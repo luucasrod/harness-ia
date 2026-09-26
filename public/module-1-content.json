@@ -1,0 +1,623 @@
+{
+  "lesson_id": "lesson-1-architecture",
+  "title": "Arquitetura de Sistemas",
+  "description": "Short overview",
+  "learning_objectives": ["Understand...", "Learn..."],
+  "content": "Main lesson content (800-1200 words, use markdown)",
+  "examples": [
+    {
+      "title": "Example 1",
+      "description": "What this shows",
+      "code_or_diagram": "Code snippet or ASCII diagram"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-1-1",
+      "type": "multiple_choice",
+      "question": "Question",
+      "options": ["A", "B", "C", "D"],
+      "correct_answer": "A",
+      "explanation": "Why this is correct"
+    }
+  ]
+}
+
+CONTENT REQUIREMENTS:
+✓ Real-world examples (not toy examples)
+✓ Progressive difficulty (L1 → L2 → L3 → L4)
+✓ Code snippets in multiple languages (show patterns)
+✓ Diagrams (use Mermaid or ASCII)
+✓ 3-5 quizzes per lesson (multiple choice, short answer)
+✓ 1 exercise per lesson (prediction, debugging, code review)
+✓ Accessibility focused (clear language, no jargon without explanation)
+✓ Brazilian Portuguese (clear, professional tone)
+
+RETURN ONLY JSON. NO OTHER TEXT.
+codex
+{
+  "module_id": "module-1-engineering-foundation",
+  "title": "Fundação de Engenharia",
+  "description": "Módulo introdutório para desenvolver pensamento arquitetural, uso consciente de padrões, boas práticas de código e aplicação prática em um pequeno sistema realista.",
+  "lessons": [
+    {
+      "lesson_id": "lesson-1-architecture",
+      "title": "Arquitetura de Sistemas",
+      "description": "Introdução aos blocos fundamentais de arquitetura de software, separação de responsabilidades e decisões técnicas orientadas a contexto.",
+      "learning_objectives": [
+        "Entender o que é arquitetura de sistemas e por que ela influencia manutenção, escala e segurança.",
+        "Identificar componentes, responsabilidades e fluxos de dados em uma aplicação real.",
+        "Diferenciar arquitetura monolítica, modular e baseada em serviços.",
+        "Representar uma arquitetura simples usando diagramas claros."
+      ],
+      "content": "## Visão geral\n\nArquitetura de sistemas é o conjunto de decisões que define como uma aplicação é organizada, como suas partes conversam entre si e como ela responde a mudanças ao longo do tempo. Ela não é apenas um desenho bonito feito antes do código. Uma boa arquitetura aparece no dia a dia: quando uma nova funcionalidade é adicionada sem quebrar o restante, quando um erro é isolado rapidamente, quando uma equipe consegue trabalhar em paralelo e quando o sistema continua compreensível meses depois.\n\nPense em uma plataforma educacional com tutor de IA. Ela pode ter usuários, cursos, aulas, exercícios, progresso do aluno, pagamentos, notificações e um serviço de IA que responde dúvidas. Se tudo estiver misturado em um único arquivo ou em uma única camada, qualquer mudança pequena pode causar efeitos colaterais difíceis de prever. Por exemplo, alterar a forma como o progresso é salvo não deveria exigir mudanças no componente que mostra a aula na tela ou no serviço que conversa com o modelo de IA.\n\n## Componentes e responsabilidades\n\nUm sistema costuma ser dividido em componentes. Um componente é uma parte com uma responsabilidade clara. Em uma aplicação web comum, podemos encontrar:\n\n- Interface: mostra dados ao usuário e recebe ações.\n- API: expõe operações como criar usuário, buscar aula ou registrar resposta.\n- Domínio: contém regras de negócio, como liberar uma aula somente após a conclusão da anterior.\n- Persistência: salva e recupera dados em banco.\n- Integrações externas: serviços de pagamento, envio de e-mail, IA ou analytics.\n\nSeparar responsabilidades reduz acoplamento. Acoplamento é o grau de dependência entre partes do sistema. Quando o acoplamento é alto, uma mudança em um lugar exige mudanças em muitos outros. Também buscamos coesão, que significa manter juntas as coisas que pertencem ao mesmo assunto. Um módulo de progresso do aluno deve concentrar regras de progresso, não regras de pagamento.\n\n## Camadas\n\nUma forma comum de organizar sistemas é por camadas. Cada camada tem um papel. A interface não deve falar diretamente com o banco de dados. Em vez disso, ela chama uma API ou serviço, que aplica regras e então usa um repositório para acessar dados.\n\n```mermaid\ngraph TD\n  UI[Interface Web ou Mobile] --> API[API HTTP]\n  API --> Service[Serviços de Aplicação]\n  Service --> Domain[Regras de Domínio]\n  Service --> Repo[Repositórios]\n  Repo --> DB[(Banco de Dados)]\n  Service --> AI[Serviço de IA]\n```\n\nEssa separação ajuda nos testes. Podemos testar regras de domínio sem subir servidor, banco ou interface. Também ajuda na evolução. Se hoje usamos PostgreSQL e amanhã precisamos trocar parte do armazenamento por outro banco, a mudança fica mais concentrada.\n\n## Monólito, monólito modular e serviços\n\nUm monólito é uma aplicação implantada como uma unidade. Isso não é necessariamente ruim. Para muitos produtos em fase inicial, um monólito bem organizado é mais simples, barato e fácil de operar. O problema é o monólito sem fronteiras internas, onde tudo acessa tudo.\n\nUm monólito modular mantém uma única implantação, mas organiza o código em módulos claros, como cursos, usuários, progresso e tutor de IA. Essa abordagem costuma ser excelente para equipes pequenas e médias, pois evita a complexidade operacional de microsserviços enquanto preserva clareza interna.\n\nMicrosserviços são aplicações menores, implantadas separadamente, que se comunicam por rede. Eles podem ser úteis quando há equipes independentes, necessidades de escala muito diferentes ou domínios bem isolados. Porém, trazem custos: observabilidade, autenticação entre serviços, latência, versionamento de APIs e falhas distribuídas.\n\nUma decisão arquitetural madura considera contexto. Não existe arquitetura universalmente melhor. Existe uma arquitetura adequada ao momento do produto, ao tamanho da equipe, aos riscos e às metas.\n\n## Fluxo realista: resposta a exercício\n\nImagine que um aluno responde a um exercício. O sistema precisa validar a resposta, registrar tentativa, atualizar progresso e talvez acionar o tutor de IA para explicar o erro. Um fluxo saudável poderia ser:\n\n1. A interface envia a resposta para a API.\n2. A API valida o formato da requisição.\n3. O serviço de exercícios verifica a alternativa correta.\n4. O serviço de progresso registra a tentativa.\n5. Se houver erro, o serviço de tutor gera uma explicação personalizada.\n6. A resposta retorna para a interface.\n\nEsse fluxo mantém responsabilidades claras. A interface não precisa conhecer a regra de correção. O banco não decide se o aluno avançou. O serviço de IA não salva progresso diretamente.\n\n## Decisões arquiteturais\n\nDecisões importantes devem ser registradas. Uma técnica simples é usar ADRs, ou Architecture Decision Records. Um ADR documenta o contexto, a decisão e suas consequências. Por exemplo: “Usaremos monólito modular no MVP porque a equipe é pequena, o domínio ainda está mudando e queremos reduzir complexidade operacional.”\n\nRegistrar decisões evita que o time esqueça por que algo foi feito. Também permite revisar escolhas quando o contexto mudar. Arquitetura não é uma prisão; é uma série de apostas responsáveis.\n\n## Sinais de boa arquitetura\n\nUma boa arquitetura costuma apresentar sinais práticos: nomes claros, módulos com fronteiras compreensíveis, regras de negócio testáveis, dependências em direção previsível e poucas surpresas. Se para corrigir uma mensagem na tela é necessário entender autenticação, pagamento e IA, algo provavelmente está misturado demais.\n\nNesta primeira etapa, o objetivo não é decorar nomes sofisticados. O objetivo é aprender a olhar para um sistema e perguntar: quais são as partes, quais responsabilidades cada parte tem, como os dados fluem e onde uma mudança causaria impacto?",
+      "examples": [
+        {
+          "title": "Arquitetura modular para plataforma educacional",
+          "description": "Mostra como dividir uma aplicação educacional em módulos com responsabilidades claras.",
+          "code_or_diagram": "modules/\n  users/\n    user.controller.ts\n    user.service.ts\n    user.repository.ts\n  courses/\n    course.controller.ts\n    course.service.ts\n    course.repository.ts\n  progress/\n    progress.service.ts\n    progress.repository.ts\n  ai-tutor/\n    tutor.service.ts\n    prompt-builder.ts"
+        },
+        {
+          "title": "Separação de camadas em TypeScript",
+          "description": "Exemplo de API chamando um serviço em vez de acessar o banco diretamente.",
+          "code_or_diagram": "class LessonController {\n  constructor(private lessonService: LessonService) {}\n\n  async completeLesson(request) {\n    const { userId, lessonId } = request.body;\n    return this.lessonService.completeLesson(userId, lessonId);\n  }\n}\n\nclass LessonService {\n  constructor(private progressRepository: ProgressRepository) {}\n\n  async completeLesson(userId: string, lessonId: string) {\n    const progress = await this.progressRepository.findByUser(userId);\n    progress.markLessonAsCompleted(lessonId);\n    await this.progressRepository.save(progress);\n    return progress;\n  }\n}"
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ex-1-1",
+          "type": "multiple_choice",
+          "question": "Qual é o principal objetivo de separar uma aplicação em camadas?",
+          "options": [
+            "Reduzir mistura de responsabilidades e facilitar manutenção",
+            "Fazer o sistema usar menos memória em todos os casos",
+            "Evitar completamente a necessidade de testes",
+            "Garantir que a aplicação nunca tenha bugs"
+          ],
+          "correct_answer": "Reduzir mistura de responsabilidades e facilitar manutenção",
+          "explanation": "Camadas ajudam a organizar responsabilidades e reduzir impacto de mudanças, mas não eliminam testes nem bugs."
+        },
+        {
+          "id": "ex-1-2",
+          "type": "short_answer",
+          "question": "Explique, com suas palavras, por que um monólito modular pode ser uma boa escolha para um MVP.",
+          "correct_answer": "Porque mantém simplicidade operacional, permite desenvolvimento rápido e ainda preserva organização interna por módulos.",
+          "explanation": "Em produtos iniciais, microsserviços podem adicionar complexidade antes de haver necessidade real."
+        },
+        {
+          "id": "ex-1-3",
+          "type": "multiple_choice",
+          "question": "Em uma plataforma com tutor de IA, qual componente deveria conter a regra de liberar a próxima aula após conclusão da anterior?",
+          "options": [
+            "Serviço de domínio ou aplicação relacionado a progresso",
+            "Arquivo CSS da interface",
+            "Banco de dados diretamente",
+            "Serviço externo de e-mail"
+          ],
+          "correct_answer": "Serviço de domínio ou aplicação relacionado a progresso",
+          "explanation": "A regra pertence ao domínio de progresso do aluno, não à apresentação ou a integrações externas."
+        },
+        {
+          "id": "ex-1-4",
+          "type": "code_review",
+          "question": "Revise este cenário: a tela de aula acessa diretamente o banco de dados, corrige exercícios e chama o serviço de IA. Qual problema arquitetural existe?",
+          "correct_answer": "Há mistura de responsabilidades e alto acoplamento. A interface deveria delegar regras para serviços e acessar dados por meio de uma API ou camada adequada.",
+          "explanation": "Quando a interface concentra regras, persistência e integração, o sistema fica difícil de testar, manter e evoluir."
+        }
+      ]
+    },
+    {
+      "lesson_id": "lesson-2-design-patterns",
+      "title": "Padrões de Design",
+      "description": "Estudo de padrões de design como soluções reutilizáveis para problemas recorrentes de projeto de software.",
+      "learning_objectives": [
+        "Entender o papel dos padrões de design sem tratá-los como receitas obrigatórias.",
+        "Aplicar padrões como Strategy, Factory e Observer em contextos reais.",
+        "Reconhecer quando um padrão simplifica o código e quando adiciona complexidade desnecessária.",
+        "Comparar implementações de padrões em diferentes linguagens."
+      ],
+      "content": "## O que são padrões de design\n\nPadrões de design são soluções conhecidas para problemas comuns de projeto de software. Eles não são bibliotecas prontas nem regras absolutas. São formas de nomear estruturas que muitas equipes já usaram para resolver dificuldades parecidas. Quando alguém diz “podemos usar Strategy aqui”, a equipe ganha uma linguagem compartilhada para discutir alternativas.\n\nO valor de um padrão está no problema que ele resolve. Usar padrão apenas para parecer sofisticado costuma piorar o código. O bom uso acontece quando existe uma força real: muitos condicionais, criação complexa de objetos, necessidade de notificar várias partes do sistema ou variação de comportamento por contexto.\n\nNesta aula, vamos focar em três padrões úteis para uma plataforma educacional com tutor de IA: Strategy, Factory e Observer.\n\n## Strategy: trocar comportamento sem espalhar condicionais\n\nO padrão Strategy permite encapsular diferentes formas de executar uma tarefa atrás de uma interface comum. Imagine que a plataforma corrige exercícios de tipos diferentes: múltipla escolha, resposta curta e código. Uma solução ingênua colocaria vários `if` ou `switch` em um único método. Isso funciona no começo, mas cresce mal.\n\nCom Strategy, cada tipo de correção vira uma estratégia separada. O serviço principal escolhe a estratégia adequada e chama o mesmo método.\n\n```mermaid\ngraph TD\n  GradingService --> Strategy[GradingStrategy]\n  Strategy --> MultipleChoice[MultipleChoiceStrategy]\n  Strategy --> ShortAnswer[ShortAnswerStrategy]\n  Strategy --> Code[CodeExecutionStrategy]\n```\n\nEsse padrão ajuda quando novos comportamentos são adicionados com frequência. Para incluir um novo tipo de exercício, criamos uma nova estratégia sem alterar profundamente as existentes.\n\n## Factory: centralizar criação de objetos\n\nFactory é útil quando a criação de um objeto envolve regras, configurações ou escolha entre variantes. Em vez de espalhar `new MultipleChoiceStrategy()` por várias partes do sistema, uma fábrica decide qual objeto criar.\n\nEm uma plataforma real, uma fábrica pode escolher o cliente de IA conforme o provedor configurado: OpenAI, Azure OpenAI ou outro serviço. O restante do sistema não precisa conhecer os detalhes de autenticação e configuração de cada provedor.\n\nFactory não deve ser usada para qualquer criação simples. Se criar um objeto é trivial e acontece em um lugar só, uma fábrica pode ser exagero. Ela se justifica quando existe variação, configuração ou repetição.\n\n## Observer: reagir a eventos\n\nObserver permite que partes do sistema reajam quando algo acontece, sem que o emissor conheça todos os interessados. Por exemplo, quando uma aula é concluída, o sistema pode atualizar progresso, enviar uma notificação, liberar certificado e registrar analytics.\n\nSem Observer, o método `completeLesson` poderia chamar diretamente todos esses serviços. Isso aumenta acoplamento. Com eventos, o serviço publica `LessonCompleted`, e outros componentes escutam esse evento.\n\n```mermaid\ngraph LR\n  LessonService --> EventBus[Evento: LessonCompleted]\n  EventBus --> ProgressHandler[Atualizar progresso]\n  EventBus --> NotificationHandler[Enviar notificação]\n  EventBus --> AnalyticsHandler[Registrar analytics]\n```\n\nEssa abordagem melhora extensibilidade. Se amanhã quisermos adicionar um e-mail de parabéns, criamos um novo observador sem alterar a lógica central de conclusão da aula.\n\n## Exemplo em Python: Strategy\n\n```python\nfrom abc import ABC, abstractmethod\n\nclass GradingStrategy(ABC):\n    @abstractmethod\n    def grade(self, answer, expected):\n        pass\n\nclass MultipleChoiceStrategy(GradingStrategy):\n    def grade(self, answer, expected):\n        return answer == expected\n\nclass ShortAnswerStrategy(GradingStrategy):\n    def grade(self, answer, expected):\n        return answer.strip().lower() == expected.strip().lower()\n\nclass GradingService:\n    def __init__(self, strategy: GradingStrategy):\n        self.strategy = strategy\n\n    def submit(self, answer, expected):\n        return self.strategy.grade(answer, expected)\n```\n\nEsse código evita que `GradingService` conheça todos os detalhes de cada correção. Ele depende de uma abstração simples.\n\n## Exemplo em JavaScript: Factory\n\n```javascript\nfunction createAiClient(provider, config) {\n  if (provider === 'openai') {\n    return new OpenAiClient(config.apiKey);\n  }\n\n  if (provider === 'azure') {\n    return new AzureOpenAiClient(config.endpoint, config.apiKey);\n  }\n\n  throw new Error(`Unsupported provider: ${provider}`);\n}\n\nconst aiClient = createAiClient(process.env.AI_PROVIDER, config);\n```\n\nA fábrica concentra a decisão de criação. O serviço de tutor pode receber `aiClient` sem saber qual provedor está por trás.\n\n## Quando evitar padrões\n\nUm erro comum é aplicar padrões cedo demais. Se há apenas um tipo de exercício e nenhuma previsão concreta de variação, criar várias interfaces pode tornar o código mais difícil. Simplicidade também é uma decisão de engenharia.\n\nUma boa pergunta é: “Qual dor este padrão remove?” Se a resposta for clara, o padrão pode ajudar. Se a resposta for apenas “porque é boa prática”, talvez seja melhor esperar.\n\n## Padrões e comunicação\n\nAlém da estrutura técnica, padrões melhoram comunicação. Eles dão nomes curtos para ideias recorrentes. Em vez de explicar longamente “vamos criar classes intercambiáveis para cada algoritmo de correção”, podemos dizer “vamos usar Strategy para correção”. Isso reduz ambiguidade, desde que todos entendam o padrão.\n\nNesta fase do curso, o mais importante é desenvolver julgamento. Padrões são ferramentas. Um bom engenheiro não usa todas as ferramentas em todos os problemas; escolhe a ferramenta que reduz complexidade real.",
+      "examples": [
+        {
+          "title": "Strategy para correção de exercícios",
+          "description": "Mostra como trocar algoritmos de correção sem alterar o serviço principal.",
+          "code_or_diagram": "interface GradingStrategy {\n  grade(answer: unknown, expected: unknown): boolean;\n}\n\nclass MultipleChoiceGrading implements GradingStrategy {\n  grade(answer: string, expected: string): boolean {\n    return answer === expected;\n  }\n}\n\nclass CaseInsensitiveTextGrading implements GradingStrategy {\n  grade(answer: string, expected: string): boolean {\n    return answer.trim().toLowerCase() === expected.trim().toLowerCase();\n  }\n}"
+        },
+        {
+          "title": "Observer para eventos de conclusão",
+          "description": "Mostra como desacoplar ações disparadas quando uma aula é concluída.",
+          "code_or_diagram": "class EventBus {\n  constructor() {\n    this.handlers = {};\n  }\n\n  on(eventName, handler) {\n    this.handlers[eventName] = this.handlers[eventName] || [];\n    this.handlers[eventName].push(handler);\n  }\n\n  emit(eventName, payload) {\n    for (const handler of this.handlers[eventName] || []) {\n      handler(payload);\n    }\n  }\n}\n\nbus.on('LessonCompleted', updateProgress);\nbus.on('LessonCompleted', sendNotification);\nbus.emit('LessonCompleted', { userId: 'u1', lessonId: 'l1' });"
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ex-2-1",
+          "type": "multiple_choice",
+          "question": "Quando o padrão Strategy é mais útil?",
+          "options": [
+            "Quando existem variações de comportamento que precisam ser trocadas sem espalhar condicionais",
+            "Quando o sistema não tem nenhuma variação",
+            "Quando queremos remover todas as classes do projeto",
+            "Quando precisamos escrever CSS responsivo"
+          ],
+          "correct_answer": "Quando existem variações de comportamento que precisam ser trocadas sem espalhar condicionais",
+          "explanation": "Strategy encapsula algoritmos ou comportamentos alternativos por trás de uma interface comum."
+        },
+        {
+          "id": "ex-2-2",
+          "type": "short_answer",
+          "question": "Dê um exemplo real de uso de Factory em uma plataforma com tutor de IA.",
+          "correct_answer": "Uma Factory pode criar o cliente correto de IA conforme o provedor configurado, como OpenAI, Azure OpenAI ou outro serviço.",
+          "explanation": "Factory centraliza decisões de criação quando existem variantes ou configuração complexa."
+        },
+        {
+          "id": "ex-2-3",
+          "type": "multiple_choice",
+          "question": "Qual é um risco de usar padrões de design sem necessidade?",
+          "options": [
+            "Aumentar complexidade e dificultar leitura",
+            "Impedir completamente bugs de produção",
+            "Tornar o código impossível de testar",
+            "Eliminar a necessidade de arquitetura"
+          ],
+          "correct_answer": "Aumentar complexidade e dificultar leitura",
+          "explanation": "Padrões devem resolver uma dor real; caso contrário, podem criar abstrações desnecessárias."
+        },
+        {
+          "id": "ex-2-4",
+          "type": "prediction",
+          "question": "Um método completeLesson chama diretamente updateProgress, sendEmail, trackAnalytics e unlockCertificate. Qual padrão poderia reduzir esse acoplamento?",
+          "correct_answer": "Observer, usando eventos como LessonCompleted para que diferentes partes reajam independentemente.",
+          "explanation": "Observer permite notificar interessados sem que o serviço principal conheça todos eles."
+        }
+      ]
+    },
+    {
+      "lesson_id": "lesson-3-code-best-practices",
+      "title": "Boas Práticas de Código",
+      "description": "Práticas essenciais para escrever código legível, testável, seguro e sustentável em projetos reais.",
+      "learning_objectives": [
+        "Escrever código com nomes claros, funções pequenas e responsabilidades bem definidas.",
+        "Identificar sinais de código frágil, duplicado ou difícil de testar.",
+        "Aplicar validação de entrada, tratamento de erros e logs úteis.",
+        "Realizar revisão de código com foco em comportamento, clareza e risco."
+      ],
+      "content": "## O que significa código bom\n\nCódigo bom não é apenas código que funciona hoje. É código que outra pessoa consegue entender, alterar e testar com segurança. Em um produto real, o código será lido muitas vezes mais do que será escrito. Por isso, clareza é uma característica técnica, não apenas estética.\n\nEm uma plataforma educacional, uma função que calcula progresso do aluno pode parecer simples no começo. Depois surgem regras: aulas opcionais, módulos bloqueados, atividades práticas, recuperação, certificados e trilhas personalizadas. Se o código inicial estiver confuso, cada nova regra ficará mais arriscada.\n\nBoas práticas ajudam a reduzir esse risco. Elas não substituem pensamento, mas criam hábitos que tornam o sistema mais confiável.\n\n## Nomes claros\n\nNomes devem revelar intenção. Um nome como `processData` não explica quase nada. `calculateModuleProgress` é melhor porque indica o que está sendo calculado. Variáveis como `x`, `arr` e `temp` podem ser aceitáveis em contextos muito pequenos, mas em regras de negócio normalmente atrapalham.\n\nCompare:\n\n```javascript\nfunction calc(a, b) {\n  return a.filter(x => b.includes(x.id)).length / a.length;\n}\n```\n\nCom:\n\n```javascript\nfunction calculateCompletionRate(lessons, completedLessonIds) {\n  const completedCount = lessons.filter(lesson =>\n    completedLessonIds.includes(lesson.id)\n  ).length;\n\n  return completedCount / lessons.length;\n}\n```\n\nA segunda versão é maior, mas mais compreensível. Código claro reduz a necessidade de comentários explicando o óbvio.\n\n## Funções pequenas e responsabilidade única\n\nUma função deve fazer uma coisa principal. Isso não significa que toda função precisa ter três linhas, mas significa que ela deve ter um motivo claro para mudar. Uma função que valida entrada, acessa banco, chama IA, calcula nota e envia e-mail tem motivos demais para mudar.\n\nDividir responsabilidades facilita testes. Podemos testar `calculateCompletionRate` sem banco, servidor ou autenticação. Funções puras, que recebem dados e retornam resultado sem alterar estado externo, são especialmente fáceis de verificar.\n\n## Validação de entrada\n\nNunca confie cegamente em dados recebidos de usuários, APIs externas ou arquivos. Validação protege o sistema contra erros e abusos. Se uma API espera `lessonId` e `answer`, deve verificar se esses campos existem e têm o formato correto antes de executar regras.\n\nEm TypeScript, bibliotecas como Zod são comuns para validação. Em Python, Pydantic cumpre papel semelhante.\n\n```typescript\nconst SubmitAnswerSchema = z.object({\n  userId: z.string().min(1),\n  lessonId: z.string().min(1),\n  answer: z.union([z.string(), z.number(), z.boolean()])\n});\n```\n\nValidação clara melhora mensagens de erro e evita falhas internas difíceis de interpretar.\n\n## Tratamento de erros\n\nErros devem ser tratados no nível adequado. Nem todo erro deve ser escondido do usuário, e nem todo detalhe interno deve ser exposto. Se o serviço de IA estiver indisponível, a interface pode mostrar uma mensagem amigável: “Não foi possível gerar a explicação agora. Tente novamente em instantes.” O log interno, por outro lado, deve conter detalhes suficientes para investigação.\n\nEvite capturar erros apenas para ignorá-los. Isso cria falhas silenciosas. Também evite retornar mensagens técnicas demais ao usuário, como stack traces, tokens ou detalhes de infraestrutura.\n\n## Logs úteis\n\nLogs ajudam a entender o comportamento do sistema. Um bom log informa o que aconteceu, em qual contexto e com identificadores seguros. Por exemplo: `answer_submission_failed` com `userId`, `lessonId` e tipo de erro. Cuidado para não registrar dados sensíveis, como senhas, tokens ou conteúdo privado desnecessário.\n\nLogs estruturados são melhores que textos soltos porque podem ser filtrados e analisados por ferramentas de observabilidade.\n\n## Duplicação\n\nDuplicação nem sempre deve ser removida imediatamente. Às vezes, duas partes parecem iguais hoje, mas evoluirão de formas diferentes. Porém, duplicação de regra de negócio costuma ser perigosa. Se a regra de liberação de módulo estiver duplicada na API e na interface, uma mudança pode ser aplicada em apenas um lugar e criar inconsistência.\n\nUma boa prática é centralizar regras críticas no domínio ou serviço de aplicação e deixar a interface apenas refletir o estado retornado.\n\n## Testes\n\nTestes automatizados protegem contra regressões. Para começar, priorize regras importantes e áreas propensas a erro: cálculo de progresso, correção de exercícios, autorização e integração com serviços externos.\n\nUm teste deve ser legível. A estrutura Arrange, Act, Assert ajuda:\n\n```python\ndef test_completion_rate_for_two_completed_lessons():\n    lessons = [{'id': 'l1'}, {'id': 'l2'}, {'id': 'l3'}]\n    completed_ids = ['l1', 'l2']\n\n    result = calculate_completion_rate(lessons, completed_ids)\n\n    assert result == 2 / 3\n```\n\n## Revisão de código\n\nCode review não é uma disputa de gosto. É uma prática para encontrar riscos antes que cheguem ao usuário. Uma boa revisão pergunta: o comportamento está correto? Existem casos extremos? Os nomes ajudam? A mudança tem testes suficientes? Há risco de segurança? O código segue padrões do projeto?\n\nComentários de revisão devem ser específicos e respeitosos. Em vez de “isso está ruim”, prefira “esta função mistura validação e persistência; podemos separar para facilitar testes?”\n\n## Segurança básica\n\nMesmo no início, algumas práticas são obrigatórias: não salvar senhas em texto puro, não expor tokens no frontend, validar permissões no servidor e evitar montar consultas SQL com concatenação de strings. Segurança não deve ser uma etapa final; ela faz parte da qualidade do código.\n\nBoas práticas existem para tornar o desenvolvimento mais previsível. O objetivo não é escrever código perfeito, mas código que aceite mudança sem se tornar um labirinto.",
+      "examples": [
+        {
+          "title": "Refatoração de função com responsabilidade clara",
+          "description": "Mostra como separar cálculo de progresso de efeitos externos.",
+          "code_or_diagram": "function calculateProgress(totalLessons, completedLessons) {\n  if (totalLessons === 0) return 0;\n  return completedLessons / totalLessons;\n}\n\nasync function updateUserProgress(userId, moduleId) {\n  const lessons = await lessonRepository.findByModule(moduleId);\n  const completed = await progressRepository.countCompleted(userId, moduleId);\n  const progress = calculateProgress(lessons.length, completed);\n  await progressRepository.save(userId, moduleId, progress);\n  return progress;\n}"
+        },
+        {
+          "title": "Tratamento de erro em integração com IA",
+          "description": "Mostra como retornar mensagem segura ao usuário e manter log útil para investigação.",
+          "code_or_diagram": "try {\n  const explanation = await aiTutor.explainWrongAnswer(context);\n  return { explanation };\n} catch (error) {\n  logger.error('ai_explanation_failed', {\n    lessonId: context.lessonId,\n    exerciseId: context.exerciseId,\n    errorName: error.name\n  });\n\n  return {\n    explanation: 'Não foi possível gerar uma explicação agora. Tente novamente em instantes.'\n  };\n}"
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ex-3-1",
+          "type": "multiple_choice",
+          "question": "Qual nome de função comunica melhor a intenção?",
+          "options": [
+            "calculateModuleCompletionRate",
+            "doStuff",
+            "handle",
+            "processData"
+          ],
+          "correct_answer": "calculateModuleCompletionRate",
+          "explanation": "O nome indica claramente o resultado esperado e o contexto da operação."
+        },
+        {
+          "id": "ex-3-2",
+          "type": "short_answer",
+          "question": "Por que não devemos expor detalhes técnicos de erro diretamente ao usuário?",
+          "correct_answer": "Porque detalhes internos podem confundir o usuário e revelar informações sensíveis sobre infraestrutura, código ou segurança.",
+          "explanation": "Mensagens ao usuário devem ser claras e seguras; detalhes técnicos pertencem aos logs internos."
+        },
+        {
+          "id": "ex-3-3",
+          "type": "multiple_choice",
+          "question": "Qual é um bom candidato para teste automatizado em uma plataforma educacional?",
+          "options": [
+            "Cálculo de progresso do aluno",
+            "Cor exata de um ícone decorativo",
+            "Nome temporário de uma variável local irrelevante",
+            "Ordem dos imports quando não há padrão no projeto"
+          ],
+          "correct_answer": "Cálculo de progresso do aluno",
+          "explanation": "Regras de negócio importantes devem ser protegidas por testes, pois afetam diretamente a experiência do aluno."
+        },
+        {
+          "id": "ex-3-4",
+          "type": "debugging",
+          "question": "Analise o código: `catch (error) { return null; }`. Qual é o problema e como melhorar?",
+          "correct_answer": "O erro é silenciado, dificultando investigação. Uma melhoria é registrar um log seguro e retornar uma resposta clara ou relançar o erro quando apropriado.",
+          "explanation": "Falhas silenciosas tornam bugs difíceis de diagnosticar e podem esconder problemas sérios."
+        }
+      ]
+    },
+    {
+      "lesson_id": "lesson-4-practical-project",
+      "title": "Projeto Prático",
+      "description": "Aplicação integrada dos conceitos do módulo na modelagem de um pequeno sistema de progresso e tutor de IA.",
+      "learning_objectives": [
+        "Projetar uma pequena arquitetura modular para uma funcionalidade real.",
+        "Aplicar padrões de design de forma justificada.",
+        "Escrever código claro com validação, tratamento de erros e testes básicos.",
+        "Realizar uma revisão técnica da própria solução."
+      ],
+      "content": "## Objetivo do projeto\n\nNesta aula, você vai integrar os conceitos do módulo criando o desenho técnico de uma funcionalidade realista: submissão de resposta de exercício com feedback do tutor de IA. O objetivo não é construir uma plataforma completa, mas praticar decisões de engenharia em um recorte pequeno e significativo.\n\nA funcionalidade deve permitir que um aluno responda a um exercício, receba correção, tenha o progresso atualizado e, quando errar, receba uma explicação gerada pelo tutor de IA. Esse fluxo envolve arquitetura, padrões de design e boas práticas de código.\n\n## Escopo funcional\n\nO sistema deve atender aos seguintes requisitos:\n\n- Receber uma resposta de exercício.\n- Validar os dados de entrada.\n- Corrigir a resposta conforme o tipo de exercício.\n- Registrar a tentativa do aluno.\n- Atualizar o progresso da aula quando aplicável.\n- Gerar explicação com IA quando a resposta estiver incorreta.\n- Retornar uma resposta clara para a interface.\n\nTambém existem requisitos não funcionais:\n\n- O código deve separar responsabilidades.\n- A correção deve permitir novos tipos de exercício no futuro.\n- Falhas no tutor de IA não devem impedir o registro da tentativa.\n- Erros devem ser registrados sem expor dados sensíveis.\n\n## Arquitetura proposta\n\nUma solução adequada para este estágio é um monólito modular. Ele mantém implantação simples, mas organiza o código por responsabilidades. O módulo de exercícios cuida da submissão e correção. O módulo de progresso cuida do avanço do aluno. O módulo de tutor encapsula a integração com IA.\n\n```mermaid\ngraph TD\n  UI[Interface da Aula] --> API[SubmitAnswerController]\n  API --> ExerciseService[ExerciseSubmissionService]\n  ExerciseService --> GradingFactory[GradingStrategyFactory]\n  GradingFactory --> Strategy[GradingStrategy]\n  ExerciseService --> AttemptRepo[AttemptRepository]\n  ExerciseService --> ProgressService[ProgressService]\n  ExerciseService --> TutorService[AiTutorService]\n  AttemptRepo --> DB[(Banco de Dados)]\n  ProgressService --> DB\n  TutorService --> AI[Provedor de IA]\n```\n\nObserve que a interface chama apenas a API. Ela não decide se a resposta está correta. Também não atualiza progresso diretamente. Essa separação permite mudar regras internas sem reescrever a tela.\n\n## Design da correção\n\nComo existem tipos diferentes de exercício, Strategy é uma boa escolha. Podemos criar uma interface `GradingStrategy` e implementações como `MultipleChoiceGrading`, `ShortTextGrading` e, no futuro, `CodeGrading`.\n\nA escolha da estratégia pode ficar em uma Factory. Assim, o serviço principal não precisa conhecer todos os detalhes de criação.\n\n```typescript\ninterface GradingStrategy {\n  grade(input: {\n    answer: unknown;\n    expectedAnswer: unknown;\n  }): { isCorrect: boolean; score: number };\n}\n\nclass MultipleChoiceGrading implements GradingStrategy {\n  grade(input) {\n    const isCorrect = input.answer === input.expectedAnswer;\n    return { isCorrect, score: isCorrect ? 1 : 0 };\n  }\n}\n\nclass ShortTextGrading implements GradingStrategy {\n  grade(input) {\n    const normalize = (value: string) => value.trim().toLowerCase();\n    const isCorrect = normalize(input.answer) === normalize(input.expectedAnswer);\n    return { isCorrect, score: isCorrect ? 1 : 0 };\n  }\n}\n\nclass GradingStrategyFactory {\n  create(type: string): GradingStrategy {\n    if (type === 'multiple_choice') return new MultipleChoiceGrading();\n    if (type === 'short_text') return new ShortTextGrading();\n    throw new Error(`Unsupported exercise type: ${type}`);\n  }\n}\n```\n\nEsse desenho facilita extensão. Para adicionar um tipo novo, criamos uma nova estratégia e atualizamos a fábrica.\n\n## Serviço principal\n\nO serviço principal coordena o caso de uso. Ele não deve conter todos os detalhes de correção, persistência e IA. Seu papel é organizar o fluxo.\n\n```typescript\nclass ExerciseSubmissionService {\n  constructor(\n    private gradingFactory: GradingStrategyFactory,\n    private attemptRepository: AttemptRepository,\n    private progressService: ProgressService,\n    private tutorService: AiTutorService,\n    private logger: Logger\n  ) {}\n\n  async submitAnswer(input: SubmitAnswerInput) {\n    const exercise = await this.loadExercise(input.exerciseId);\n    const strategy = this.gradingFactory.create(exercise.type);\n    const result = strategy.grade({\n      answer: input.answer,\n      expectedAnswer: exercise.expectedAnswer\n    });\n\n    await this.attemptRepository.save({\n      userId: input.userId,\n      exerciseId: input.exerciseId,\n      answer: input.answer,\n      isCorrect: result.isCorrect,\n      score: result.score\n    });\n\n    if (result.isCorrect) {\n      await this.progressService.markExerciseCompleted(input.userId, input.exerciseId);\n      return { isCorrect: true, feedback: 'Resposta correta.' };\n    }\n\n    const feedback = await this.generateSafeFeedback(input, exercise);\n    return { isCorrect: false, feedback };\n  }\n\n  private async generateSafeFeedback(input, exercise) {\n    try {\n      return await this.tutorService.explainMistake({\n        exerciseTitle: exercise.title,\n        studentAnswer: input.answer,\n        expectedAnswer: exercise.expectedAnswer\n      });\n    } catch (error) {\n      this.logger.error('ai_feedback_failed', {\n        userId: input.userId,\n        exerciseId: input.exerciseId,\n        errorName: error.name\n      });\n\n      return 'Sua resposta ainda não está correta. Revise o conteúdo da aula e tente novamente.';\n    }\n  }\n}\n```\n\nEsse exemplo mostra uma decisão importante: se a IA falhar, a tentativa continua registrada. A experiência perde uma explicação personalizada, mas a operação principal não é perdida.\n\n## Validação e contrato da API\n\nAntes de chamar o serviço, a API deve validar a entrada. O contrato pode ser:\n\n```json\n{\n  \"userId\": \"user-123\",\n  \"exerciseId\": \"exercise-456\",\n  \"answer\": \"B\"\n}\n```\n\nCampos obrigatórios devem ser verificados. O servidor também deve validar permissões: o usuário pode responder a esse exercício? A aula pertence a um curso em que ele está matriculado? Essas regras não devem depender apenas da interface.\n\n## Testes recomendados\n\nComece testando regras sem infraestrutura pesada:\n\n- Correção de múltipla escolha com resposta correta.\n- Correção de texto curto ignorando maiúsculas e espaços extras.\n- Registro de tentativa mesmo quando a resposta está errada.\n- Retorno de feedback padrão quando o serviço de IA falha.\n- Atualização de progresso somente quando a resposta está correta.\n\nEsses testes protegem o comportamento mais importante.\n\n## Revisão final\n\nAntes de considerar o projeto concluído, faça uma revisão com perguntas objetivas:\n\n- Cada classe tem uma responsabilidade clara?\n- Existe regra de negócio duplicada?\n- O código continua compreensível sem comentários excessivos?\n- Falhas externas são tratadas com segurança?\n- Seria simples adicionar um novo tipo de exercício?\n- Há testes para os caminhos principais e para pelo menos uma falha?\n\nEsse projeto fecha o módulo porque conecta arquitetura, padrões e qualidade de código. A meta é sair com uma estrutura simples, mas profissional: fácil de entender, fácil de testar e preparada para crescer sem exigir uma reescrita imediata.",
+      "examples": [
+        {
+          "title": "Estrutura de pastas do projeto",
+          "description": "Organização sugerida para manter responsabilidades separadas.",
+          "code_or_diagram": "src/\n  exercises/\n    submit-answer.controller.ts\n    exercise-submission.service.ts\n    grading/\n      grading-strategy.ts\n      multiple-choice-grading.ts\n      short-text-grading.ts\n      grading-strategy.factory.ts\n    repositories/\n      attempt.repository.ts\n  progress/\n    progress.service.ts\n    progress.repository.ts\n  tutor/\n    ai-tutor.service.ts\n  shared/\n    logger.ts\n    validation.ts"
+        },
+        {
+          "title": "Teste de falha do tutor de IA",
+          "description": "Garante que a tentativa seja processada mesmo se a IA não responder.",
+          "code_or_diagram": "it('returns fallback feedback when AI tutor fails', async () => {\n  tutorService.explainMistake.mockRejectedValue(new Error('timeout'));\n\n  const result = await service.submitAnswer({\n    userId: 'user-1',\n    exerciseId: 'exercise-1',\n    answer: 'wrong answer'\n  });\n\n  expect(result.isCorrect).toBe(false);\n  expect(result.feedback).toContain('tente novamente');\n  expect(attemptRepository.save).toHaveBeenCalled();\n});"
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ex-4-1",
+          "type": "multiple_choice",
+          "question": "Qual arquitetura é mais adequada para o projeto prático inicial descrito na aula?",
+          "options": [
+            "Monólito modular com separação clara por responsabilidades",
+            "Dez microsserviços independentes desde o primeiro dia",
+            "Um único arquivo com toda a lógica",
+            "Somente código no frontend, sem validação no servidor"
+          ],
+          "correct_answer": "Monólito modular com separação clara por responsabilidades",
+          "explanation": "O monólito modular equilibra simplicidade operacional e boa organização interna para um projeto inicial."
+        },
+        {
+          "id": "ex-4-2",
+          "type": "short_answer",
+          "question": "Por que a falha do tutor de IA não deve impedir o registro da tentativa do aluno?",
+          "correct_answer": "Porque registrar a tentativa é parte central do fluxo, enquanto o feedback da IA é um complemento. O sistema deve degradar de forma controlada.",
+          "explanation": "Sistemas robustos isolam falhas externas para preservar operações principais sempre que possível."
+        },
+        {
+          "id": "ex-4-3",
+          "type": "multiple_choice",
+          "question": "Qual combinação de padrões aparece de forma justificada no projeto?",
+          "options": [
+            "Strategy para correção e Factory para escolher a estratégia",
+            "Singleton para todas as classes e Observer para variáveis locais",
+            "Factory para substituir todos os testes",
+            "Strategy para conexão com CSS"
+          ],
+          "correct_answer": "Strategy para correção e Factory para escolher a estratégia",
+          "explanation": "Há diferentes formas de correção, e a escolha da estratégia pode ser centralizada em uma fábrica."
+        },
+        {
+          "id": "ex-4-4",
+          "type": "code_review",
+          "question": "Revise esta decisão: o frontend calcula se a resposta está correta e envia apenas o resultado para o backend salvar. Qual é o risco?",
+          "correct_answer": "O usuário poderia manipular o resultado. A correção precisa acontecer no servidor, onde regras e permissões podem ser validadas com segurança.",
+          "explanation": "A interface não é uma fronteira confiável para regras críticas."
+        }
+      ],
+      "project": {
+        "project_id": "project-1-ai-tutor-answer-flow",
+        "title": "Fluxo de Resposta com Tutor de IA",
+        "brief": "Projete e implemente, em pseudocódigo ou na linguagem de sua preferência, o fluxo de submissão de resposta de exercício para uma plataforma educacional com tutor de IA.",
+        "deliverables": [
+          "Diagrama simples da arquitetura proposta.",
+          "Estrutura de pastas ou módulos.",
+          "Implementação de pelo menos duas estratégias de correção.",
+          "Serviço principal de submissão de resposta.",
+          "Tratamento de falha do tutor de IA.",
+          "Dois testes automatizados ou descrições detalhadas de teste."
+        ],
+        "evaluation_criteria": [
+          "Separação clara de responsabilidades.",
+          "Uso justificado de padrões de design.",
+          "Código legível, com nomes claros e validação adequada.",
+          "Tratamento seguro de erros.",
+          "Facilidade para adicionar novos tipos de exercício."
+        ]
+      }
+    }
+  ]
+}
+tokens used
+10.484
+{
+  "module_id": "module-1-engineering-foundation",
+  "title": "Fundação de Engenharia",
+  "description": "Módulo introdutório para desenvolver pensamento arquitetural, uso consciente de padrões, boas práticas de código e aplicação prática em um pequeno sistema realista.",
+  "lessons": [
+    {
+      "lesson_id": "lesson-1-architecture",
+      "title": "Arquitetura de Sistemas",
+      "description": "Introdução aos blocos fundamentais de arquitetura de software, separação de responsabilidades e decisões técnicas orientadas a contexto.",
+      "learning_objectives": [
+        "Entender o que é arquitetura de sistemas e por que ela influencia manutenção, escala e segurança.",
+        "Identificar componentes, responsabilidades e fluxos de dados em uma aplicação real.",
+        "Diferenciar arquitetura monolítica, modular e baseada em serviços.",
+        "Representar uma arquitetura simples usando diagramas claros."
+      ],
+      "content": "## Visão geral\n\nArquitetura de sistemas é o conjunto de decisões que define como uma aplicação é organizada, como suas partes conversam entre si e como ela responde a mudanças ao longo do tempo. Ela não é apenas um desenho bonito feito antes do código. Uma boa arquitetura aparece no dia a dia: quando uma nova funcionalidade é adicionada sem quebrar o restante, quando um erro é isolado rapidamente, quando uma equipe consegue trabalhar em paralelo e quando o sistema continua compreensível meses depois.\n\nPense em uma plataforma educacional com tutor de IA. Ela pode ter usuários, cursos, aulas, exercícios, progresso do aluno, pagamentos, notificações e um serviço de IA que responde dúvidas. Se tudo estiver misturado em um único arquivo ou em uma única camada, qualquer mudança pequena pode causar efeitos colaterais difíceis de prever. Por exemplo, alterar a forma como o progresso é salvo não deveria exigir mudanças no componente que mostra a aula na tela ou no serviço que conversa com o modelo de IA.\n\n## Componentes e responsabilidades\n\nUm sistema costuma ser dividido em componentes. Um componente é uma parte com uma responsabilidade clara. Em uma aplicação web comum, podemos encontrar:\n\n- Interface: mostra dados ao usuário e recebe ações.\n- API: expõe operações como criar usuário, buscar aula ou registrar resposta.\n- Domínio: contém regras de negócio, como liberar uma aula somente após a conclusão da anterior.\n- Persistência: salva e recupera dados em banco.\n- Integrações externas: serviços de pagamento, envio de e-mail, IA ou analytics.\n\nSeparar responsabilidades reduz acoplamento. Acoplamento é o grau de dependência entre partes do sistema. Quando o acoplamento é alto, uma mudança em um lugar exige mudanças em muitos outros. Também buscamos coesão, que significa manter juntas as coisas que pertencem ao mesmo assunto. Um módulo de progresso do aluno deve concentrar regras de progresso, não regras de pagamento.\n\n## Camadas\n\nUma forma comum de organizar sistemas é por camadas. Cada camada tem um papel. A interface não deve falar diretamente com o banco de dados. Em vez disso, ela chama uma API ou serviço, que aplica regras e então usa um repositório para acessar dados.\n\n```mermaid\ngraph TD\n  UI[Interface Web ou Mobile] --> API[API HTTP]\n  API --> Service[Serviços de Aplicação]\n  Service --> Domain[Regras de Domínio]\n  Service --> Repo[Repositórios]\n  Repo --> DB[(Banco de Dados)]\n  Service --> AI[Serviço de IA]\n```\n\nEssa separação ajuda nos testes. Podemos testar regras de domínio sem subir servidor, banco ou interface. Também ajuda na evolução. Se hoje usamos PostgreSQL e amanhã precisamos trocar parte do armazenamento por outro banco, a mudança fica mais concentrada.\n\n## Monólito, monólito modular e serviços\n\nUm monólito é uma aplicação implantada como uma unidade. Isso não é necessariamente ruim. Para muitos produtos em fase inicial, um monólito bem organizado é mais simples, barato e fácil de operar. O problema é o monólito sem fronteiras internas, onde tudo acessa tudo.\n\nUm monólito modular mantém uma única implantação, mas organiza o código em módulos claros, como cursos, usuários, progresso e tutor de IA. Essa abordagem costuma ser excelente para equipes pequenas e médias, pois evita a complexidade operacional de microsserviços enquanto preserva clareza interna.\n\nMicrosserviços são aplicações menores, implantadas separadamente, que se comunicam por rede. Eles podem ser úteis quando há equipes independentes, necessidades de escala muito diferentes ou domínios bem isolados. Porém, trazem custos: observabilidade, autenticação entre serviços, latência, versionamento de APIs e falhas distribuídas.\n\nUma decisão arquitetural madura considera contexto. Não existe arquitetura universalmente melhor. Existe uma arquitetura adequada ao momento do produto, ao tamanho da equipe, aos riscos e às metas.\n\n## Fluxo realista: resposta a exercício\n\nImagine que um aluno responde a um exercício. O sistema precisa validar a resposta, registrar tentativa, atualizar progresso e talvez acionar o tutor de IA para explicar o erro. Um fluxo saudável poderia ser:\n\n1. A interface envia a resposta para a API.\n2. A API valida o formato da requisição.\n3. O serviço de exercícios verifica a alternativa correta.\n4. O serviço de progresso registra a tentativa.\n5. Se houver erro, o serviço de tutor gera uma explicação personalizada.\n6. A resposta retorna para a interface.\n\nEsse fluxo mantém responsabilidades claras. A interface não precisa conhecer a regra de correção. O banco não decide se o aluno avançou. O serviço de IA não salva progresso diretamente.\n\n## Decisões arquiteturais\n\nDecisões importantes devem ser registradas. Uma técnica simples é usar ADRs, ou Architecture Decision Records. Um ADR documenta o contexto, a decisão e suas consequências. Por exemplo: “Usaremos monólito modular no MVP porque a equipe é pequena, o domínio ainda está mudando e queremos reduzir complexidade operacional.”\n\nRegistrar decisões evita que o time esqueça por que algo foi feito. Também permite revisar escolhas quando o contexto mudar. Arquitetura não é uma prisão; é uma série de apostas responsáveis.\n\n## Sinais de boa arquitetura\n\nUma boa arquitetura costuma apresentar sinais práticos: nomes claros, módulos com fronteiras compreensíveis, regras de negócio testáveis, dependências em direção previsível e poucas surpresas. Se para corrigir uma mensagem na tela é necessário entender autenticação, pagamento e IA, algo provavelmente está misturado demais.\n\nNesta primeira etapa, o objetivo não é decorar nomes sofisticados. O objetivo é aprender a olhar para um sistema e perguntar: quais são as partes, quais responsabilidades cada parte tem, como os dados fluem e onde uma mudança causaria impacto?",
+      "examples": [
+        {
+          "title": "Arquitetura modular para plataforma educacional",
+          "description": "Mostra como dividir uma aplicação educacional em módulos com responsabilidades claras.",
+          "code_or_diagram": "modules/\n  users/\n    user.controller.ts\n    user.service.ts\n    user.repository.ts\n  courses/\n    course.controller.ts\n    course.service.ts\n    course.repository.ts\n  progress/\n    progress.service.ts\n    progress.repository.ts\n  ai-tutor/\n    tutor.service.ts\n    prompt-builder.ts"
+        },
+        {
+          "title": "Separação de camadas em TypeScript",
+          "description": "Exemplo de API chamando um serviço em vez de acessar o banco diretamente.",
+          "code_or_diagram": "class LessonController {\n  constructor(private lessonService: LessonService) {}\n\n  async completeLesson(request) {\n    const { userId, lessonId } = request.body;\n    return this.lessonService.completeLesson(userId, lessonId);\n  }\n}\n\nclass LessonService {\n  constructor(private progressRepository: ProgressRepository) {}\n\n  async completeLesson(userId: string, lessonId: string) {\n    const progress = await this.progressRepository.findByUser(userId);\n    progress.markLessonAsCompleted(lessonId);\n    await this.progressRepository.save(progress);\n    return progress;\n  }\n}"
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ex-1-1",
+          "type": "multiple_choice",
+          "question": "Qual é o principal objetivo de separar uma aplicação em camadas?",
+          "options": [
+            "Reduzir mistura de responsabilidades e facilitar manutenção",
+            "Fazer o sistema usar menos memória em todos os casos",
+            "Evitar completamente a necessidade de testes",
+            "Garantir que a aplicação nunca tenha bugs"
+          ],
+          "correct_answer": "Reduzir mistura de responsabilidades e facilitar manutenção",
+          "explanation": "Camadas ajudam a organizar responsabilidades e reduzir impacto de mudanças, mas não eliminam testes nem bugs."
+        },
+        {
+          "id": "ex-1-2",
+          "type": "short_answer",
+          "question": "Explique, com suas palavras, por que um monólito modular pode ser uma boa escolha para um MVP.",
+          "correct_answer": "Porque mantém simplicidade operacional, permite desenvolvimento rápido e ainda preserva organização interna por módulos.",
+          "explanation": "Em produtos iniciais, microsserviços podem adicionar complexidade antes de haver necessidade real."
+        },
+        {
+          "id": "ex-1-3",
+          "type": "multiple_choice",
+          "question": "Em uma plataforma com tutor de IA, qual componente deveria conter a regra de liberar a próxima aula após conclusão da anterior?",
+          "options": [
+            "Serviço de domínio ou aplicação relacionado a progresso",
+            "Arquivo CSS da interface",
+            "Banco de dados diretamente",
+            "Serviço externo de e-mail"
+          ],
+          "correct_answer": "Serviço de domínio ou aplicação relacionado a progresso",
+          "explanation": "A regra pertence ao domínio de progresso do aluno, não à apresentação ou a integrações externas."
+        },
+        {
+          "id": "ex-1-4",
+          "type": "code_review",
+          "question": "Revise este cenário: a tela de aula acessa diretamente o banco de dados, corrige exercícios e chama o serviço de IA. Qual problema arquitetural existe?",
+          "correct_answer": "Há mistura de responsabilidades e alto acoplamento. A interface deveria delegar regras para serviços e acessar dados por meio de uma API ou camada adequada.",
+          "explanation": "Quando a interface concentra regras, persistência e integração, o sistema fica difícil de testar, manter e evoluir."
+        }
+      ]
+    },
+    {
+      "lesson_id": "lesson-2-design-patterns",
+      "title": "Padrões de Design",
+      "description": "Estudo de padrões de design como soluções reutilizáveis para problemas recorrentes de projeto de software.",
+      "learning_objectives": [
+        "Entender o papel dos padrões de design sem tratá-los como receitas obrigatórias.",
+        "Aplicar padrões como Strategy, Factory e Observer em contextos reais.",
+        "Reconhecer quando um padrão simplifica o código e quando adiciona complexidade desnecessária.",
+        "Comparar implementações de padrões em diferentes linguagens."
+      ],
+      "content": "## O que são padrões de design\n\nPadrões de design são soluções conhecidas para problemas comuns de projeto de software. Eles não são bibliotecas prontas nem regras absolutas. São formas de nomear estruturas que muitas equipes já usaram para resolver dificuldades parecidas. Quando alguém diz “podemos usar Strategy aqui”, a equipe ganha uma linguagem compartilhada para discutir alternativas.\n\nO valor de um padrão está no problema que ele resolve. Usar padrão apenas para parecer sofisticado costuma piorar o código. O bom uso acontece quando existe uma força real: muitos condicionais, criação complexa de objetos, necessidade de notificar várias partes do sistema ou variação de comportamento por contexto.\n\nNesta aula, vamos focar em três padrões úteis para uma plataforma educacional com tutor de IA: Strategy, Factory e Observer.\n\n## Strategy: trocar comportamento sem espalhar condicionais\n\nO padrão Strategy permite encapsular diferentes formas de executar uma tarefa atrás de uma interface comum. Imagine que a plataforma corrige exercícios de tipos diferentes: múltipla escolha, resposta curta e código. Uma solução ingênua colocaria vários `if` ou `switch` em um único método. Isso funciona no começo, mas cresce mal.\n\nCom Strategy, cada tipo de correção vira uma estratégia separada. O serviço principal escolhe a estratégia adequada e chama o mesmo método.\n\n```mermaid\ngraph TD\n  GradingService --> Strategy[GradingStrategy]\n  Strategy --> MultipleChoice[MultipleChoiceStrategy]\n  Strategy --> ShortAnswer[ShortAnswerStrategy]\n  Strategy --> Code[CodeExecutionStrategy]\n```\n\nEsse padrão ajuda quando novos comportamentos são adicionados com frequência. Para incluir um novo tipo de exercício, criamos uma nova estratégia sem alterar profundamente as existentes.\n\n## Factory: centralizar criação de objetos\n\nFactory é útil quando a criação de um objeto envolve regras, configurações ou escolha entre variantes. Em vez de espalhar `new MultipleChoiceStrategy()` por várias partes do sistema, uma fábrica decide qual objeto criar.\n\nEm uma plataforma real, uma fábrica pode escolher o cliente de IA conforme o provedor configurado: OpenAI, Azure OpenAI ou outro serviço. O restante do sistema não precisa conhecer os detalhes de autenticação e configuração de cada provedor.\n\nFactory não deve ser usada para qualquer criação simples. Se criar um objeto é trivial e acontece em um lugar só, uma fábrica pode ser exagero. Ela se justifica quando existe variação, configuração ou repetição.\n\n## Observer: reagir a eventos\n\nObserver permite que partes do sistema reajam quando algo acontece, sem que o emissor conheça todos os interessados. Por exemplo, quando uma aula é concluída, o sistema pode atualizar progresso, enviar uma notificação, liberar certificado e registrar analytics.\n\nSem Observer, o método `completeLesson` poderia chamar diretamente todos esses serviços. Isso aumenta acoplamento. Com eventos, o serviço publica `LessonCompleted`, e outros componentes escutam esse evento.\n\n```mermaid\ngraph LR\n  LessonService --> EventBus[Evento: LessonCompleted]\n  EventBus --> ProgressHandler[Atualizar progresso]\n  EventBus --> NotificationHandler[Enviar notificação]\n  EventBus --> AnalyticsHandler[Registrar analytics]\n```\n\nEssa abordagem melhora extensibilidade. Se amanhã quisermos adicionar um e-mail de parabéns, criamos um novo observador sem alterar a lógica central de conclusão da aula.\n\n## Exemplo em Python: Strategy\n\n```python\nfrom abc import ABC, abstractmethod\n\nclass GradingStrategy(ABC):\n    @abstractmethod\n    def grade(self, answer, expected):\n        pass\n\nclass MultipleChoiceStrategy(GradingStrategy):\n    def grade(self, answer, expected):\n        return answer == expected\n\nclass ShortAnswerStrategy(GradingStrategy):\n    def grade(self, answer, expected):\n        return answer.strip().lower() == expected.strip().lower()\n\nclass GradingService:\n    def __init__(self, strategy: GradingStrategy):\n        self.strategy = strategy\n\n    def submit(self, answer, expected):\n        return self.strategy.grade(answer, expected)\n```\n\nEsse código evita que `GradingService` conheça todos os detalhes de cada correção. Ele depende de uma abstração simples.\n\n## Exemplo em JavaScript: Factory\n\n```javascript\nfunction createAiClient(provider, config) {\n  if (provider === 'openai') {\n    return new OpenAiClient(config.apiKey);\n  }\n\n  if (provider === 'azure') {\n    return new AzureOpenAiClient(config.endpoint, config.apiKey);\n  }\n\n  throw new Error(`Unsupported provider: ${provider}`);\n}\n\nconst aiClient = createAiClient(process.env.AI_PROVIDER, config);\n```\n\nA fábrica concentra a decisão de criação. O serviço de tutor pode receber `aiClient` sem saber qual provedor está por trás.\n\n## Quando evitar padrões\n\nUm erro comum é aplicar padrões cedo demais. Se há apenas um tipo de exercício e nenhuma previsão concreta de variação, criar várias interfaces pode tornar o código mais difícil. Simplicidade também é uma decisão de engenharia.\n\nUma boa pergunta é: “Qual dor este padrão remove?” Se a resposta for clara, o padrão pode ajudar. Se a resposta for apenas “porque é boa prática”, talvez seja melhor esperar.\n\n## Padrões e comunicação\n\nAlém da estrutura técnica, padrões melhoram comunicação. Eles dão nomes curtos para ideias recorrentes. Em vez de explicar longamente “vamos criar classes intercambiáveis para cada algoritmo de correção”, podemos dizer “vamos usar Strategy para correção”. Isso reduz ambiguidade, desde que todos entendam o padrão.\n\nNesta fase do curso, o mais importante é desenvolver julgamento. Padrões são ferramentas. Um bom engenheiro não usa todas as ferramentas em todos os problemas; escolhe a ferramenta que reduz complexidade real.",
+      "examples": [
+        {
+          "title": "Strategy para correção de exercícios",
+          "description": "Mostra como trocar algoritmos de correção sem alterar o serviço principal.",
+          "code_or_diagram": "interface GradingStrategy {\n  grade(answer: unknown, expected: unknown): boolean;\n}\n\nclass MultipleChoiceGrading implements GradingStrategy {\n  grade(answer: string, expected: string): boolean {\n    return answer === expected;\n  }\n}\n\nclass CaseInsensitiveTextGrading implements GradingStrategy {\n  grade(answer: string, expected: string): boolean {\n    return answer.trim().toLowerCase() === expected.trim().toLowerCase();\n  }\n}"
+        },
+        {
+          "title": "Observer para eventos de conclusão",
+          "description": "Mostra como desacoplar ações disparadas quando uma aula é concluída.",
+          "code_or_diagram": "class EventBus {\n  constructor() {\n    this.handlers = {};\n  }\n\n  on(eventName, handler) {\n    this.handlers[eventName] = this.handlers[eventName] || [];\n    this.handlers[eventName].push(handler);\n  }\n\n  emit(eventName, payload) {\n    for (const handler of this.handlers[eventName] || []) {\n      handler(payload);\n    }\n  }\n}\n\nbus.on('LessonCompleted', updateProgress);\nbus.on('LessonCompleted', sendNotification);\nbus.emit('LessonCompleted', { userId: 'u1', lessonId: 'l1' });"
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ex-2-1",
+          "type": "multiple_choice",
+          "question": "Quando o padrão Strategy é mais útil?",
+          "options": [
+            "Quando existem variações de comportamento que precisam ser trocadas sem espalhar condicionais",
+            "Quando o sistema não tem nenhuma variação",
+            "Quando queremos remover todas as classes do projeto",
+            "Quando precisamos escrever CSS responsivo"
+          ],
+          "correct_answer": "Quando existem variações de comportamento que precisam ser trocadas sem espalhar condicionais",
+          "explanation": "Strategy encapsula algoritmos ou comportamentos alternativos por trás de uma interface comum."
+        },
+        {
+          "id": "ex-2-2",
+          "type": "short_answer",
+          "question": "Dê um exemplo real de uso de Factory em uma plataforma com tutor de IA.",
+          "correct_answer": "Uma Factory pode criar o cliente correto de IA conforme o provedor configurado, como OpenAI, Azure OpenAI ou outro serviço.",
+          "explanation": "Factory centraliza decisões de criação quando existem variantes ou configuração complexa."
+        },
+        {
+          "id": "ex-2-3",
+          "type": "multiple_choice",
+          "question": "Qual é um risco de usar padrões de design sem necessidade?",
+          "options": [
+            "Aumentar complexidade e dificultar leitura",
+            "Impedir completamente bugs de produção",
+            "Tornar o código impossível de testar",
+            "Eliminar a necessidade de arquitetura"
+          ],
+          "correct_answer": "Aumentar complexidade e dificultar leitura",
+          "explanation": "Padrões devem resolver uma dor real; caso contrário, podem criar abstrações desnecessárias."
+        },
+        {
+          "id": "ex-2-4",
+          "type": "prediction",
+          "question": "Um método completeLesson chama diretamente updateProgress, sendEmail, trackAnalytics e unlockCertificate. Qual padrão poderia reduzir esse acoplamento?",
+          "correct_answer": "Observer, usando eventos como LessonCompleted para que diferentes partes reajam independentemente.",
+          "explanation": "Observer permite notificar interessados sem que o serviço principal conheça todos eles."
+        }
+      ]
+    },
+    {
+      "lesson_id": "lesson-3-code-best-practices",
+      "title": "Boas Práticas de Código",
+      "description": "Práticas essenciais para escrever código legível, testável, seguro e sustentável em projetos reais.",
+      "learning_objectives": [
+        "Escrever código com nomes claros, funções pequenas e responsabilidades bem definidas.",
+        "Identificar sinais de código frágil, duplicado ou difícil de testar.",
+        "Aplicar validação de entrada, tratamento de erros e logs úteis.",
+        "Realizar revisão de código com foco em comportamento, clareza e risco."
+      ],
+      "content": "## O que significa código bom\n\nCódigo bom não é apenas código que funciona hoje. É código que outra pessoa consegue entender, alterar e testar com segurança. Em um produto real, o código será lido muitas vezes mais do que será escrito. Por isso, clareza é uma característica técnica, não apenas estética.\n\nEm uma plataforma educacional, uma função que calcula progresso do aluno pode parecer simples no começo. Depois surgem regras: aulas opcionais, módulos bloqueados, atividades práticas, recuperação, certificados e trilhas personalizadas. Se o código inicial estiver confuso, cada nova regra ficará mais arriscada.\n\nBoas práticas ajudam a reduzir esse risco. Elas não substituem pensamento, mas criam hábitos que tornam o sistema mais confiável.\n\n## Nomes claros\n\nNomes devem revelar intenção. Um nome como `processData` não explica quase nada. `calculateModuleProgress` é melhor porque indica o que está sendo calculado. Variáveis como `x`, `arr` e `temp` podem ser aceitáveis em contextos muito pequenos, mas em regras de negócio normalmente atrapalham.\n\nCompare:\n\n```javascript\nfunction calc(a, b) {\n  return a.filter(x => b.includes(x.id)).length / a.length;\n}\n```\n\nCom:\n\n```javascript\nfunction calculateCompletionRate(lessons, completedLessonIds) {\n  const completedCount = lessons.filter(lesson =>\n    completedLessonIds.includes(lesson.id)\n  ).length;\n\n  return completedCount / lessons.length;\n}\n```\n\nA segunda versão é maior, mas mais compreensível. Código claro reduz a necessidade de comentários explicando o óbvio.\n\n## Funções pequenas e responsabilidade única\n\nUma função deve fazer uma coisa principal. Isso não significa que toda função precisa ter três linhas, mas significa que ela deve ter um motivo claro para mudar. Uma função que valida entrada, acessa banco, chama IA, calcula nota e envia e-mail tem motivos demais para mudar.\n\nDividir responsabilidades facilita testes. Podemos testar `calculateCompletionRate` sem banco, servidor ou autenticação. Funções puras, que recebem dados e retornam resultado sem alterar estado externo, são especialmente fáceis de verificar.\n\n## Validação de entrada\n\nNunca confie cegamente em dados recebidos de usuários, APIs externas ou arquivos. Validação protege o sistema contra erros e abusos. Se uma API espera `lessonId` e `answer`, deve verificar se esses campos existem e têm o formato correto antes de executar regras.\n\nEm TypeScript, bibliotecas como Zod são comuns para validação. Em Python, Pydantic cumpre papel semelhante.\n\n```typescript\nconst SubmitAnswerSchema = z.object({\n  userId: z.string().min(1),\n  lessonId: z.string().min(1),\n  answer: z.union([z.string(), z.number(), z.boolean()])\n});\n```\n\nValidação clara melhora mensagens de erro e evita falhas internas difíceis de interpretar.\n\n## Tratamento de erros\n\nErros devem ser tratados no nível adequado. Nem todo erro deve ser escondido do usuário, e nem todo detalhe interno deve ser exposto. Se o serviço de IA estiver indisponível, a interface pode mostrar uma mensagem amigável: “Não foi possível gerar a explicação agora. Tente novamente em instantes.” O log interno, por outro lado, deve conter detalhes suficientes para investigação.\n\nEvite capturar erros apenas para ignorá-los. Isso cria falhas silenciosas. Também evite retornar mensagens técnicas demais ao usuário, como stack traces, tokens ou detalhes de infraestrutura.\n\n## Logs úteis\n\nLogs ajudam a entender o comportamento do sistema. Um bom log informa o que aconteceu, em qual contexto e com identificadores seguros. Por exemplo: `answer_submission_failed` com `userId`, `lessonId` e tipo de erro. Cuidado para não registrar dados sensíveis, como senhas, tokens ou conteúdo privado desnecessário.\n\nLogs estruturados são melhores que textos soltos porque podem ser filtrados e analisados por ferramentas de observabilidade.\n\n## Duplicação\n\nDuplicação nem sempre deve ser removida imediatamente. Às vezes, duas partes parecem iguais hoje, mas evoluirão de formas diferentes. Porém, duplicação de regra de negócio costuma ser perigosa. Se a regra de liberação de módulo estiver duplicada na API e na interface, uma mudança pode ser aplicada em apenas um lugar e criar inconsistência.\n\nUma boa prática é centralizar regras críticas no domínio ou serviço de aplicação e deixar a interface apenas refletir o estado retornado.\n\n## Testes\n\nTestes automatizados protegem contra regressões. Para começar, priorize regras importantes e áreas propensas a erro: cálculo de progresso, correção de exercícios, autorização e integração com serviços externos.\n\nUm teste deve ser legível. A estrutura Arrange, Act, Assert ajuda:\n\n```python\ndef test_completion_rate_for_two_completed_lessons():\n    lessons = [{'id': 'l1'}, {'id': 'l2'}, {'id': 'l3'}]\n    completed_ids = ['l1', 'l2']\n\n    result = calculate_completion_rate(lessons, completed_ids)\n\n    assert result == 2 / 3\n```\n\n## Revisão de código\n\nCode review não é uma disputa de gosto. É uma prática para encontrar riscos antes que cheguem ao usuário. Uma boa revisão pergunta: o comportamento está correto? Existem casos extremos? Os nomes ajudam? A mudança tem testes suficientes? Há risco de segurança? O código segue padrões do projeto?\n\nComentários de revisão devem ser específicos e respeitosos. Em vez de “isso está ruim”, prefira “esta função mistura validação e persistência; podemos separar para facilitar testes?”\n\n## Segurança básica\n\nMesmo no início, algumas práticas são obrigatórias: não salvar senhas em texto puro, não expor tokens no frontend, validar permissões no servidor e evitar montar consultas SQL com concatenação de strings. Segurança não deve ser uma etapa final; ela faz parte da qualidade do código.\n\nBoas práticas existem para tornar o desenvolvimento mais previsível. O objetivo não é escrever código perfeito, mas código que aceite mudança sem se tornar um labirinto.",
+      "examples": [
+        {
+          "title": "Refatoração de função com responsabilidade clara",
+          "description": "Mostra como separar cálculo de progresso de efeitos externos.",
+          "code_or_diagram": "function calculateProgress(totalLessons, completedLessons) {\n  if (totalLessons === 0) return 0;\n  return completedLessons / totalLessons;\n}\n\nasync function updateUserProgress(userId, moduleId) {\n  const lessons = await lessonRepository.findByModule(moduleId);\n  const completed = await progressRepository.countCompleted(userId, moduleId);\n  const progress = calculateProgress(lessons.length, completed);\n  await progressRepository.save(userId, moduleId, progress);\n  return progress;\n}"
+        },
+        {
+          "title": "Tratamento de erro em integração com IA",
+          "description": "Mostra como retornar mensagem segura ao usuário e manter log útil para investigação.",
+          "code_or_diagram": "try {\n  const explanation = await aiTutor.explainWrongAnswer(context);\n  return { explanation };\n} catch (error) {\n  logger.error('ai_explanation_failed', {\n    lessonId: context.lessonId,\n    exerciseId: context.exerciseId,\n    errorName: error.name\n  });\n\n  return {\n    explanation: 'Não foi possível gerar uma explicação agora. Tente novamente em instantes.'\n  };\n}"
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ex-3-1",
+          "type": "multiple_choice",
+          "question": "Qual nome de função comunica melhor a intenção?",
+          "options": [
+            "calculateModuleCompletionRate",
+            "doStuff",
+            "handle",
+            "processData"
+          ],
+          "correct_answer": "calculateModuleCompletionRate",
+          "explanation": "O nome indica claramente o resultado esperado e o contexto da operação."
+        },
+        {
+          "id": "ex-3-2",
+          "type": "short_answer",
+          "question": "Por que não devemos expor detalhes técnicos de erro diretamente ao usuário?",
+          "correct_answer": "Porque detalhes internos podem confundir o usuário e revelar informações sensíveis sobre infraestrutura, código ou segurança.",
+          "explanation": "Mensagens ao usuário devem ser claras e seguras; detalhes técnicos pertencem aos logs internos."
+        },
+        {
+          "id": "ex-3-3",
+          "type": "multiple_choice",
+          "question": "Qual é um bom candidato para teste automatizado em uma plataforma educacional?",
+          "options": [
+            "Cálculo de progresso do aluno",
+            "Cor exata de um ícone decorativo",
+            "Nome temporário de uma variável local irrelevante",
+            "Ordem dos imports quando não há padrão no projeto"
+          ],
+          "correct_answer": "Cálculo de progresso do aluno",
+          "explanation": "Regras de negócio importantes devem ser protegidas por testes, pois afetam diretamente a experiência do aluno."
+        },
+        {
+          "id": "ex-3-4",
+          "type": "debugging",
+          "question": "Analise o código: `catch (error) { return null; }`. Qual é o problema e como melhorar?",
+          "correct_answer": "O erro é silenciado, dificultando investigação. Uma melhoria é registrar um log seguro e retornar uma resposta clara ou relançar o erro quando apropriado.",
+          "explanation": "Falhas silenciosas tornam bugs difíceis de diagnosticar e podem esconder problemas sérios."
+        }
+      ]
+    },
+    {
+      "lesson_id": "lesson-4-practical-project",
+      "title": "Projeto Prático",
+      "description": "Aplicação integrada dos conceitos do módulo na modelagem de um pequeno sistema de progresso e tutor de IA.",
+      "learning_objectives": [
+        "Projetar uma pequena arquitetura modular para uma funcionalidade real.",
+        "Aplicar padrões de design de forma justificada.",
+        "Escrever código claro com validação, tratamento de erros e testes básicos.",
+        "Realizar uma revisão técnica da própria solução."
+      ],
+      "content": "## Objetivo do projeto\n\nNesta aula, você vai integrar os conceitos do módulo criando o desenho técnico de uma funcionalidade realista: submissão de resposta de exercício com feedback do tutor de IA. O objetivo não é construir uma plataforma completa, mas praticar decisões de engenharia em um recorte pequeno e significativo.\n\nA funcionalidade deve permitir que um aluno responda a um exercício, receba correção, tenha o progresso atualizado e, quando errar, receba uma explicação gerada pelo tutor de IA. Esse fluxo envolve arquitetura, padrões de design e boas práticas de código.\n\n## Escopo funcional\n\nO sistema deve atender aos seguintes requisitos:\n\n- Receber uma resposta de exercício.\n- Validar os dados de entrada.\n- Corrigir a resposta conforme o tipo de exercício.\n- Registrar a tentativa do aluno.\n- Atualizar o progresso da aula quando aplicável.\n- Gerar explicação com IA quando a resposta estiver incorreta.\n- Retornar uma resposta clara para a interface.\n\nTambém existem requisitos não funcionais:\n\n- O código deve separar responsabilidades.\n- A correção deve permitir novos tipos de exercício no futuro.\n- Falhas no tutor de IA não devem impedir o registro da tentativa.\n- Erros devem ser registrados sem expor dados sensíveis.\n\n## Arquitetura proposta\n\nUma solução adequada para este estágio é um monólito modular. Ele mantém implantação simples, mas organiza o código por responsabilidades. O módulo de exercícios cuida da submissão e correção. O módulo de progresso cuida do avanço do aluno. O módulo de tutor encapsula a integração com IA.\n\n```mermaid\ngraph TD\n  UI[Interface da Aula] --> API[SubmitAnswerController]\n  API --> ExerciseService[ExerciseSubmissionService]\n  ExerciseService --> GradingFactory[GradingStrategyFactory]\n  GradingFactory --> Strategy[GradingStrategy]\n  ExerciseService --> AttemptRepo[AttemptRepository]\n  ExerciseService --> ProgressService[ProgressService]\n  ExerciseService --> TutorService[AiTutorService]\n  AttemptRepo --> DB[(Banco de Dados)]\n  ProgressService --> DB\n  TutorService --> AI[Provedor de IA]\n```\n\nObserve que a interface chama apenas a API. Ela não decide se a resposta está correta. Também não atualiza progresso diretamente. Essa separação permite mudar regras internas sem reescrever a tela.\n\n## Design da correção\n\nComo existem tipos diferentes de exercício, Strategy é uma boa escolha. Podemos criar uma interface `GradingStrategy` e implementações como `MultipleChoiceGrading`, `ShortTextGrading` e, no futuro, `CodeGrading`.\n\nA escolha da estratégia pode ficar em uma Factory. Assim, o serviço principal não precisa conhecer todos os detalhes de criação.\n\n```typescript\ninterface GradingStrategy {\n  grade(input: {\n    answer: unknown;\n    expectedAnswer: unknown;\n  }): { isCorrect: boolean; score: number };\n}\n\nclass MultipleChoiceGrading implements GradingStrategy {\n  grade(input) {\n    const isCorrect = input.answer === input.expectedAnswer;\n    return { isCorrect, score: isCorrect ? 1 : 0 };\n  }\n}\n\nclass ShortTextGrading implements GradingStrategy {\n  grade(input) {\n    const normalize = (value: string) => value.trim().toLowerCase();\n    const isCorrect = normalize(input.answer) === normalize(input.expectedAnswer);\n    return { isCorrect, score: isCorrect ? 1 : 0 };\n  }\n}\n\nclass GradingStrategyFactory {\n  create(type: string): GradingStrategy {\n    if (type === 'multiple_choice') return new MultipleChoiceGrading();\n    if (type === 'short_text') return new ShortTextGrading();\n    throw new Error(`Unsupported exercise type: ${type}`);\n  }\n}\n```\n\nEsse desenho facilita extensão. Para adicionar um tipo novo, criamos uma nova estratégia e atualizamos a fábrica.\n\n## Serviço principal\n\nO serviço principal coordena o caso de uso. Ele não deve conter todos os detalhes de correção, persistência e IA. Seu papel é organizar o fluxo.\n\n```typescript\nclass ExerciseSubmissionService {\n  constructor(\n    private gradingFactory: GradingStrategyFactory,\n    private attemptRepository: AttemptRepository,\n    private progressService: ProgressService,\n    private tutorService: AiTutorService,\n    private logger: Logger\n  ) {}\n\n  async submitAnswer(input: SubmitAnswerInput) {\n    const exercise = await this.loadExercise(input.exerciseId);\n    const strategy = this.gradingFactory.create(exercise.type);\n    const result = strategy.grade({\n      answer: input.answer,\n      expectedAnswer: exercise.expectedAnswer\n    });\n\n    await this.attemptRepository.save({\n      userId: input.userId,\n      exerciseId: input.exerciseId,\n      answer: input.answer,\n      isCorrect: result.isCorrect,\n      score: result.score\n    });\n\n    if (result.isCorrect) {\n      await this.progressService.markExerciseCompleted(input.userId, input.exerciseId);\n      return { isCorrect: true, feedback: 'Resposta correta.' };\n    }\n\n    const feedback = await this.generateSafeFeedback(input, exercise);\n    return { isCorrect: false, feedback };\n  }\n\n  private async generateSafeFeedback(input, exercise) {\n    try {\n      return await this.tutorService.explainMistake({\n        exerciseTitle: exercise.title,\n        studentAnswer: input.answer,\n        expectedAnswer: exercise.expectedAnswer\n      });\n    } catch (error) {\n      this.logger.error('ai_feedback_failed', {\n        userId: input.userId,\n        exerciseId: input.exerciseId,\n        errorName: error.name\n      });\n\n      return 'Sua resposta ainda não está correta. Revise o conteúdo da aula e tente novamente.';\n    }\n  }\n}\n```\n\nEsse exemplo mostra uma decisão importante: se a IA falhar, a tentativa continua registrada. A experiência perde uma explicação personalizada, mas a operação principal não é perdida.\n\n## Validação e contrato da API\n\nAntes de chamar o serviço, a API deve validar a entrada. O contrato pode ser:\n\n```json\n{\n  \"userId\": \"user-123\",\n  \"exerciseId\": \"exercise-456\",\n  \"answer\": \"B\"\n}\n```\n\nCampos obrigatórios devem ser verificados. O servidor também deve validar permissões: o usuário pode responder a esse exercício? A aula pertence a um curso em que ele está matriculado? Essas regras não devem depender apenas da interface.\n\n## Testes recomendados\n\nComece testando regras sem infraestrutura pesada:\n\n- Correção de múltipla escolha com resposta correta.\n- Correção de texto curto ignorando maiúsculas e espaços extras.\n- Registro de tentativa mesmo quando a resposta está errada.\n- Retorno de feedback padrão quando o serviço de IA falha.\n- Atualização de progresso somente quando a resposta está correta.\n\nEsses testes protegem o comportamento mais importante.\n\n## Revisão final\n\nAntes de considerar o projeto concluído, faça uma revisão com perguntas objetivas:\n\n- Cada classe tem uma responsabilidade clara?\n- Existe regra de negócio duplicada?\n- O código continua compreensível sem comentários excessivos?\n- Falhas externas são tratadas com segurança?\n- Seria simples adicionar um novo tipo de exercício?\n- Há testes para os caminhos principais e para pelo menos uma falha?\n\nEsse projeto fecha o módulo porque conecta arquitetura, padrões e qualidade de código. A meta é sair com uma estrutura simples, mas profissional: fácil de entender, fácil de testar e preparada para crescer sem exigir uma reescrita imediata.",
+      "examples": [
+        {
+          "title": "Estrutura de pastas do projeto",
+          "description": "Organização sugerida para manter responsabilidades separadas.",
+          "code_or_diagram": "src/\n  exercises/\n    submit-answer.controller.ts\n    exercise-submission.service.ts\n    grading/\n      grading-strategy.ts\n      multiple-choice-grading.ts\n      short-text-grading.ts\n      grading-strategy.factory.ts\n    repositories/\n      attempt.repository.ts\n  progress/\n    progress.service.ts\n    progress.repository.ts\n  tutor/\n    ai-tutor.service.ts\n  shared/\n    logger.ts\n    validation.ts"
+        },
+        {
+          "title": "Teste de falha do tutor de IA",
+          "description": "Garante que a tentativa seja processada mesmo se a IA não responder.",
+          "code_or_diagram": "it('returns fallback feedback when AI tutor fails', async () => {\n  tutorService.explainMistake.mockRejectedValue(new Error('timeout'));\n\n  const result = await service.submitAnswer({\n    userId: 'user-1',\n    exerciseId: 'exercise-1',\n    answer: 'wrong answer'\n  });\n\n  expect(result.isCorrect).toBe(false);\n  expect(result.feedback).toContain('tente novamente');\n  expect(attemptRepository.save).toHaveBeenCalled();\n});"
+        }
+      ],
+      "exercises": [
+        {
+          "id": "ex-4-1",
+          "type": "multiple_choice",
+          "question": "Qual arquitetura é mais adequada para o projeto prático inicial descrito na aula?",
+          "options": [
+            "Monólito modular com separação clara por responsabilidades",
+            "Dez microsserviços independentes desde o primeiro dia",
+            "Um único arquivo com toda a lógica",
+            "Somente código no frontend, sem validação no servidor"
+          ],
+          "correct_answer": "Monólito modular com separação clara por responsabilidades",
+          "explanation": "O monólito modular equilibra simplicidade operacional e boa organização interna para um projeto inicial."
+        },
+        {
+          "id": "ex-4-2",
+          "type": "short_answer",
+          "question": "Por que a falha do tutor de IA não deve impedir o registro da tentativa do aluno?",
+          "correct_answer": "Porque registrar a tentativa é parte central do fluxo, enquanto o feedback da IA é um complemento. O sistema deve degradar de forma controlada.",
+          "explanation": "Sistemas robustos isolam falhas externas para preservar operações principais sempre que possível."
+        },
+        {
+          "id": "ex-4-3",
+          "type": "multiple_choice",
+          "question": "Qual combinação de padrões aparece de forma justificada no projeto?",
+          "options": [
+            "Strategy para correção e Factory para escolher a estratégia",
+            "Singleton para todas as classes e Observer para variáveis locais",
+            "Factory para substituir todos os testes",
+            "Strategy para conexão com CSS"
+          ],
+          "correct_answer": "Strategy para correção e Factory para escolher a estratégia",
+          "explanation": "Há diferentes formas de correção, e a escolha da estratégia pode ser centralizada em uma fábrica."
+        },
+        {
+          "id": "ex-4-4",
+          "type": "code_review",
+          "question": "Revise esta decisão: o frontend calcula se a resposta está correta e envia apenas o resultado para o backend salvar. Qual é o risco?",
+          "correct_answer": "O usuário poderia manipular o resultado. A correção precisa acontecer no servidor, onde regras e permissões podem ser validadas com segurança.",
+          "explanation": "A interface não é uma fronteira confiável para regras críticas."
+        }
+      ],
+      "project": {
+        "project_id": "project-1-ai-tutor-answer-flow",
+        "title": "Fluxo de Resposta com Tutor de IA",
+        "brief": "Projete e implemente, em pseudocódigo ou na linguagem de sua preferência, o fluxo de submissão de resposta de exercício para uma plataforma educacional com tutor de IA.",
+        "deliverables": [
+          "Diagrama simples da arquitetura proposta.",
+          "Estrutura de pastas ou módulos.",
+          "Implementação de pelo menos duas estratégias de correção.",
+          "Serviço principal de submissão de resposta.",
+          "Tratamento de falha do tutor de IA.",
+          "Dois testes automatizados ou descrições detalhadas de teste."
+        ],
+        "evaluation_criteria": [
+          "Separação clara de responsabilidades.",
+          "Uso justificado de padrões de design.",
+          "Código legível, com nomes claros e validação adequada.",
+          "Tratamento seguro de erros.",
+          "Facilidade para adicionar novos tipos de exercício."
+        ]
+      }
+    }
+  ]
+}
+
+[exited with code 0]
