@@ -30,10 +30,7 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target as Node)
-      ) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
       }
     }
@@ -48,11 +45,11 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
   }
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-zinc-200 bg-white/95 px-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90 sm:px-6">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-20 flex flex-col gap-3 border-b border-slate-800/80 bg-slate-950/90 px-4 py-3 shadow-md backdrop-blur sm:h-16 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-start">
         <button
           type="button"
-          className="rounded-lg p-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-zinc-50 lg:hidden"
+          className="rounded-lg p-2 text-slate-300 transition hover:bg-slate-700 hover:text-white hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-cyan-400 sm:hidden"
           onClick={onMenuClick}
           aria-label="Open navigation"
         >
@@ -61,54 +58,54 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
           <span className="mt-1.5 block h-0.5 w-5 bg-current" />
         </button>
 
-        <Link href="/dashboard" className="flex items-center gap-2 lg:hidden">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-950 text-xs font-semibold text-white dark:bg-zinc-100 dark:text-zinc-950">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 sm:hidden"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-xs font-bold text-white shadow-lg shadow-blue-950/40">
             IA
           </span>
-          <span className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
+          <span className="bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-300 bg-clip-text text-base font-bold text-transparent">
             Harness IA
           </span>
         </Link>
 
-        <div className="hidden lg:block">
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+        <div className="hidden sm:block">
+          <p className="text-sm font-medium text-slate-400">
             Learning dashboard
           </p>
-          <h1 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
-            Welcome back
-          </h1>
+          <p className="text-lg font-semibold text-white">Welcome back</p>
         </div>
       </div>
 
-      <div className="relative" ref={menuRef}>
+      <div className="relative flex w-full justify-end sm:w-auto" ref={menuRef}>
         <button
           type="button"
-          className="flex items-center gap-3 rounded-lg p-1.5 text-left hover:bg-zinc-100 dark:hover:bg-zinc-900"
+          className="flex items-center gap-3 rounded-lg p-1.5 text-left transition hover:bg-slate-700 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-cyan-400"
           onClick={() => setMenuOpen((open) => !open)}
           aria-expanded={menuOpen}
           aria-haspopup="menu"
+          aria-label="Open user menu"
         >
           <span className="hidden text-right sm:block">
-            <span className="block text-sm font-medium text-zinc-950 dark:text-zinc-50">
+            <span className="block text-sm font-semibold text-white">
               Lucas
             </span>
-            <span className="block text-xs text-zinc-500 dark:text-zinc-400">
-              Student
-            </span>
+            <span className="block text-xs text-slate-400">Student</span>
           </span>
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-100 text-sm font-semibold text-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-cyan-400 text-sm font-bold text-white shadow-md">
             L
           </span>
         </button>
 
         {menuOpen ? (
           <div
-            className="absolute right-0 mt-2 w-56 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-950"
+            className="absolute right-0 top-12 w-56 overflow-hidden rounded-lg border border-slate-700 bg-slate-900 shadow-lg"
             role="menu"
           >
             <Link
               href="/dashboard/profile"
-              className="block px-4 py-3 text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-900"
+              className="block px-4 py-3 text-sm text-slate-200 transition hover:bg-slate-700 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-400"
               role="menuitem"
               onClick={() => setMenuOpen(false)}
             >
@@ -116,7 +113,7 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
             </Link>
             <Link
               href="/dashboard/profile"
-              className="block px-4 py-3 text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-900"
+              className="block px-4 py-3 text-sm text-slate-200 transition hover:bg-slate-700 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-400"
               role="menuitem"
               onClick={() => setMenuOpen(false)}
             >
@@ -124,7 +121,7 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
             </Link>
             <button
               type="button"
-              className="block w-full px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+              className="block w-full px-4 py-3 text-left text-sm font-semibold text-red-300 transition hover:bg-slate-700 hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-400"
               role="menuitem"
               onClick={handleLogout}
             >
