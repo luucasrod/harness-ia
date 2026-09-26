@@ -1,0 +1,19 @@
+{
+  "/(auth)/auth/login/page": "/auth/login",
+  "/(auth)/login/page": "/login",
+  "/(auth)/signup/page": "/signup",
+  "/(dashboard)/courses/page": "/courses",
+  "/(dashboard)/dashboard/courses/page": "/dashboard/courses",
+  "/(dashboard)/dashboard/page": "/dashboard",
+  "/(dashboard)/dashboard/profile/page": "/dashboard/profile",
+  "/(dashboard)/dashboard/progress/page": "/dashboard/progress",
+  "/(dashboard)/dashboard/skills/page": "/dashboard/skills",
+  "/(dashboard)/profile/page": "/profile",
+  "/(dashboard)/progress/page": "/progress",
+  "/(dashboard)/skills/page": "/skills",
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/app/page": "/app",
+  "/favicon.ico/route": "/favicon.ico",
+  "/page": "/"
+}
