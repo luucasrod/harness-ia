@@ -14,14 +14,15 @@ function hasSessionCookie(request: NextRequest) {
 }
 
 export function middleware(request: NextRequest) {
-  if (hasSessionCookie(request)) {
-    return NextResponse.next();
+  const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/dashboard") && !hasSessionCookie(request)) {
+    const loginUrl = new URL("/auth/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  const loginUrl = new URL("/auth/login", request.url);
-  loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
-
-  return NextResponse.redirect(loginUrl);
+  return NextResponse.next();
 }
 
 export const config = {
