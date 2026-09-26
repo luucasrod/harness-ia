@@ -6,3 +6,107 @@ datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
+
+model User {
+  id            Int        @id @default(autoincrement())
+  email         String     @unique
+  name          String?
+  password_hash String?
+  role          String     @default("STUDENT")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  courses       Enrollment[]
+  skills        UserSkill[]
+  progress      UserProgress[]
+  submissions   ExerciseSubmission[]
+}
+
+model Course {
+  id          Int        @id @default(autoincrement())
+  title       String
+  description String?
+  imageUrl    String?
+  order       Int        @default(0)
+  modules     Module[]
+  enrollments Enrollment[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Module {
+  id       Int      @id @default(autoincrement())
+  title    String
+  order    Int      @default(0)
+  courseId Int?
+  course   Course?  @relation(fields: [courseId], references: [id])
+  lessons  Lesson[]
+  progress UserProgress[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Lesson {
+  id      Int      @id @default(autoincrement())
+  title   String
+  type    String   @default("CONTENT")
+  order   Int      @default(0)
+  content String?
+  duration Int?
+  moduleId Int
+  module  Module   @relation(fields: [moduleId], references: [id])
+  exercises Exercise[]
+  progress UserProgress[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Exercise {
+  id          Int                @id @default(autoincrement())
+  title       String
+  description String?
+  lessonId    Int?
+  lesson      Lesson?            @relation(fields: [lessonId], references: [id])
+  submissions ExerciseSubmission[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model ExerciseSubmission {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  exerciseId Int
+  user       User     @relation(fields: [userId], references: [id])
+  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+  code       String?
+  result     String?
+  createdAt  DateTime @default(now())
+}
+
+model UserSkill {
+  id          Int     @id @default(autoincrement())
+  userId      Int
+  skillName   String
+  proficiency Int     @default(0)
+  level       String  @default("BEGINNER")
+  user        User    @relation(fields: [userId], references: [id])
+}
+
+model UserProgress {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  lessonId  Int?
+  moduleId  Int?
+  completed Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id])
+  lesson    Lesson?  @relation(fields: [lessonId], references: [id])
+  module    Module?  @relation(fields: [moduleId], references: [id])
+}
+
+model Enrollment {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  courseId   Int
+  user       User     @relation(fields: [userId], references: [id])
+  course     Course   @relation(fields: [courseId], references: [id])
+  enrolledAt DateTime @default(now())
+}

@@ -1,31 +1,29 @@
-import { getToken } from 'next-auth/jwt';
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
-const publicRoutes = ['/auth/login', '/auth/signup'];
+const sessionCookies = [
+  "harness-ia-session",
+  "next-auth.session-token",
+  "__Secure-next-auth.session-token",
+  "authjs.session-token",
+  "__Secure-authjs.session-token",
+];
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+function hasSessionCookie(request: NextRequest) {
+  return sessionCookies.some((name) => request.cookies.has(name));
+}
 
-  // Allow public routes
-  if (publicRoutes.includes(pathname)) {
+export function middleware(request: NextRequest) {
+  if (hasSessionCookie(request)) {
     return NextResponse.next();
   }
 
-  // Protected routes: check session
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/api/')) {
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+  const loginUrl = new URL("/auth/login", request.url);
+  loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
 
-    if (!token) {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
-    }
-  }
-
-  return NextResponse.next();
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/api/:path*'],
+  matcher: ["/dashboard/:path*"],
 };
