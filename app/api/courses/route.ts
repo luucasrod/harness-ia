@@ -1,10 +1,20 @@
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { PrismaClient } from '@prisma/client';
 
 const db = new PrismaClient();
 
 export async function GET(request: Request) {
   try {
-    const userId = 1;
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return Response.json(
+        { success: false, error: { code: 'AUTH_REQUIRED', message: 'Autenticação necessária' } },
+        { status: 401 }
+      );
+    }
+
+    const userId = parseInt(session.user.id, 10);
     const courses = await db.course.findMany({
       include: {
         modules: {
