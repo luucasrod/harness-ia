@@ -1,7 +1,5 @@
 {
-  "name": "harness-ia",
   "buildCommand": "prisma generate && next build",
-  "deploymentEnabled": true,
   "env": {
     "DATABASE_URL": "@harness_ia_database_url",
     "NEXTAUTH_SECRET": "@harness_ia_nextauth_secret",
