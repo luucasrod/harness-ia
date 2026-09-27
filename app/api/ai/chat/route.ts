@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       const exercise = await db.exercise.findUnique({
         where: { id: exerciseId },
       });
-      exerciseQuestion = exercise?.description;
+      exerciseQuestion = exercise?.description || undefined;
     }
 
     const tutorResponse = await getTutorResponse(message, {
