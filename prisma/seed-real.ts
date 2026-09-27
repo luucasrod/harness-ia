@@ -6,18 +6,6 @@ const db = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding real Module 1 data...');
 
-  await db.$executeRaw`DELETE FROM "UserProgress"`;
-  await db.$executeRaw`DELETE FROM "ExerciseSubmission"`;
-  await db.$executeRaw`DELETE FROM "Exercise"`;
-  await db.$executeRaw`DELETE FROM "UserSkill"`;
-  await db.$executeRaw`DELETE FROM "Enrollment"`;
-  await db.$executeRaw`DELETE FROM "Lesson"`;
-  await db.$executeRaw`DELETE FROM "Module"`;
-  await db.$executeRaw`DELETE FROM "Course"`;
-  await db.$executeRaw`DELETE FROM "User"`;
-
-  console.log('✅ Database cleared');
-
   const passwordHash = await bcrypt.hash('password123', 10);
 
   const testUser = await db.user.create({
