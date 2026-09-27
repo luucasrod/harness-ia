@@ -1,4 +1,5 @@
 {
+  "name": "harness-ia",
   "buildCommand": "prisma generate && next build",
   "deploymentEnabled": true,
   "env": {
