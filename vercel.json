@@ -1,11 +1,5 @@
 {
   "buildCommand": "prisma generate && next build",
-  "env": {
-    "DATABASE_URL": "@harness_ia_database_url",
-    "NEXTAUTH_SECRET": "@harness_ia_nextauth_secret",
-    "NEXTAUTH_URL": "@harness_ia_nextauth_url",
-    "OPENAI_API_KEY": "@harness_ia_openai_key"
-  },
   "functions": {
     "app/api/**/*.ts": {
       "maxDuration": 30
