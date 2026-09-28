@@ -1,0 +1,241 @@
+{
+  "lesson_id": "lesson-8-6-case-studies",
+  "title": "Case Studies - Google Spanner, Netflix, LinkedIn em Escala",
+  "module_id": "module-8",
+  "module_title": "System Design & Scalability",
+  "description": "Explore como Google, Netflix e LinkedIn resolveram 'sistema distribuído em escala'. Entenda as decisões reais, tradeoffs e padrões de evolução.",
+  "duration_minutes": 90,
+  "target_audience": "Developers 2-5 anos, arquitetos iniciantes",
+  "learning_objectives": [
+    "Entender como Google Spanner sacrifica latência por consistency global (ACID distribuído)",
+    "Aprender Netflix philosophy: eventual consistency + chaos engineering + fallback",
+    "Explorar LinkedIn architecture: streaming real-time + batch processing",
+    "Comparar trade-offs de três abordagens diferentes",
+    "Entender padrão de evolução: monolito → microservices → streaming → transactional",
+    "Aplicar aprendizados ao seu próprio sistema"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "Case studies mostram decisões reais, não hipotéticas",
+        "Cada empresa escolheu tradeoff diferente",
+        "Google: sacrifica latência por consistency",
+        "Netflix: sacrifica consistency por latência",
+        "LinkedIn: sacrifica real-time exactness por volume",
+        "Nenhuma é 'certa', todas apropriadas para contexto"
+      ]
+    },
+    {
+      "section_id": "spanner",
+      "title": "Google Spanner (14 minutos)",
+      "key_points": [
+        "Problema: ACID global (consistência) + distribuído",
+        "Solução: TrueTime (atomic clocks + GPS) para timestamp coordenado",
+        "Timestamp ordering: consistency garantida globalmente",
+        "Replicação com quorum: failover sem perda",
+        "Tradeoff: 100-150ms latência por consistency forte",
+        "Uso: transações financeiras, dados críticos globais"
+      ]
+    },
+    {
+      "section_id": "netflix",
+      "title": "Netflix (14 minutos)",
+      "key_points": [
+        "Problema: 500k RPS global, nunca timeout",
+        "Solução: microservices + eventual consistency + chaos",
+        "Chaos Monkey: mata serviços aleatoriamente pra testar resiliência",
+        "Fallback culture: nunca falha, degrada gracefully",
+        "CDN global: 200+ caches perto de usuários",
+        "Uso: media, social, UX crítico"
+      ]
+    },
+    {
+      "section_id": "linkedin",
+      "title": "LinkedIn (14 minutos)",
+      "key_points": [
+        "Problema: 10B+ eventos/dia, insights em real-time",
+        "Solução: separado stream (Kafka/Storm) + batch (Hadoop)",
+        "Real-time: 5-10s latência, ~99% accuracy (sketches)",
+        "Batch: 24h latência, 100% accurate",
+        "Hybrid: fast+approximate vs slow+exact",
+        "Uso: analytics, big data, trending"
+      ]
+    },
+    {
+      "section_id": "comparison",
+      "title": "Comparação - Três Caminhos (12 minutos)",
+      "key_points": [
+        "Spanner: ACID/CP, 100-200ms, transactional",
+        "Netflix: eventual/AP, <50ms, user experience",
+        "LinkedIn: hybrid, 5min (stream)+24h (batch), volume",
+        "Decision tree: ACID global? Latency critical? Volume?",
+        "Evolução: monolito → microservices → streaming → global"
+      ]
+    },
+    {
+      "section_id": "synthesis",
+      "title": "Síntese - Qual Caminho? (5 minutos)",
+      "key_points": [
+        "Escolha baseado em requirements (consistency vs performance vs volume)",
+        "Padrão de evolução típico de startups",
+        "Aplica aprendizados ao seu sistema"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-spanner-truetime",
+      "title": "Google Spanner: TrueTime e Consistency Global",
+      "description": "Como atomic clocks garantem consistency distribuída",
+      "code_or_diagram": "// Problema: relógios desincronizados entre datacenters\n\nServidor US: hora = 10:00:00.000\nServidor EU: hora = 10:00:00.500 (500ms atrás)\n\nScenario:\n  US escreve: X = 10 at 10:00:00.000\n  EU lê: at 10:00:00.100 (vê antes de escrita, dados velhos!)\n\n// Solução: TrueTime\n\nGoogle coloca atomic clocks (relógios atômicos) em cada DC\nTodos sincronizados via GPS (< 10ms margem)\n\nNow: [10:00:00.000 - 10:00:00.010] (intervalo, não ponto)\n\nEscrita:\n  US escreve: X = 10, timestamp = now() = 10:00:00.005\n  Replicade para EU\n\nLeitura em EU:\n  now() = 10:00:00.505\n  Lê dados com timestamp < now\n  Garante ver: X = 10 (escrita já sincronizou)\n\n// Resultado\nGlobal consistency ACID, sacrificando latência (10ms TrueTime overhead)"
+    },
+    {
+      "id": "ex-netflix-fallback",
+      "title": "Netflix: Fallback Culture",
+      "description": "Nunca falha, sempre degrade gracefully",
+      "code_or_diagram": "// User clicks 'Play'\n\nPlayback Service:\n  GET /api/video/metadata/123\n  \n  [ Try 1 ] Video Service (primary)\n    Timeout > 2s? → [ Fallback 1 ]\n    \n  [ Fallback 1 ] Cache (local, 1h TTL)\n    Miss? → [ Fallback 2 ]\n    Hit? Return stale metadata (1h old OK)\n    \n  [ Fallback 2 ] Empty metadata\n    Return { title: \"Video 123\", description: null }\n    \n  [ Playback ]\n    User sees: video plays (no description, acceptable)\n    Never sees: error\n\n// Failures don't cascade\nVideo Service down → Netflix still works (just no metadata)\nRecommendation Service down → Netflix still works (default feed)\nReplicaion lag 30s → Netflix works (old data, converge later)\n\n// Result\n99.999% uptime achieved via graceful degradation\nFeatures don't fail, they degrade"
+    },
+    {
+      "id": "ex-netflix-chaos",
+      "title": "Netflix: Chaos Monkey Testing",
+      "description": "Proactive failure testing",
+      "code_or_diagram": "// Simian Army: Continuous chaos testing\n\nChaos Monkey\n  - Randomly kills server instances\n  - Goal: discover fragile services\n  - Frequency: 2x daily\n  - Effect: engineers build resilient by default\n\nExample:\n  10 PM: Chaos Monkey kills 5 random servers\n  Engineers: \"Why failed? Fix it\"\n  Engineers: build retry logic, fallback, health checks\n  Result: system becomes fragile → resilient\n\nLatency Monkey\n  - Adds artificial latency (500ms) between services\n  - Goal: discover timeout cascades\n  - Effect: engineers add circuit breakers, timeouts\n\nChaos Gorilla\n  - Simulates entire datacenter outage\n  - Goal: test multi-region failover\n  - Frequency: monthly\n  - Effect: architects multi-region from day 1\n\n// Netflix Mentality\n\"If you didn't test it failing, assume it will fail in production\"\n\"Chaos engineering is not pessimism, it's pragmatism\""
+    },
+    {
+      "id": "ex-linkedin-streaming-batch",
+      "title": "LinkedIn: Streaming vs Batch",
+      "description": "Real-time approximate vs batch exact",
+      "code_or_diagram": "// Event: User clicks 'Like' on post\n\n// REAL-TIME PATH (Streaming)\nEvent → Kafka → Storm workers\n  [ Filter ] Only public posts\n  [ Enrich ] Add user data\n  [ Aggregate ] Increment like count (HyperLogLog sketch)\n  [ Output ] Update Redis cache\n  Latency: 5-10 seconds\n  Accuracy: 99% (sketch, not exact)\n  Volume: 100k events/second sustained\n\nWeb tier:\n  Read from Redis cache\n  User sees: \"123 likes\" (real-time, approximate)\n  Tweet updates feed in 5 seconds\n\n// BATCH PATH (Hadoop)\nDay 1 (real-time):\n  Streaming shows: \"123 likes\"\n  \nDay 2 (batch run):\n  Hadoop processed all events\n  True count: \"126 likes\" (exact)\n  Database updated\n  Trending recalculated (accurate)\n  \n// Tradeoff\nReal-time: fast + approximate (5-10s, 99%)\nBatch: slow + exact (24h, 100%)\n\nResult: Users see trends in real-time (5-10s), exact metrics next day"
+    },
+    {
+      "id": "ex-comparison-table",
+      "title": "Comparação: Spanner vs Netflix vs LinkedIn",
+      "description": "Trade-offs lado a lado",
+      "code_or_diagram": "                 SPANNER          NETFLIX           LINKEDIN\nConsistency:     ACID/Strong      Eventual          Hybrid (RT+batch)\nLatency:         100-200ms        <50ms             5min (RT), 24h (batch)\nGlobal:          Yes (multi-reg)  Yes (active-a)   Yes (CDN+repl)\nFailure Mode:    Quorum           Fallback/degrade  Separate streams\nDatabase:        Relational       Cassandra+Redis   MySQL+Cassandra+HDFS\nCAP Choice:      CP               AP                AP (realtime), C (batch)\n\nWhen To Use:\nSpanner:  Banks, inventory, transactional (need global ACID)\nNetflix:  Media, social, UX critical (need fast + reliable)\nLinkedin: Analytics, big data, insights (need volume + real-time)\n\nStartup Path:\nPhase 1: Monolito\nPhase 2: Microservices + Cache (Netflix-style)\nPhase 3: Streaming + Batch (LinkedIn-style) if volume grows\nPhase 4: Global Transactions (Spanner-style) if transactional needs emerge"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-8-6-1",
+      "type": "multiple_choice",
+      "question": "Google Spanner sacrifica o quê por consistency global?",
+      "options": [
+        "Availability (falha se maioria de replicas cai)",
+        "Latência (100-150ms vs 10ms de eventual)",
+        "Volume (não aguenta tantos RPS quanto eventual)",
+        "Simplicidade (implementação complexa vs monolito)"
+      ],
+      "correct_answer": "Latência (100-150ms vs 10ms de eventual)",
+      "explanation": "Spanner é CP no CAP theorem: sacrifica Availability (latência) por Consistency. Usuário espera 100-150ms garantindo dados ACID globais. Netflix é AP: responde em <50ms mas eventual (dados podem estar 5s desatualizados)."
+    },
+    {
+      "id": "ex-8-6-2",
+      "type": "short_answer",
+      "question": "Netflix nunca falha, mas Video Service fica offline 1h. Como isso não derruba Netflix?",
+      "expected_answer": "Fallback culture. Playback Service tenta Video Service, timeout, tenta cache, tenta empty metadata. Usuário vê vídeo sem description (degradado, mas funciona). Nunca retorna erro. Sistema está 'down' mas Netflix funciona (graceful degradation).",
+      "explanation": "Fallback é core Netflix strategy. Cada serviço tem múltiplas tentativas: primary → cache → stale → empty. Sistema falha gracefully, nunca crashes. Isso é por quê Netflix tá sempre 'up' mesmo com failures."
+    },
+    {
+      "id": "ex-8-6-3",
+      "type": "multiple_choice",
+      "question": "LinkedIn streaming mostra 'likes' em real-time (~99% exactness). Problema?",
+      "options": [
+        "Nenhum; aproximação é OK pra trending",
+        "Sim; usuário vê 'likes' errados (confiança baixa)",
+        "Depends; trending é approximately OK, mas invoice precisa exatidão",
+        "Ambas as opções 1 e 3"
+      ],
+      "correct_answer": "Ambas as opções 1 e 3",
+      "explanation": "Streaming ~99% é ótimo pra trending/real-time (usuário vê 'top 10' trending topics, 1% erro insignificante). Mas pra billing/revenue (likes = valor), LinkedIn roda batch exacto depois. Hybrid approach: fast approximate + slow exact."
+    },
+    {
+      "id": "ex-8-6-4",
+      "type": "code_review",
+      "question": "Você escreve serviço que sem fallback falha 0.1% do tempo. Netflix aceitaria?",
+      "expected_answer": "Não. 0.1% de 500k RPS = 500 erros/segundo é visível. Netflix implementa fallback, não depende de 'só não falhar' (impossible). Mesmo 99.99% uptime = 26 minutos/ano downtime sem fallback.",
+      "explanation": "Fallback é não-negociável em Netflix scale. Você presume falha vai acontecer e já tem plano B. Não é 'evitar falha', é 'falhar e degradar gracefully'."
+    },
+    {
+      "id": "ex-8-6-5",
+      "type": "prediction",
+      "question": "Você quer usar Google Spanner (strong consistency) na startup. Qual é o problema real?",
+      "options": [
+        "Spanner é lento (100ms latência)",
+        "Spanner é caro (Google cloud pricing)",
+        "Startup não tem volume pra justificar (100-200ms é aceitável se volume baixo)",
+        "Ambas as opções 1 e 2 são problemas reais"
+      ],
+      "correct_answer": "Ambas as opções 1 e 2 são problemas reais",
+      "explanation": "Spanner: (1) 100-150ms é perceptível para UX (Netflix precisa <50ms), (2) custo é alto (replicação global, atomic clocks). Startup não justifica. Use monolito/PostgreSQL até ter transactional global requirement."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-8-6",
+    "title": "Projeto Final: Arquitetar Seu Próprio Sistema em Escala",
+    "description": "Escolha um cenário, desenhe arquitetura completa inspirada em Spanner/Netflix/LinkedIn.",
+    "context": "Você está fundando startup. Qual é seu sistema? Qual é suas constraints?",
+    "tasks": [
+      {
+        "task_id": "task-1",
+        "title": "Escolha Seu Cenário",
+        "description": "Escolha um: (A) Marketplace, (B) Analytics, (C) Social, ou (D) seu próprio",
+        "hints": ["Marketplace: transactional, global, low latency", "Analytics: high volume, eventual ok", "Social: high RPS, user experience critical"],
+        "rubric": "Descrever: tipo de sistema, volume esperado, SLA target, constraints críticas"
+      },
+      {
+        "task_id": "task-2",
+        "title": "Arquitetura de Serviços",
+        "description": "Desenhe: serviços, databases, cache, messaging, CDN. Qual inspiração: Spanner/Netflix/LinkedIn?",
+        "hints": ["Qual é principal challenge?", "Transactional → Spanner-like", "High RPS → Netflix-like", "High volume → LinkedIn-like"],
+        "rubric": "Diagrama claro: serviços, DBs, cache, comunicação, inspiração justificada"
+      },
+      {
+        "task_id": "task-3",
+        "title": "Consistency Model",
+        "description": "ACID onde? Eventual onde? Por quê?",
+        "hints": ["Payments: ACID", "Feed: eventual OK", "Analytics: eventual + batch"],
+        "rubric": "Justificar cada escolha baseado em criticality"
+      },
+      {
+        "task_id": "task-4",
+        "title": "Scaling to 10x Volume",
+        "description": "Sistema hoje: 1k RPS. Amanhã: 10k RPS. Como escala?",
+        "hints": ["Horizontal: mais servidores", "Caching: reduzir DB hits", "CDN: cache perto de users", "Streaming: real-time vs batch"],
+        "rubric": "Plano de scaling específico (não genérico): quais componentes bottleneck? Como resolve cada?"
+      },
+      {
+        "task_id": "task-5",
+        "title": "Disaster Recovery",
+        "description": "Datacenter falha. RTO? RPO? Backup strategy?",
+        "hints": ["RTO: quanto tempo pra voltar online?", "RPO: quanto de dados perde?", "3-2-1 backup rule"],
+        "rubric": "Plano completo: DR strategy, backup locations, recovery procedures"
+      },
+      {
+        "task_id": "task-6",
+        "title": "Documento Final",
+        "description": "Compile tudo em 1 documento: arquitetura, decisions, scaling, DR",
+        "hints": ["Inclua diagramas", "Referencie Spanner/Netflix/LinkedIn quando aplicável", "Justifique tradeoffs"],
+        "rubric": "Profissional, completo, defensável pra investors/engineers"
+      }
+    ],
+    "expected_output": "Comprehensive system design document (5-10 pages) com: architecture diagram, service specs, consistency models, scaling plan, disaster recovery strategy, inspired by real case studies"
+  },
+  "resources": {
+    "google_spanner": [
+      "Spanner: Google's Globally-Distributed Database (paper)",
+      "Concurrency Control for Geo-Replicated Transactional Systems"
+    ],
+    "netflix": [
+      "Netflix Blog: Chaos Monkey",
+      "A Look Inside Netflix's Technology",
+      "How Netflix Scales with Every Subscriber"
+    ],
+    "linkedin": [
+      "Building Real-time Data Pipeline at LinkedIn",
+      "Kafka: A Distributed Messaging System",
+      "Project Voldemort: Reliable Distributed Storage"
+    ]
+  }
+}

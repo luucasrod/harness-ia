@@ -1,0 +1,123 @@
+{
+  "id": "9-4",
+  "moduleId": "9",
+  "lessonNumber": "9.4",
+  "title": "CI/CD Pipelines & Release - Automação Profissional",
+  "duration": "45 min",
+  "wordCount": 2687,
+  "objectives": [
+    "Entender pipeline stages (checkout → build → test → deploy)",
+    "GitHub Actions: workflows baseados em eventos",
+    "Deploy strategies: blue-green, canary, rolling updates",
+    "Secrets e segurança em CI/CD",
+    "Hands-on: Setup GitHub Actions pipeline real pra sua app"
+  ],
+  "sections": [
+    {"id": "intro", "title": "Introdução"},
+    {"id": "concepts", "title": "Conceitos CI/CD"},
+    {"id": "github-actions", "title": "GitHub Actions - Workflow Profissional"},
+    {"id": "deployment-strategies", "title": "Deployment Strategies"},
+    {"id": "monitoring", "title": "Monitoramento e Rollback"}
+  ],
+  "keyTakeaways": [
+    "CI/CD automatiza tudo: commit → test → build → deploy",
+    "GitHub Actions é grátis e integrado ao Git",
+    "Secrets são cifrados pela plataforma",
+    "Strategies diferentes: blue-green, canary, rolling",
+    "Monitoramento pós-deploy é essencial"
+  ],
+  "exercises": {
+    "main": {
+      "id": "exercise-github-actions",
+      "type": "hands-on",
+      "title": "Setup GitHub Actions Pipeline",
+      "description": "Criar .github/workflows/deploy.yml, configurar secrets, fazer push, ver pipeline executar com test + build + deploy automático",
+      "estimatedTime": "30 min",
+      "steps": [
+        {"number": 1, "title": "Criar Workflow", "description": "Escrever .github/workflows/deploy.yml"},
+        {"number": 2, "title": "Configurar Secrets", "description": "GitHub Settings → Secrets (DOCKER_USER, DOCKER_PASSWORD, AWS_ROLE_ARN)"},
+        {"number": 3, "title": "Push Code", "description": "git push origin main"},
+        {"number": 4, "title": "Monitorar Pipeline", "description": "GitHub Actions → ver workflow rodando em tempo real"},
+        {"number": 5, "title": "Revisar Logs", "description": "Ver checkout, tests, build, push, deploy"},
+        {"number": 6, "title": "Health Check", "description": "Verificar health endpoint após deploy"},
+        {"number": 7, "title": "Slack Notifications", "description": "Configure webhook pra notificações"}
+      ],
+      "successCriteria": [
+        ".github/workflows/deploy.yml existe",
+        "Secrets configuradas no GitHub",
+        "Push pra main dispara pipeline",
+        "Todos os jobs passam (3-5 min)",
+        "Image é pushed pro registry",
+        "K8s deployment é atualizado",
+        "Health check passa"
+      ],
+      "hints": [
+        "GitHub Actions é gratuito até 2000 min/mês",
+        "Secrets nunca aparecem em logs",
+        "`if: github.event_name == 'push'` condiciona execução",
+        "needs: job_name cria dependências",
+        "Webhook Slack precisa de URL (veja docs Slack)"
+      ]
+    }
+  },
+  "quiz": [
+    {
+      "id": "q1",
+      "number": 1,
+      "type": "choice",
+      "difficulty": "fundamental",
+      "question": "Um pipeline falha no stage 'Test'. O que acontece?",
+      "options": [
+        {"text": "Pipeline continua pro próximo stage", "correct": false},
+        {"text": "Pipeline para, código não vai pra produção", "correct": true},
+        {"text": "Só notifica via email", "correct": false},
+        {"text": "Faz rollback automático", "correct": false}
+      ],
+      "explanation": "Pipeline é uma sequência. Primeira falha = STOP. Ninguém quer quebrado código em produção."
+    },
+    {
+      "id": "q2",
+      "number": 2,
+      "type": "short_answer",
+      "difficulty": "intermediate",
+      "question": "Você quer rodar testes apenas quando arquivo `app/main.py` muda. Como fazer em GitHub Actions?",
+      "expectedAnswer": "Usar `paths:` em `on.push`. Exemplo: `paths: ['app/**', 'tests/**']`."
+    },
+    {
+      "id": "q3",
+      "number": 3,
+      "type": "code_review",
+      "difficulty": "intermediate",
+      "question": "Qual problema há com esse GitHub Actions step?\n\n```yaml\n- name: Deploy to production\n  run: |\n    docker login -u user -p ${{ secrets.DOCKER_PASSWORD }}\n```",
+      "expectedAnswer": "Username está hardcoded. Usar `secrets.DOCKER_USER` também. Username exposto em logs é risco de segurança."
+    },
+    {
+      "id": "q4",
+      "number": 4,
+      "type": "prediction",
+      "difficulty": "intermediate",
+      "question": "Você usa canary deployment com 5% tráfego pra v1.0.1. Depois de 10 min, error_rate sobe pra 8%. O que acontece?",
+      "options": [
+        {"text": "Continua aumentando % de tráfego", "correct": false},
+        {"text": "Rollback automático, volta pra v1.0.0", "correct": true},
+        {"text": "Notifica via Slack mas continua deploy", "correct": false},
+        {"text": "Congela em 5% até revisar", "correct": false}
+      ],
+      "explanation": "Canary descobre problemas cedo com % pequeno. Threshold breached = rollback automático."
+    },
+    {
+      "id": "q5",
+      "number": 5,
+      "type": "debugging",
+      "difficulty": "intermediate",
+      "question": "GitHub Actions job 'Deploy' falha com 'UnauthorizedOperation'. Por onde começar?",
+      "options": [
+        {"text": "Verificar secrets `AWS_ROLE_ARN` e credenciais", "correct": true},
+        {"text": "Checar sintaxe YAML", "correct": false},
+        {"text": "Aumentar timeout", "correct": false},
+        {"text": "Rerun workflow", "correct": false}
+      ],
+      "explanation": "UnauthorizedOperation = acesso negado às credenciais. Verificar secrets, IAM policy, role ARN."
+    }
+  ]
+}

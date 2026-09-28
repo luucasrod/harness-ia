@@ -1,0 +1,186 @@
+{
+  "lesson_id": "lesson-2-2-hooks-deep-dive",
+  "title": "Hooks Profundo - useReducer, Context, Custom Hooks",
+  "description": "Domine Hooks: useState vs useReducer para estado complexo, useContext para global state, custom hooks para reutilização, useEffect pitfalls, useMemo/useCallback estratégico.",
+  "duration_minutes": 60,
+  "target_audience": "Developers com mentalidade de engineer, conhecimento de React hooks básicos",
+  "learning_objectives": [
+    "Escolher entre useState e useReducer baseado em complexidade",
+    "Implementar global state com useContext sem Redux",
+    "Criar e reutilizar custom hooks",
+    "Evitar race conditions, stale closures e dependências erradas em useEffect",
+    "Aplicar useMemo/useCallback com critério, não cegamente"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução",
+      "key_points": ["useState se torna spaghetti com múltiplas variáveis", "useReducer centraliza transições complexas", "Context resolve global state simples", "Custom hooks evitam duplicação de lógica"]
+    },
+    {
+      "section_id": "usestate_vs_usereducer",
+      "title": "useState vs useReducer",
+      "key_points": ["useState: state simples (count, isOpen)", "useReducer: múltiplas variáveis interdependentes", "Reducer centraliza lógica, torna debuggable", "Transições explícitas previnem estados inválidos"]
+    },
+    {
+      "section_id": "usecontext",
+      "title": "useContext: Global State",
+      "key_points": ["Context sem Redux: auth, theme, language", "Provider gerencia estado, Components consomem via hook", "Suficiente pra maioria, Redux se atualizações frequentes", "Custom hook torna uso simples (useAuth, useTheme)"]
+    },
+    {
+      "section_id": "custom_hooks",
+      "title": "Custom Hooks: Reutilização",
+      "key_points": ["useFetch: encapsula lógica de fetch", "useFetch: gerencia loading, error, data", "Cleanup função previne memory leaks", "Nome com 'use': useAuth, useFetch, useLocalStorage"]
+    },
+    {
+      "section_id": "useeffect_pitfalls",
+      "title": "useEffect Pitfalls",
+      "key_points": ["Dependências erradas causam loops infinitos", "Race conditions: requisições lentas vêm fora de ordem", "Stale closures: callback usa valor antigo", "Cleanup função cancela requisições anteriores"]
+    },
+    {
+      "section_id": "memoization",
+      "title": "useMemo e useCallback",
+      "key_points": ["Memoizar cálculos caros (>5ms)", "useCallback estabiliza callbacks pra memoized children", "Overhead de memoization pode superar benefício", "Meça com DevTools Profiler antes de otimizar"]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-2-2-1",
+      "title": "useState spaghetti vs useReducer clean",
+      "description": "Mesmo componente: 10 states vs reducer com máquina de estados",
+      "code_or_diagram": "❌ useState: distribuído\nconst [loading, setLoading] = useState(false);\nconst [error, setError] = useState(null);\nconst [question, setQuestion] = useState(null);\nconst [selectedAnswer, setSelectedAnswer] = useState('');\nconst [isSubmitting, setIsSubmitting] = useState(false);\nconst [result, setResult] = useState(null);\n\n✅ useReducer: centralizado\nconst [state, dispatch] = useReducer(quizReducer, initialState);\n// Transições explícitas:\ndispatch({ type: 'FETCH_START' });\ndispatch({ type: 'FETCH_SUCCESS', payload: question });\ndispatch({ type: 'SUBMIT_START' });"
+    },
+    {
+      "id": "ex-2-2-2",
+      "title": "useContext + Custom Hook para Auth",
+      "description": "Global state sem Redux",
+      "code_or_diagram": "const AuthContext = createContext(null);\n\nexport function useAuth() {\n  return useContext(AuthContext);\n}\n\nfunction LoginComponent() {\n  const { user, login, logout } = useAuth();\n  // ...\n}\n\n// Provider no topo\n<AuthProvider>\n  <App />\n</AuthProvider>"
+    },
+    {
+      "id": "ex-2-2-3",
+      "title": "useFetch Custom Hook",
+      "description": "Reutiliza lógica de fetch em múltiplos componentes",
+      "code_or_diagram": "function useFetch<T>(url: string) {\n  const [data, setData] = useState<T | null>(null);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState<Error | null>(null);\n\n  useEffect(() => {\n    let cancelled = false;\n    fetch(url)\n      .then(r => r.json())\n      .then(d => !cancelled && setData(d))\n      .catch(e => !cancelled && setError(e))\n      .finally(() => !cancelled && setLoading(false));\n\n    return () => { cancelled = true; }; // Cleanup\n  }, [url]);\n\n  return { data, loading, error };\n}\n\n// Uso\nconst { data: exercises } = useFetch('/api/exercises');"
+    },
+    {
+      "id": "ex-2-2-4",
+      "title": "Race Condition em useEffect",
+      "description": "Requisições lentas vêm fora de ordem sem cleanup",
+      "code_or_diagram": "❌ Race condition\nuseEffect(() => {\n  fetchExercises(query).then(setResults);\n}, [query]);\n// User digita 'a' (fetch lento), depois 'ab' (fetch rápido)\n// 'ab' chega ANTES de 'a', results fica incorreto\n\n✅ Solução: cleanup\nuseEffect(() => {\n  let cancelled = false;\n  const search = async () => {\n    const data = await fetchExercises(query);\n    if (!cancelled) setResults(data);\n  };\n  search();\n  return () => { cancelled = true; }; // Cancela anterior\n}, [query]);"
+    },
+    {
+      "id": "ex-2-2-5",
+      "title": "useCallback com memoized child",
+      "description": "Estabiliza callback pra evitar re-renders desnecessários",
+      "code_or_diagram": "function TeacherDashboard() {\n  const [students, setStudents] = useState([]);\n\n  const handleUpdate = useCallback((id, data) => {\n    setStudents(s => s.map(st => st.id === id ? { ...st, ...data } : st));\n  }, []); // Callback é estável\n\n  return (\n    <StudentList students={students} onUpdate={handleUpdate} />\n  ); // StudentList é memoized, não re-renderiza\n}\n\nconst StudentList = memo(function({ students, onUpdate }) {\n  // ...\n});"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-2-2-q1",
+      "type": "multiple_choice",
+      "question": "Quando useReducer é preferível a useState?",
+      "options": [
+        "Sempre, useReducer é melhor.",
+        "Quando state tem múltiplas variáveis interdependentes ou transições complexas.",
+        "Quando state é simples (count, isOpen).",
+        "Nunca, useState é suficiente."
+      ],
+      "correct_answer": "Quando state tem múltiplas variáveis interdependentes ou transições complexas.",
+      "explanation": "useState é ótimo para state simples. useReducer brilha quando: loading, error, data, retry count, etc. precisam mudar juntos. Redutores centralizam a lógica e evitam estados inválidos."
+    },
+    {
+      "id": "ex-2-2-q2",
+      "type": "short_answer",
+      "question": "Por que é importante ter uma cleanup function em useEffect?",
+      "expected_answer": "Cleanup previne memory leaks (cancel requisições, clear timers) e race conditions (ignora resultados de requests anteriores se componente desmontar ou dependência mudar).",
+      "explanation": "Exemplo: fetch A lento, fetch B rápido. B chega primeiro, depois A (incorreto). Com cleanup, B cancela A automaticamente. Sem cleanup, componente tenta setState em componente desmonted → memory leak warning."
+    },
+    {
+      "id": "ex-2-2-q3",
+      "type": "code_review",
+      "question": "Revise: 'useEffect(() => { fetchData(query); }, [])' Com query muda, o quê acontece?",
+      "expected_answer": "Fetch não re-roda porque dependências estão vazias. Se query muda, data fica stale. Correto: [query] como dependência.",
+      "explanation": "Array de dependências controla quando efeito roda. Vazio = roda uma vez ao montar. [query] = roda quando query muda. Sem array = roda toda renderização (loop infinito comum)."
+    },
+    {
+      "id": "ex-2-2-q4",
+      "type": "prediction",
+      "question": "Você usa useMemo para memoizar um sort() simples. Provável resultado?",
+      "options": [
+        "Melhora de performance significativa.",
+        "Sem mudança: overhead de memoization > benefício de evitar re-render.",
+        "Quebra (useMemo não funciona com array methods).",
+        "Usa 50% menos memória."
+      ],
+      "correct_answer": "Sem mudança: overhead de memoization > benefício de evitar re-render.",
+      "explanation": "Sort é <1ms, overhead é >0.1ms. Memoization via dependency comparison leva mais tempo que o cálculo. Meça com DevTools Profiler: só otimize se realmente caro (>5ms)."
+    },
+    {
+      "id": "ex-2-2-q5",
+      "type": "multiple_choice",
+      "question": "Um custom hook deve fazer o quê?",
+      "options": [
+        "Chamar APIs e side effects na raiz (fora de useEffect).",
+        "Encapsular lógica stateful e retornar state/callbacks reutilizáveis.",
+        "Renderizar componentes diretamente.",
+        "Usar múltiplos Contextos para evitar Redux."
+      ],
+      "correct_answer": "Encapsular lógica stateful e retornar state/callbacks reutilizáveis.",
+      "explanation": "Custom hooks são funções que chamam Hooks (useState, useEffect, etc.). useFetch encapsula fetch logic. useAuth encapsula auth logic. Retornam { data, loading, error } pra componentes consumirem."
+    }
+  ],
+  "practical_exercise": {
+    "id": "exercise-2-2-custom-hook",
+    "title": "Criar useFormState Custom Hook",
+    "description": "Crie um custom hook que gerencia estado de formulário (values, errors, touched, isSubmitting) e seja reutilizável em qualquer form.",
+    "starting_code": "function LoginForm() {\n  const [email, setEmail] = useState('');\n  const [password, setPassword] = useState('');\n  const [errors, setErrors] = useState({ email: '', password: '' });\n  const [touched, setTouched] = useState({ email: false, password: false });\n  const [isSubmitting, setIsSubmitting] = useState(false);\n\n  const validate = () => {\n    const newErrors = { email: '', password: '' };\n    if (!email.includes('@')) newErrors.email = 'Invalid email';\n    if (password.length < 6) newErrors.password = 'Min 6 chars';\n    setErrors(newErrors);\n    return Object.values(newErrors).every(e => e === '');\n  };\n\n  const handleSubmit = async (e) => {\n    e.preventDefault();\n    if (!validate()) return;\n    setIsSubmitting(true);\n    await authenticateUser(email, password);\n    setIsSubmitting(false);\n  };\n\n  return (\n    <form onSubmit={handleSubmit}>\n      <input value={email} onChange={(e) => setEmail(e.target.value)} />\n      {touched.email && errors.email && <span>{errors.email}</span>}\n      {/* ... password field ... */}\n      <button disabled={isSubmitting}>Login</button>\n    </form>\n  );\n}",
+    "problems_to_fix": [
+      "Form logic duplicada em múltiplos componentes",
+      "Difícil reutilizar validação em outra form",
+      "State é distribuído (email, password, errors, touched, etc)",
+      "Lógica de submit misturada com renderização"
+    ],
+    "solution_outline": "1. Crie useFormState({ initialValues, validate, onSubmit })\n2. Retorne { values, errors, touched, isSubmitting, handleChange, handleBlur, handleSubmit }\n3. useFormState usa useReducer pra centralizar state\n4. Reutilize em LoginForm, RegisterForm, PasswordResetForm sem duplicação",
+    "expected_improvements": [
+      "Form logic encapsulada em hook",
+      "Reutilizável sem copiar código",
+      "Testável: mock initialValues e validate, assert retorno do hook",
+      "Escalável: adicionar field dinâmicos, conditional validation"
+    ],
+    "deliverables": [
+      "Hook useFormState funcional",
+      "Refatore LoginForm usando hook",
+      "Testes do hook (com Mock Provider de submit)"
+    ]
+  },
+  "summary_key_takeaways": [
+    "useReducer centraliza state complexo, useState é simples",
+    "useContext + custom hook resolve global state, Redux se necessário",
+    "Custom hooks evitam duplicação, reutilizam lógica stateful",
+    "useEffect: dependências corretas, cleanup pra race conditions",
+    "Memoização com critério: meça antes, não otimize adivinhação"
+  ],
+  "next_lesson": {
+    "id": "lesson-2-3-global-state",
+    "title": "Estado Global - Redux/Zustand",
+    "preview": "Context funciona pra state simples. Quando você precisa de Redux? Zustand é alternativa melhor? Esta lição compara Context API, Redux e Zustand com exemplos reais da plataforma educacional."
+  },
+  "resources": [
+    {
+      "title": "React Docs: useReducer",
+      "type": "article",
+      "link": "https://react.dev/reference/react/useReducer"
+    },
+    {
+      "title": "React Docs: useContext",
+      "type": "article",
+      "link": "https://react.dev/reference/react/useContext"
+    },
+    {
+      "title": "Custom Hooks Patterns",
+      "type": "article",
+      "link": "https://react.dev/reference/react#custom-hooks"
+    }
+  ]
+}

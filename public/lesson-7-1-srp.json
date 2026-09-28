@@ -1,0 +1,198 @@
+{
+  "lesson_id": "lesson-7-1-srp",
+  "module": 7,
+  "title": "SOLID - Single Responsibility Principle (SRP)",
+  "description": "Dominar o primeiro princípio SOLID: uma classe deve ter uma única razão para mudar. Identificar violações em código real, refatorar para aumentar testabilidade e manutenibilidade.",
+  "duration_minutes": 200,
+  "target_audience": "Developers com experiência básica em OOP; pré-requisito: Lição 1.1 (Engineering vs. Coding)",
+  "learning_objectives": [
+    "Entender a definição rigorosa de SRP: 'uma classe deve ter uma razão para mudar'",
+    "Identificar violações de SRP em código real (sinais de alerta, padrões de problemas)",
+    "Refatorar código acoplado em componentes especializados com responsabilidades claras",
+    "Aplicar SRP em um contexto real: sistema educacional com Lesson, Repository, Validator, Service",
+    "Entender trade-offs: quando separar, quando manter junto, overhead de overengineering",
+    "Reconhecer padrões que emergem de SRP: Repository, Service, Validator, Mapper"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (15 minutos)",
+      "key_points": [
+        "SRP não é purismo; é pragmatismo. Uma classe com responsabilidade única é mais testável, entendível e modificável",
+        "Violação de SRP: múltiplas razões para mudar = múltiplas responsabilidades",
+        "Exemplo real: UserManager com validação, persistência, e-mail, pagamento, analytics. Uma mudança em e-mail quebra salvamento.",
+        "Escala: diferença entre semanas vs. meses no tempo de mudança em sistemas grandes"
+      ]
+    },
+    {
+      "section_id": "definition",
+      "title": "Definição Rigorosa de SRP (20 minutos)",
+      "key_points": [
+        "Definição original (Bob Martin): 'A class should have one and only one reason to change'",
+        "Razão para mudar = necessidade de negócio ou técnica que força edição da classe",
+        "Exemplos: mudança em regra de negócio, integração externa, estrutura de dados, apresentação",
+        "Confusão comum: responsabilidade ≠ funcionalidade. Uma classe pode fazer múltiplas coisas mas ter uma responsabilidade",
+        "PaymentProcessor validando, calculando taxa, cobrando, auditando, enviando e-mail = 5 razões para mudar"
+      ]
+    },
+    {
+      "section_id": "identifying",
+      "title": "Identificando Violações de SRP (25 minutos)",
+      "key_points": [
+        "Red Flag 1: Nome da classe é 'Manager', 'Processor', 'Handler' = múltiplas responsabilidades",
+        "Red Flag 2: Métodos não relacionados semanticamente (changePassword, subscribeNewsletter, generateReport em User)",
+        "Red Flag 3: Testes precisam mockar muitos serviços (DB, Email, Payment, Analytics, Logger)",
+        "Red Flag 4: Documentação vaga ('handles all operations', 'manages X') vs. específica ('persists to database')",
+        "Exemplo: LessonManager faz dados, renderização, controle de acesso, analytics, certificado = 5 responsabilidades"
+      ]
+    },
+    {
+      "section_id": "applying",
+      "title": "Aplicando SRP (20 minutos)",
+      "key_points": [
+        "Passo 1: Identificar responsabilidades implícitas (validação, criptografia, persistência, notificação)",
+        "Passo 2: Extrair cada responsabilidade em classe separada (UserValidator, PasswordHasher, UserRepository, WelcomeEmailService)",
+        "Passo 3: Coordenar com serviço de orquestração (UserService chama cada classe em sequência)",
+        "Benefício: testabilidade imediata - testar validação, hashing, persistência isoladamente",
+        "Benefício: modificabilidade - trocar bcrypt por Argon2? Só muda PasswordHasher"
+      ]
+    },
+    {
+      "section_id": "tradeoffs",
+      "title": "Trade-offs e Contexto (15 minutos)",
+      "key_points": [
+        "Protótipos e prototipagem rápida: OK ter tudo junto, refatore quando vira produção",
+        "Classes muito pequenas: separar Email de EmailValidator é overengineering",
+        "Conceitos acoplados por natureza (Login = autenticação + sessão): separar adiciona complexidade sem valor",
+        "Teste de SRP: 'Se só quero Y, posso remover X sem quebrar Y?'",
+        "Coesão vs. Acoplamento: SRP melhora coesão interna e baixa acoplamento externo"
+      ]
+    },
+    {
+      "section_id": "patterns",
+      "title": "Síntese e Padrões Práticos (20 minutos)",
+      "key_points": [
+        "Padrões que emergem de SRP: Repository (persistência), Service (orquestração), Validator (validação), Mapper (transformação)",
+        "Repository Pattern: abstrai persistência, permite testar lógica sem banco",
+        "Service Pattern: coordena múltiplos componentes, implementa lógica de negócio",
+        "Validator Pattern: responsável por validação de dados",
+        "Mapper/DTO Pattern: transforma domínio em resposta API, oculta detalhes internos",
+        "Checklist: Identifiquei razões para mudar? Cada razão tem classe? Nomes descrevem claramente? Mudança em uma afeta outras?"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-7-1-1",
+      "title": "Violação de SRP: UserManager com Múltiplas Responsabilidades",
+      "description": "Classe com validação, criptografia, persistência, notificação e analytics. Múltiplas razões para mudar.",
+      "code_or_diagram": "// VIOLA SRP: 5 responsabilidades, 5 razões para mudar\nclass UserManager {\n  // Razão 1: Validação muda\n  async createUser(email, password, name) {\n    if (!email.includes('@')) throw new Error('Invalid email');\n    if (password.length < 8) throw new Error('Password too short');\n    \n    // Razão 2: Criptografia muda (bcrypt -> Argon2)\n    const hashedPassword = bcrypt.hash(password);\n    \n    // Razão 3: Persistência muda\n    const user = { email, hashedPassword, name };\n    db.insert('users', user);\n    \n    // Razão 4: E-mail muda (SMTP -> SendGrid)\n    emailService.send(email, 'Welcome!');\n    \n    // Razão 5: Analytics muda\n    analytics.log('user_created', { userId: user.id });\n    \n    return user;\n  }\n}\n\n// PROBLEMA: Mudança em qualquer responsabilidade afeta a classe inteira.\n// Teste precisa de mocks para: validação, cripto, DB, email, analytics."
+    },
+    {
+      "id": "ex-7-1-2",
+      "title": "Refatoração: Cada Responsabilidade em Classe Separada",
+      "description": "Extrair validação, criptografia, persistência, notificação em classes especializadas. Orquestrar com UserService.",
+      "code_or_diagram": "// SEGUE SRP: Cada classe, uma responsabilidade\n\nclass UserValidator {\n  validate(data) {\n    const errors = [];\n    if (!data.email.includes('@')) errors.push('Invalid email');\n    if (data.password.length < 8) errors.push('Password too short');\n    if (!data.name) errors.push('Name required');\n    return { isValid: errors.length === 0, errors };\n  }\n}\n\nclass PasswordHasher {\n  hash(password) { return bcrypt.hashSync(password, 10); }\n  verify(password, hash) { return bcrypt.compareSync(password, hash); }\n}\n\nclass UserRepository {\n  async create(user) { return await db.insert('users', user); }\n  async findByEmail(email) { return await db.findOne('users', { email }); }\n}\n\nclass WelcomeEmailService {\n  async send(user) {\n    await emailService.send(user.email, {\n      subject: 'Welcome!',\n      template: 'welcome',\n      data: { name: user.name }\n    });\n  }\n}\n\nclass UserAnalyticsService {\n  log(event, data) { analytics.log(event, data); }\n}\n\n// ORQUESTRAÇÃO: Cada responsabilidade separada\nclass UserService {\n  constructor(validator, passwordHasher, repository, emailService, analyticsService) {\n    this.validator = validator;\n    this.passwordHasher = passwordHasher;\n    this.repository = repository;\n    this.emailService = emailService;\n    this.analyticsService = analyticsService;\n  }\n  \n  async createUser(data) {\n    // 1. Validar\n    const validation = this.validator.validate(data);\n    if (!validation.isValid) throw new ValidationError(validation.errors);\n    \n    // 2. Hash senha\n    const hashedPassword = this.passwordHasher.hash(data.password);\n    \n    // 3. Persistir\n    const user = await this.repository.create({\n      email: data.email,\n      password: hashedPassword,\n      name: data.name\n    });\n    \n    // 4. Notificar (async, não bloqueia)\n    this.emailService.send(user).catch(error => {\n      console.error('Failed to send welcome email', error);\n    });\n    \n    // 5. Registrar evento\n    this.analyticsService.log('user_created', { userId: user.id });\n    \n    return user;\n  }\n}\n\n// BENEFÍCIO: Mudança em qualquer responsabilidade afeta só sua classe.\n// Teste pode testar cada um isoladamente, ou UserService com mocks."
+    },
+    {
+      "id": "ex-7-1-3",
+      "title": "Testabilidade: Antes vs. Depois",
+      "description": "Como SRP melhora testes: de muitos mocks para testes isolados e simples.",
+      "code_or_diagram": "// ANTES (viola SRP): Teste precisa de muitos mocks\ntest('UserManager should create user', () => {\n  const mockDB = mock(Database);\n  const mockEmail = mock(EmailService);\n  const mockAnalytics = mock(AnalyticsService);\n  \n  const manager = new UserManager(mockDB, mockEmail, mockAnalytics);\n  manager.createUser('test@test.com', 'password123', 'John');\n  \n  expect(mockDB.insert).toHaveBeenCalled();\n  expect(mockEmail.send).toHaveBeenCalled();\n  expect(mockAnalytics.log).toHaveBeenCalled();\n  // Teste mistura múltiplas responsabilidades\n});\n\n// DEPOIS (segue SRP): Testes isolados, simples\n\n// Testar validação (nenhum mock)\ntest('UserValidator should reject invalid email', () => {\n  const validator = new UserValidator();\n  const result = validator.validate({ email: 'invalid', password: 'pass123', name: 'John' });\n  expect(result.isValid).toBe(false);\n  expect(result.errors).toContain('Invalid email');\n});\n\n// Testar hashing (nenhum mock)\ntest('PasswordHasher should hash and verify', () => {\n  const hasher = new PasswordHasher();\n  const hash = hasher.hash('password123');\n  expect(hasher.verify('password123', hash)).toBe(true);\n  expect(hasher.verify('wrongpassword', hash)).toBe(false);\n});\n\n// Testar service (mocks de dependências, não de múltiplas responsabilidades)\ntest('UserService should create user and send email', async () => {\n  const mockRepository = mock(UserRepository);\n  const mockEmailService = mock(WelcomeEmailService);\n  \n  const service = new UserService(\n    new UserValidator(),\n    new PasswordHasher(),\n    mockRepository,\n    mockEmailService,\n    new UserAnalyticsService()\n  );\n  \n  await service.createUser({ email: 'test@test.com', password: 'password123', name: 'John' });\n  \n  expect(mockRepository.create).toHaveBeenCalled();\n  expect(mockEmailService.send).toHaveBeenCalled();\n});\n\n// Benefício: Testes mais rápidos (sem I/O), mais focados, mais legíveis."
+    },
+    {
+      "id": "ex-7-1-4",
+      "title": "Padrões Que Emergem de SRP",
+      "description": "Repository, Service, Validator e Mapper são padrões que naturalmente emergem quando aplicamos SRP.",
+      "code_or_diagram": "// PADRÃO 1: Repository (Persistência)\n// Responsabilidade única: abstrair acesso a dados\nclass UserRepository {\n  async create(user) { /* ... */ }\n  async findById(id) { /* ... */ }\n  async findByEmail(email) { /* ... */ }\n  async update(user) { /* ... */ }\n  async delete(id) { /* ... */ }\n}\n\n// PADRÃO 2: Service (Orquestração)\n// Responsabilidade única: coordenar lógica de negócio\nclass UserService {\n  constructor(repository, validator, emailService) { /* ... */ }\n  async createUser(data) {\n    // Orquestra: validação -> persistência -> notificação\n  }\n}\n\n// PADRÃO 3: Validator (Validação)\n// Responsabilidade única: garantir dados válidos\nclass UserValidator {\n  validate(data) {\n    // Apenas validação, nada mais\n  }\n}\n\n// PADRÃO 4: Mapper/DTO (Transformação)\n// Responsabilidade única: converter domínio em resposta\nclass UserResponseMapper {\n  toResponse(user) {\n    return {\n      id: user.id,\n      email: user.email,\n      name: user.name\n      // Oculta: passwordHash, createdAt, updatedAt, internalFlags, etc.\n    };\n  }\n}\n\n// Esses padrões não são \"inventados\"; eles emergem naturalmente\n// quando aplicamos SRP. É reconhecimento de estrutura útil."
+    },
+    {
+      "id": "ex-7-1-5",
+      "title": "Trade-offs: Quando Não Separar",
+      "description": "SRP não significa 'separar sempre'. Há contextos onde manter junto faz sentido: prototipagem, classes pequenas, conceitos acoplados.",
+      "code_or_diagram": "// SITUAÇÃO 1: Prototipagem\n// Na prototipagem rápida, está OK ter tudo junto\nclass QuickLessonAPI {\n  async handleGetLesson(req, res) {\n    const lessonData = await db.query('SELECT * FROM lessons WHERE id = ?', req.params.id);\n    const html = `<div>${lessonData.content}</div>`;\n    res.send(html);\n  }\n}\n// Quando protótipo vira produção, refatore. Separação prematura é desperdiço.\n\n// SITUAÇÃO 2: Classes Muito Pequenas\n// Email é tão pequeno que separar Validator é overhead\nclass Email {\n  to: string;\n  subject: string;\n  body: string;\n  \n  validate(): boolean {\n    return this.to.includes('@') && this.subject && this.body;\n  }\n}\n// Email tem uma responsabilidade: representar um e-mail validado.\n// Validação é parte integral da representação.\n\n// SITUAÇÃO 3: Conceitos Intrinsecamente Acoplados\n// Login: autenticação + sessão são inseparáveis\nclass AuthenticationService {\n  authenticate(email, password): Session {\n    const user = this.findUser(email);\n    if (!this.passwordHasher.verify(password, user.passwordHash)) {\n      throw new AuthenticationError();\n    }\n    return this.sessionService.createSession(user);\n  }\n}\n// Separar em PasswordVerifier + SessionCreator adiciona complexidade sem valor.\n// Juntas, têm uma razão para mudar: \"requisitos de autenticação mudaram\"\n\n// TESTE DE SRP: \"Se só quero usar Y, posso remover X?\"\n// Autenticação: \"Se só quero verificar senha, preciso de sessão?\" -> NÃO.\n// Resultado: Pode separar.\n// \n// Email: \"Se só quero e-mail, preciso de validação?\" -> SIM, é parte integral.\n// Resultado: Juntos é correto."
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-7-1-q1",
+      "type": "multiple_choice",
+      "question": "Qual é a definição correta de Single Responsibility Principle?",
+      "options": [
+        "Uma classe deve fazer uma coisa, e fazer bem.",
+        "Uma classe deve ter uma razão para mudar.",
+        "Uma classe deve ser pequena.",
+        "Uma classe deve ter no máximo cinco métodos."
+      ],
+      "correct_answer": "Uma classe deve ter uma razão para mudar.",
+      "explanation": "Bob Martin definiu SRP como 'A class should have one and only one reason to change'. Isso significa que se há múltiplas razões de negócio ou técnica para modificar uma classe, ela tem múltiplas responsabilidades e deveria ser dividida."
+    },
+    {
+      "id": "ex-7-1-q2",
+      "type": "code_review",
+      "question": "Revise este código. Ele segue SRP? Por quê?\n\nclass OrderProcessor {\n  async processOrder(order) {\n    // Validação\n    if (order.items.length === 0) throw new Error('No items');\n    if (order.total < 0) throw new Error('Invalid total');\n    \n    // Cálculo de imposto\n    const tax = order.total * 0.1;\n    \n    // Cobrança\n    const chargeResult = await stripe.charge(order.total + tax, order.cardToken);\n    \n    // Auditoria\n    await auditLog.record(`Order processed: ${order.id}`);\n    \n    // E-mail de confirmação\n    await emailService.send(order.user.email, 'Order confirmed');\n    \n    return chargeResult;\n  }\n}",
+      "expected_answer": "Não segue SRP. A classe tem múltiplas responsabilidades: validação, cálculo de imposto, cobrança, auditoria e e-mail. Portanto, tem múltiplas razões para mudar: quando regras de validação mudam, quando a fórmula de imposto muda, quando a integração com Stripe muda, quando o formato de auditoria muda, quando o template de e-mail muda. Deveria separar em OrderValidator, TaxCalculator, PaymentProcessor, AuditService, ConfirmationEmailService, e coordenar com OrderService.",
+      "explanation": "Cada mudança em uma responsabilidade força edição de OrderProcessor. Testes precisam de mocks para stripe, auditLog e emailService simultaneamente. Uma classe com múltiplas responsabilidades tem múltiplas razões para mudar."
+    },
+    {
+      "id": "ex-7-1-q3",
+      "type": "short_answer",
+      "question": "Qual é o sinal de alerta mais comum de violação de SRP em nomes de classe?",
+      "expected_answer": "Nomes genéricos como 'Manager', 'Processor', 'Handler', 'Service'. Esses nomes sugerem que a classe faz tudo relacionado a um conceito, em vez de ter uma responsabilidade específica. Compare: 'UserManager' (vago) vs. 'UserRepository' (específico: persiste usuários).",
+      "explanation": "Nomes descritivos revelam responsabilidades. Se você precisa de um nome vago para descrever a classe, provavelmente ela tem múltiplas responsabilidades."
+    },
+    {
+      "id": "ex-7-1-q4",
+      "type": "prediction",
+      "question": "Qual será o resultado de não refatorar uma classe que viola SRP em um projeto de longa duração?",
+      "expected_answer": "A classe crescerá de forma descontrolada. Cada novo requisito adicionará novos métodos. Testes ficarão cada vez mais complexos. Mudanças simples exigirão refactoring extenso. Débito técnico acumulará, até que o código fica impossível de manter sem refazer tudo.",
+      "explanation": "SRP mantém a complexidade controlada. Sem ele, a complexidade cresce exponencialmente com o tempo. Um projeto que começa com código violando SRP e continua assim eventualmente precisará parar para refatorar, custando semanas de trabalho."
+    },
+    {
+      "id": "ex-7-1-q5",
+      "type": "multiple_choice",
+      "question": "Em qual situação é ACEITÁVEL violar SRP?",
+      "options": [
+        "Nunca. SRP deve ser aplicado em 100% do código.",
+        "Na prototipagem rápida, refatore quando o protótipo vira produção.",
+        "Em classes muito pequenas onde separação adiciona overhead.",
+        "Em conceitos intrinsecamente acoplados (ambas 2 e 3 estão corretas).",
+        "Nunca. SRP deve ser aplicado em 100% do código."
+      ],
+      "correct_answer": "Em conceitos intrinsecamente acoplados (ambas 2 e 3 estão corretas).",
+      "explanation": "Prototipagem rápida: SRP adiciona fricção. Refatore quando vira produção. Classes pequenas (Email com validate()): separação é overhead; validação é parte integral. Conceitos acoplados (Login = autenticação + sessão): separá-los adiciona complexidade sem valor. Use o teste: 'Se só quero Y, posso remover X?'. Se não, estão acoplados legitimamente."
+    }
+  ],
+  "practical_exercise": {
+    "id": "practical-7-1",
+    "title": "Refatore LessonManager: Separe Responsabilidades",
+    "description": "Você tem uma classe LessonManager que faz tudo: persistência, renderização, controle de acesso, analytics e certificados. Refatore em componentes especializados seguindo SRP.",
+    "starting_code": "class LessonManager {\n  async getLessonById(id) {\n    return await db.query('SELECT * FROM lessons WHERE id = ?', id);\n  }\n  \n  renderAsHTML(lesson) {\n    return `<div class=\"lesson\">\n      <h1>${lesson.title}</h1>\n      <p>${lesson.content}</p>\n    </div>`;\n  }\n  \n  canStudentAccess(student, lesson) {\n    return student.completedLessons.includes(lesson.prerequisite);\n  }\n  \n  trackLessonView(studentId, lessonId) {\n    analytics.log('lesson_viewed', { studentId, lessonId });\n  }\n  \n  generateCertificate(student, lesson) {\n    return new PDFGenerator().create({\n      student,\n      lesson,\n      date: new Date()\n    });\n  }\n}\n\n// Você precisa:\n// 1. Identificar cada responsabilidade\n// 2. Extrair em classes separadas\n// 3. Criar um serviço de orquestração (LessonService)\n// 4. Demonstrar como cada classe seria testada isoladamente\n// 5. Mostrar como mudanças agora afetam apenas a classe relevante",
+    "hints": [
+      "Responsabilidade 1: Persistência (getLessonById) -> LessonRepository",
+      "Responsabilidade 2: Renderização (renderAsHTML) -> LessonHTMLRenderer",
+      "Responsabilidade 3: Controle de acesso (canStudentAccess) -> LessonAccessControl",
+      "Responsabilidade 4: Analytics (trackLessonView) -> LessonAnalyticsService",
+      "Responsabilidade 5: Certificado (generateCertificate) -> CertificateGenerator",
+      "Orquestração: LessonService coordena todos esses serviços",
+      "Exemplo: Se designer quer novo HTML, só LessonHTMLRenderer muda. Se analytics muda de ferramenta, só LessonAnalyticsService muda."
+    ],
+    "expected_output": "5-6 classes especializadas + LessonService que coordena. Cada classe tem um propósito único e claro. Testes podem validar cada responsabilidade isoladamente.",
+    "solution_outline": "LessonRepository (persistência), LessonHTMLRenderer (HTML), LessonAccessControl (pré-requisitos), LessonAnalyticsService (rastreamento), CertificateGenerator (PDF). LessonService orquestra: `getLessonForStudent(studentId, lessonId)` -> verifica acesso -> busca lição -> rastreia view -> retorna lição. `getCertificate(student, lesson)` -> valida acesso -> gera PDF."
+  },
+  "summary": {
+    "key_takeaways": [
+      "SRP: Uma classe deve ter uma razão para mudar. Múltiplas razões = múltiplas responsabilidades.",
+      "Red flags: nomes genéricos (Manager), métodos não relacionados, testes complexos com muitos mocks.",
+      "Refatoração: Identificar responsabilidades, extrair em classes, coordenar com serviço.",
+      "Benefícios: Testabilidade, modificabilidade, reusabilidade, código limpo.",
+      "Trade-offs: SRP é essencial para produção, mas prototipagem rápida pode violar. Refatore quando necessário.",
+      "Padrões emergem: Repository, Service, Validator, Mapper são aplicações práticas de SRP."
+    ],
+    "next_lesson": "7.2 - SOLID Principles: Open/Closed, Liskov, Interface Segregation, Dependency Inversion",
+    "prerequisites_met": [
+      "Lição 1.1: Engineering vs. Coding (mentalidade)"
+    ],
+    "estimated_time_to_master": "5-10 horas de prática aplicando SRP em código real"
+  }
+}

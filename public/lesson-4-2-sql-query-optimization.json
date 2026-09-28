@@ -1,0 +1,195 @@
+{
+  "lesson_id": "lesson-4-2-sql-query-optimization",
+  "title": "SQL Query Optimization",
+  "description": "Técnicas práticas para otimizar queries SQL: EXPLAIN PLAN, identificar N+1, índices estratégicos, padrões que escalam. Transformar queries lentas em milissegundos com dados, não adivinhos.",
+  "duration_minutes": 45,
+  "module_id": "module-4",
+  "target_audience": "Developers que escrevem queries SQL regularmente",
+  "learning_objectives": [
+    "Usar EXPLAIN ANALYZE para entender como banco executa query",
+    "Identificar e eliminar N+1 problem — pattern que destrói performance silenciosamente",
+    "Desenhar índices inteligentes: simples, composite, covering, partial",
+    "Reescrever queries para usar índices em vez de table scans",
+    "Reconhecer padrões que escalam (agregação com índice) vs que explodem (OFFSET grande, LIKE %início%)",
+    "Denormalizar estrategicamente com triggers para sincronização"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "80% do tempo de resposta está no banco — otimizar SQL retorna 10x mais que otimizar Python",
+        "Intuição é errada 80% das vezes — sempre medir com dados reais",
+        "Uma query lenta rodam 1000x por dia = economiza horas de desenvolvimento futuro"
+      ]
+    },
+    {
+      "section_id": "explain",
+      "title": "Executar, Medir, Explicar (12 minutos)",
+      "key_points": [
+        "EXPLAIN mostra plano estimado; EXPLAIN ANALYZE mostra real com timings",
+        "Seq Scan = lê tabela inteira; Index Scan = salta direto a registros relevantes",
+        "Índice pode fazer query 3-10x mais rápida se seletivo",
+        "Ler output: cost, actual time, rows, loops — vermelho aponta gargalo"
+      ]
+    },
+    {
+      "section_id": "n_plus_1",
+      "title": "N+1: O Assassino Silencioso (15 minutos)",
+      "key_points": [
+        "N+1: uma query raiz + N queries em loop = 11 queries em vez de 1",
+        "Impacto: +1000% latência, esgota conexões, mata performance",
+        "Solução: JOIN em uma query; IN clause com batch; DataLoader",
+        "Sempre: EXPLAIN ANALYZE query de raiz; 1 query é melhor que 1+N"
+      ]
+    },
+    {
+      "section_id": "indexes",
+      "title": "Índices Inteligentes (12 minutos)",
+      "key_points": [
+        "Composite index: ordem das colunas importa; seletiva primeiro",
+        "Covering index: contém todas colunas da query — evita ler tabela",
+        "Partial index: só em subset (WHERE status = 'incomplete') — menor, mais rápido",
+        "Índices custam escrita; escolha baseado em padrão read/write real"
+      ]
+    },
+    {
+      "section_id": "patterns",
+      "title": "Padrões Que Escalam vs Que Explodem (10 minutos)",
+      "key_points": [
+        "Agregação + índice: COUNT(*) rápido; sem índice: table scan inteiro",
+        "OFFSET grande: pula 10k registros mesmo com índice; use keyset pagination",
+        "LIKE %meio%: precisa full-text search; LIKE inicio%: índice funciona",
+        "Denormalização com trigger: sincronização automática, elimina JOIN"
+      ]
+    },
+    {
+      "section_id": "summary",
+      "title": "Síntese — Otimizar Com Dados (5 minutos)",
+      "key_points": [
+        "EXPLAIN ANALYZE: sempre; dados ditam decisão, não intuição",
+        "Seq Scan em tabela grande = adicione índice",
+        "N+1 = reescreva como 1 query",
+        "Teste antes/depois com volume real"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-4-2-1",
+      "title": "EXPLAIN ANALYZE: Seq Scan vs Index Scan",
+      "description": "Mesmo query, com e sem índice — diferença de 3x velocidade",
+      "code_or_diagram": "-- SEM índice\nEXPLAIN ANALYZE\nSELECT * FROM user_lesson_progress WHERE status = 'completed';\n\nSeq Scan on user_lesson_progress (cost=0..500 rows=1000) (actual time=0.1..45.2 rows=1000)\n  Filter: (status = 'completed')\n-- Lê 5000 linhas, filtra 1000 — 45ms\n\n-- COM índice\nCREATE INDEX idx_progress_status ON user_lesson_progress(status);\n\nEXPLAIN ANALYZE\nSELECT * FROM user_lesson_progress WHERE status = 'completed';\n\nIndex Scan using idx_progress_status (cost=0..100 rows=1000) (actual time=0.1..15.2 rows=1000)\n  Index Cond: (status = 'completed')\n-- Pula direto para 1000 linhas — 15ms (3x mais rápido)"
+    },
+    {
+      "id": "ex-4-2-2",
+      "title": "N+1: Loop vs JOIN",
+      "description": "Como N queries em loop destroem performance comparado a 1 JOIN",
+      "code_or_diagram": "-- RUIM: N+1 em aplicação\nconst users = await db.query('SELECT * FROM users LIMIT 10'); // 1 query\nfor (const user of users) {\n  const progress = await db.query(\n    'SELECT COUNT(*) as lessons_completed FROM user_lesson_progress WHERE user_id = $1',\n    [user.id]\n  ); // +10 queries\n  user.lessonsCompleted = progress.count;\n}\n// Total: 11 queries, 11 round-trips, ~1000% mais lento\n\n-- BOM: 1 query com JOIN\nconst users = await db.query(\n  `SELECT u.*, COUNT(p.id) as lessons_completed\n   FROM users u\n   LEFT JOIN user_lesson_progress p ON u.id = p.user_id \n     AND p.status = 'completed'\n   GROUP BY u.id\n   LIMIT 10`\n); // 1 query, dados completos, 1 round-trip"
+    },
+    {
+      "id": "ex-4-2-3",
+      "title": "Índice Composite: Ordem Importa",
+      "description": "Qual ordem de colunas em composite index é melhor?",
+      "code_or_diagram": "-- Query comum: WHERE module_id = X AND status = 'completed'\n\n-- Índice ruim (ordem errada)\nCREATE INDEX idx_progress_status_module ON user_lesson_progress(status, module_id);\n-- Usa apenas status; module_id ignorado\n\n-- Índice bom (ordem certa)\nCREATE INDEX idx_progress_module_status ON user_lesson_progress(module_id, status);\n-- Usa ambas colunas: module_id (mais seletivo), depois status\n\nEXPLAIN ANALYZE\nSELECT * FROM user_lesson_progress WHERE module_id = X AND status = 'completed';\n-- Com índice certo: Index Scan (rápido)"
+    },
+    {
+      "id": "ex-4-2-4",
+      "title": "Covering Index: Evitar Ler Tabela",
+      "description": "Índice que contém todas colunas da query — acesso 1x em vez de 2x",
+      "code_or_diagram": "-- Sem covering\nCREATE INDEX idx_progress_user_status ON user_lesson_progress(user_id, status);\nSELECT * FROM user_lesson_progress WHERE user_id = X AND status = 'completed';\n-- Lê índice, depois tabela (2 acessos, mais lento)\n\n-- Com covering (PostgreSQL 11+)\nCREATE INDEX idx_progress_user_status_covering ON user_lesson_progress(user_id, status)\n  INCLUDE (completed_at, progress_percentage);\nSELECT user_id, status, completed_at, progress_percentage \nFROM user_lesson_progress WHERE user_id = X AND status = 'completed';\n-- Lê índice só (1 acesso, mais rápido)"
+    },
+    {
+      "id": "ex-4-2-5",
+      "title": "Padrões: OFFSET Grande vs Keyset Pagination",
+      "description": "Por que LIMIT 10 OFFSET 10000 é lento mesmo com índice",
+      "code_or_diagram": "-- PADRÃO LENTO: OFFSET\nSELECT * FROM lessons WHERE difficulty_level = 'advanced'\nORDER BY created_at DESC LIMIT 10 OFFSET 10000;\n-- Pula 10k registros mesmo com índice — O(OFFSET) custo\n\n-- PADRÃO RÁPIDO: Keyset (onde ID < cursor)\nSELECT * FROM lessons WHERE difficulty_level = 'advanced' AND id < 'last_seen_id'\nORDER BY created_at DESC LIMIT 10;\n-- Índice salta direto para cursor — O(LIMIT) custo, constante"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-4-2-q1",
+      "type": "multiple_choice",
+      "question": "Qual é o principal perigo do padrão N+1?",
+      "options": [
+        "Usa mais memória que 1 query",
+        "11 round-trips de rede, 11 parses SQL, 11 execuções = ~10x mais latência",
+        "Índices não funcionam com loops",
+        "SQL injection é possível com múltiplas queries"
+      ],
+      "correct_answer": "11 round-trips de rede, 11 parses SQL, 11 execuções = ~10x mais latência",
+      "explanation": "N+1 mata performance não por lógica lenta, mas por overhead de coordenação (rede, parsing, planejamento). 1 query bem feita vence."
+    },
+    {
+      "id": "ex-4-2-q2",
+      "type": "short_answer",
+      "question": "Por que 'SELECT * FROM users LIMIT 10 OFFSET 10000' é lento mesmo com índice?",
+      "expected_answer": "OFFSET faz banco pular 10k registros antes de ler LIMIT 10. Custo é O(OFFSET + LIMIT), não O(LIMIT). Solução: keyset pagination (WHERE id > last_id) custa O(LIMIT) constante.",
+      "explanation": "Índice ajuda a pular para início, mas OFFSET ainda precisa contar/pular 10k linhas. Pagination com cursor (last_id) é constante em offset grande."
+    },
+    {
+      "id": "ex-4-2-q3",
+      "type": "code_review",
+      "question": "Revise: 'CREATE INDEX idx_progress ON user_lesson_progress(status, user_id); SELECT * FROM user_lesson_progress WHERE user_id = X AND status = Y' — será rápido?",
+      "expected_answer": "Não rápido. Índice tem status primeiro (menos seletivo), user_id segundo (mais seletivo). Ao consultar WHERE user_id = X, índice não usa user_id para filtrar; só status. Inverter ordem: (user_id, status).",
+      "explanation": "Composite index filtra do início; colunas depois não usam se primeira não é usada. Seletiva primeiro = melhor."
+    },
+    {
+      "id": "ex-4-2-q4",
+      "type": "multiple_choice",
+      "question": "EXPLAIN ANALYZE mostra 'Seq Scan on user_lesson_progress (cost=0..500 rows=10000)' para query lenta. Qual é primeira coisa fazer?",
+      "options": [
+        "Otimizar algoritmo na aplicação (Python/Node)",
+        "Reescrever query com mais JOINs",
+        "Adicionar índice em colunas do WHERE; medir se vira Index Scan",
+        "Aumentar memória do servidor"
+      ],
+      "correct_answer": "Adicionar índice em colunas do WHERE; medir se vira Index Scan",
+      "explanation": "Seq Scan em tabela grande é gargalo claro. Índice pode fazer query 10x mais rápido. Sempre medir ANTES E DEPOIS com EXPLAIN ANALYZE."
+    },
+    {
+      "id": "ex-4-2-q5",
+      "type": "debugging",
+      "question": "Dashboard lê 'SELECT u.*, COUNT(p.id) as lessons FROM users u LEFT JOIN user_lesson_progress p ON u.id = p.user_id GROUP BY u.id' para 100 usuários. Já tem índice em user_id. Ainda lento. Por quê?",
+      "expected_answer": "Sem índice em status (se filtra por status ativo), query faz table scan completo de user_lesson_progress depois GROUP BY. Adicione índice em (user_id, status) ou WHERE clause para filtrar status antes de JOIN.",
+      "explanation": "Index em JOIN column (user_id) ajuda join, mas se agrupa todos progresso, pode ser que precisa filtrar status. EXPLAIN ANALYZE dirá se Table Scan aparece em user_lesson_progress."
+    },
+    {
+      "id": "ex-4-2-q6",
+      "type": "multiple_choice",
+      "question": "Qual é melhor prática: denormalizar com trigger ou calcular COUNT via JOIN toda requisição?",
+      "options": [
+        "JOIN toda requisição; triggers são arriscados",
+        "Denormalizar com trigger se COUNT é read-heavy; trigger mantém sincronizado",
+        "Nunca denormalize; normalização é lei",
+        "Depende; medir impact com dados reais"
+      ],
+      "correct_answer": "Denormalizar com trigger se COUNT é read-heavy; trigger mantém sincronizado",
+      "explanation": "Se dashboard lê 1000x por hora e escreve 10x, denormalização + trigger economiza 1000 JOINs; trigger de escrita é O(1) custo marginal. Read-heavy = denormalize."
+    }
+  ],
+  "practical_project": {
+    "id": "practical-4-2",
+    "title": "Projeto: Otimizar Dashboard de Professor",
+    "description": "Dashboard lento mostra progresso de 100 alunos em 6 módulos. Identifique queries lentas com EXPLAIN ANALYZE, adicione índices, elimine N+1, otimize.",
+    "requirements": [
+      "Query 1: Listar alunos com progresso por módulo (% completado)",
+      "Query 2: Contar respostas corretas por aluno",
+      "Query 3: Encontrar lições com maior taxa de erro",
+      "Tempo target: todas queries < 100ms com 100k alunos"
+    ],
+    "hints": [
+      "Use EXPLAIN ANALYZE BEFORE E AFTER — medir é obrigatório",
+      "Procure Seq Scan em tabelas grandes — adicione índice",
+      "N+1 em loop? Reescreva como JOIN ou IN clause",
+      "Agregações lentas? Denormalize com trigger se read-heavy"
+    ],
+    "solution": "Veja Solução do Exercício ao final da lição Markdown",
+    "grading_criteria": [
+      "EXPLAIN ANALYZE identifica gargalo? (Seq Scan vs Index Scan)",
+      "Índices adicionados? Todos WHERE/JOIN/ORDER BY têm índice?",
+      "N+1 eliminado? Queries reescritas como JOINs?",
+      "Performance antes/depois medida? (EXPLAIN ANALYZE timings)"
+    ]
+  }
+}

@@ -1,0 +1,211 @@
+{
+  "lesson_id": "lesson-2-6-performance-optimization",
+  "title": "Performance & Optimization",
+  "description": "Otimização de frontend baseada em medição: React Profiler, memoização estratégica, next/image, bundle analysis, Web Vitals e monitoramento em produção.",
+  "duration_minutes": 45,
+  "target_audience": "Developers com mentalidade de engineer (pré-req: Lição 1.1)",
+  "learning_objectives": [
+    "Diferenciar re-render normal de gargalo real",
+    "Usar React DevTools Profiler para diagnosticar interações lentas",
+    "Aplicar memo, useMemo e useCallback com critério",
+    "Otimizar imagens com next/image e evitar CLS",
+    "Analisar bundle para encontrar dependências pesadas",
+    "Relacionar Web Vitals a decisões de arquitetura e monitoramento"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "Performance é confiabilidade percebida",
+        "Otimização prematura aumenta complexidade",
+        "Engineer mede antes e valida depois"
+      ]
+    },
+    {
+      "section_id": "rerenders",
+      "title": "Renderização Desnecessária (8 minutos)",
+      "key_points": [
+        "Nem todo re-render é problema",
+        "Listas grandes e componentes caros merecem atenção",
+        "React.memo depende de props estáveis"
+      ]
+    },
+    {
+      "section_id": "profiler",
+      "title": "Profiler e Identificação (8 minutos)",
+      "key_points": [
+        "Profiler mostra o que renderizou, por quê e quanto custou",
+        "Fluxo correto é gravar, identificar, alterar e gravar novamente",
+        "Cálculos caros devem ser confirmados antes de otimizar"
+      ]
+    },
+    {
+      "section_id": "memoization",
+      "title": "Memoização Estratégica (8 minutos)",
+      "key_points": [
+        "memo evita render de componente quando props não mudam",
+        "useMemo memoriza resultado de cálculo",
+        "useCallback estabiliza identidade de função"
+      ]
+    },
+    {
+      "section_id": "images",
+      "title": "Image Optimization (7 minutos)",
+      "key_points": [
+        "Imagens afetam LCP e CLS",
+        "next/image reserva dimensões e otimiza formatos",
+        "priority deve ser usado apenas em imagem crítica"
+      ]
+    },
+    {
+      "section_id": "bundle",
+      "title": "Bundle Analysis (7 minutos)",
+      "key_points": [
+        "Imports pesados em rotas globais afetam todos os usuários",
+        "dynamic import adia código raro",
+        "Bundle Analyzer substitui palpite por evidência"
+      ]
+    },
+    {
+      "section_id": "web_vitals",
+      "title": "Web Vitals e Monitoramento (7 minutos)",
+      "key_points": [
+        "LCP mede carregamento do maior conteúdo",
+        "INP/FID mede resposta à interação",
+        "CLS mede estabilidade visual",
+        "Sentry, logs e vitals fecham o ciclo em produção"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-dashboard-rerender",
+      "title": "Dashboard Re-renderizando Cards",
+      "description": "Input de busca faz todos os ModuleProgressCards renderizarem a cada tecla.",
+      "code_or_diagram": "const [query, setQuery] = React.useState(''); modules.map((module) => <ModuleProgressCard module={module} />);"
+    },
+    {
+      "id": "ex-memo-card",
+      "title": "ModuleProgressCard Memoizado",
+      "description": "React.memo em componente caro com props estáveis.",
+      "code_or_diagram": "const ModuleProgressCard = React.memo(function ModuleProgressCard({ module }) { return <article>{module.title}</article>; });"
+    },
+    {
+      "id": "ex-slow-suggestions",
+      "title": "Cálculo Caro no Tutor",
+      "description": "Uso de flatMap e filter com indexOf substituído por Set.",
+      "code_or_diagram": "const uniqueConcepts = React.useMemo(() => Array.from(new Set(messages.flatMap((m) => m.concepts))), [messages]);"
+    },
+    {
+      "id": "ex-callback-row",
+      "title": "useCallback com Filho Memoizado",
+      "description": "Handler estável para LessonRow memoizado.",
+      "code_or_diagram": "const handleOpen = React.useCallback((id: string) => router.push(`/lessons/${id}`), [router]);"
+    },
+    {
+      "id": "ex-next-image",
+      "title": "next/image com Dimensões",
+      "description": "Imagem de curso com width, height e priority quando crítica.",
+      "code_or_diagram": "<Image src='/course-cover.png' alt='Interface da plataforma educacional' width={1200} height={630} priority />"
+    },
+    {
+      "id": "ex-dynamic-chart",
+      "title": "Import Dinâmico de Gráfico",
+      "description": "Adia biblioteca pesada de analytics.",
+      "code_or_diagram": "const AnalyticsChart = dynamic(() => import('./analytics-chart'), { loading: () => <p>Carregando gráfico...</p> });"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "quiz-2-6-1",
+      "type": "multiple_choice",
+      "question": "Qual é a primeira etapa de otimização madura?",
+      "options": [
+        "Adicionar useMemo em todos os componentes.",
+        "Medir e identificar o gargalo real.",
+        "Trocar a biblioteca de UI.",
+        "Remover todos os efeitos."
+      ],
+      "correct_answer": "Medir e identificar o gargalo real.",
+      "explanation": "Sem medição, otimização vira palpite e pode piorar manutenção."
+    },
+    {
+      "id": "quiz-2-6-2",
+      "type": "short_answer",
+      "question": "Quando React.memo ajuda de verdade?",
+      "expected_answer": "Quando o componente é caro, renderiza frequentemente com as mesmas props e essas props permanecem referencialmente estáveis.",
+      "explanation": "Se props mudam sempre, memo não evita render."
+    },
+    {
+      "id": "quiz-2-6-3",
+      "type": "code_review",
+      "question": "Um componente importa biblioteca pesada no layout global para uso raro. O que fazer?",
+      "expected_answer": "Mover o import para a rota/componente onde é usado e considerar dynamic import para carregar sob demanda.",
+      "explanation": "Imports globais pesados aumentam custo inicial para usuários que não usam a feature."
+    },
+    {
+      "id": "quiz-2-6-4",
+      "type": "prediction",
+      "question": "Uma imagem sem dimensões pode afetar qual Web Vital?",
+      "expected_answer": "CLS, porque o layout pode saltar quando a imagem carrega.",
+      "explanation": "Reservar espaço evita instabilidade visual."
+    },
+    {
+      "id": "quiz-2-6-5",
+      "type": "debugging",
+      "question": "O Profiler mostra uma lista inteira renderizando a cada tecla. Quais hipóteses investigar?",
+      "expected_answer": "Estado de input no pai, props instáveis, objetos/funções recriados no render, ausência de memoização em itens caros e falta de virtualização se a lista for grande.",
+      "explanation": "A correção depende do motivo real da renderização."
+    }
+  ],
+  "practical_exercise": {
+    "id": "practice-2-6-profile-optimize",
+    "title": "Profile, Identifique Gargalo e Otimize",
+    "starting_code": "Uma página de lições renderiza busca, lista de módulos, sugestões do tutor e gráficos de progresso no mesmo bundle inicial.",
+    "problems_to_fix": [
+      "Lista renderiza inteira a cada tecla",
+      "Sugestões fazem cálculo caro em todo render",
+      "Gráfico pesado entra no bundle inicial",
+      "Imagens não têm dimensões reservadas"
+    ],
+    "solution_outline": "Usar Profiler para medir, memoizar itens caros com props estáveis, usar useMemo no cálculo de sugestões, importar gráfico dinamicamente e trocar imagens por next/image com width/height.",
+    "acceptance_criteria": [
+      "Relatório antes/depois do Profiler",
+      "Explicação do gargalo principal",
+      "Bundle inicial reduzido ou justificativa se não reduzir",
+      "Lighthouse sem regressão de CLS",
+      "Trade-off da otimização documentado"
+    ]
+  },
+  "summary_key_takeaways": [
+    "Performance começa com medição",
+    "Re-render só importa quando tem custo perceptível",
+    "Memoização precisa de props estáveis e benefício real",
+    "Imagens afetam LCP e CLS",
+    "Bundle analysis revela dependências caras",
+    "Monitoramento em produção valida experiência real"
+  ],
+  "next_lesson": {
+    "id": "lesson-3-1-backend-architecture",
+    "title": "Backend Architecture",
+    "preview": "Depois de arquitetar o frontend, o próximo módulo conecta UI, domínio, API, persistência e observabilidade no backend."
+  },
+  "resources": [
+    {
+      "title": "React DevTools Profiler",
+      "type": "tool",
+      "link": "https://react.dev/learn/react-developer-tools"
+    },
+    {
+      "title": "Next.js Docs - Image Optimization",
+      "type": "article",
+      "link": "https://nextjs.org/docs/app/getting-started/images"
+    },
+    {
+      "title": "web.dev - Core Web Vitals",
+      "type": "article",
+      "link": "https://web.dev/vitals/"
+    }
+  ]
+}

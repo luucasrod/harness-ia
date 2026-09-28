@@ -1,0 +1,210 @@
+{
+  "lesson_id": "lesson-8-2-scaling",
+  "title": "Scaling - De Um Servidor a Bilhões de Requisições",
+  "module_id": "module-8",
+  "module_title": "System Design & Scalability",
+  "description": "Aprenda estratégias de scaling vertical vs horizontal, load balancing, caching em camadas e database scaling. Entenda padrões de crescimento de sistemas reais.",
+  "duration_minutes": 45,
+  "target_audience": "Developers 2-5 anos, arquitetos iniciantes",
+  "learning_objectives": [
+    "Diferenciar vertical vs horizontal scaling e quando cada é apropriado",
+    "Implementar load balancing strategies (round-robin, least connections, weighted)",
+    "Aplicar caching patterns (cache-aside, write-through, write-behind)",
+    "Entender replicação de database e seus tradeoffs",
+    "Planejar sharding quando replicação não é suficiente",
+    "Diagnosticar gargalos e aplicar scaling específico"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "Scaling não é 'adicionar mais servidores'; é série de decisões afetando performance e confiabilidade",
+        "Sucesso traz dilema: sistema que era rápido fica lento no pico",
+        "Engineers que entendem escalabilidade diferenciam-se cedo em carreira",
+        "Vertical tem limite, horizontal não, mas é complexo"
+      ]
+    },
+    {
+      "section_id": "vertical_vs_horizontal",
+      "title": "Vertical vs Horizontal Scaling (12 minutos)",
+      "key_points": [
+        "Vertical: máquina mais poderosa (simples, mas limite físico)",
+        "Horizontal: múltiplas máquinas pequenas (sem limite, mas complexo)",
+        "Single point of failure com vertical; redundância natural com horizontal",
+        "Instagram: começou 1 servidor, cresceu para centenas via horizontal",
+        "Downtime: vertical força reinicialização; horizontal permite rolling updates"
+      ]
+    },
+    {
+      "section_id": "load_balancing",
+      "title": "Load Balancing - Distribuindo Requisições (13 minutos)",
+      "key_points": [
+        "Load balancer é um router de requisições entre múltiplos servidores",
+        "Round-robin: simples, mas ignora capacidade diferente dos servidores",
+        "Least Connections: melhor proxy para carga real que conta de conexões",
+        "Weighted Round-Robin: permite diferentes capacidades explicitamente",
+        "IP Hash: session affinity, mas risco de distribuição desigual",
+        "Health checks: removem servidores mortos automaticamente"
+      ]
+    },
+    {
+      "section_id": "caching",
+      "title": "Caching - Reduzindo Carga (13 minutos)",
+      "key_points": [
+        "Cache em camadas: browser → CDN → app cache → database → disk",
+        "Cache-Aside (lazy): fetch if miss, mas dados desatualizam",
+        "Write-Through: atualiza cache na hora, mais lento e risco de inconsistência",
+        "Write-Behind: rápido mas risco de perda se cache morre antes de persistir",
+        "Google Search: 99% de requisições vêm de cache (trending topics repetidas)",
+        "TTL (Time To Live): balanceia freshness vs cache hit rate"
+      ]
+    },
+    {
+      "section_id": "database_scaling",
+      "title": "Database Scaling - Quando Um Banco Não Basta (13 minutos)",
+      "key_points": [
+        "Replicação (read replicas): leitura escala, mas lag de replicação é real",
+        "Master/Slave: uma máquina escreve, múltiplas leem; leitura escala bem",
+        "Sharding: divide dados entre múltiplos bancos (ex: user_id % shard_count)",
+        "Sharding reduz tamanho per shard, mas queries cross-shard são caras",
+        "Rebalancear shards é complexo quando dados crescem desigualmente",
+        "Twitter exemplo: MySQL monolítico → replicação → sharding por user_id"
+      ]
+    },
+    {
+      "section_id": "synthesis",
+      "title": "Síntese - Escalar É Um Espectro (6 minutos)",
+      "key_points": [
+        "Não existe 'arquitetura de escala' genérica; scaling é específico do gargalo",
+        "Padrão de crescimento: 1 servidor → separar app/db → load balancer → sharding → multi-região",
+        "1 servidor: 1-5k RPS | 10 servers: 50k RPS | 100+ servers: Netflix-scale",
+        "Próximo: como coordenar múltiplos sistemas escalando independentemente?"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-vertical-horizontal",
+      "title": "Vertical vs Horizontal: Trade-offs Reais",
+      "description": "Comparação de crescimento de infraestrutura em dois caminhos",
+      "code_or_diagram": "// VERTICAL SCALING (Ano 1 → 3)\nAno 1: 1 servidor (2 cores, 8GB RAM) → 1k RPS\nAno 2: 1 servidor (8 cores, 64GB RAM) → 5k RPS\nAno 3: 1 servidor (64 cores, 512GB RAM) → 10k RPS máximo (limite físico)\n\nProblemas:\n- Downtime durante upgrade (2-4 horas)\n- Single point of failure (tudo cai se única máquina falha)\n- Custo aumenta exponencialmente por cores adicionais\n\n// HORIZONTAL SCALING (Ano 1 → 3)\nAno 1: 1 servidor (2 cores, 8GB) → 1k RPS\nAno 2: 10 servidores (2 cores, 8GB cada) → 10k RPS\nAno 3: 100 servidores (2 cores, 8GB cada) → 100k RPS\n\nBenefícios:\n- Sem limite prático (continua adicionando servidores)\n- Redundância: 1 servidor cai, 99 continuam\n- Rolling updates (atualiza 1 servidor por vez, zero downtime)\n\nComplexidade:\n- Load balancer precisa distribuis inteligentemente\n- Cache distribuído é mais complexo\n- Debugging é mais desafiador (qual servidor?"
+    },
+    {
+      "id": "ex-load-balancer-strategies",
+      "title": "Estratégias de Load Balancing",
+      "description": "Diferentes algoritmos e quando cada um brilha",
+      "code_or_diagram": "// ROUND-ROBIN\nRequisição 1 → Servidor 1\nRequisição 2 → Servidor 2\nRequisição 3 → Servidor 3\nRequisição 4 → Servidor 1 (volta ao início)\n\nProblema: Não lida com servidores de diferentes capacidades\n\n// LEAST CONNECTIONS\nServidor 1: 100 conexões ativas\nServidor 2: 20 conexões ativas (WINNER)\nServidor 3: 150 conexões ativas\n\nPróxima requisição → Servidor 2\n\nBenefício: Melhor distribuição real de carga\nProblema: Conexões nem sempre = carga (1 conexão pode ser muito cara)\n\n// WEIGHTED ROUND-ROBIN\nServidor 1 (poderoso, 8 cores): 50% das requisições\nServidor 2 (médio, 4 cores): 30% das requisições\nServidor 3 (fraco, 2 cores): 20% das requisições\n\nBenefício: Aproveita heterogeneidade\nProblema: Requer ajuste manual\n\n// IP HASH\nHash(IP do cliente) → sempre mesma requisição vai mesmo servidor\nBenefício: Session affinity (cache local fica quente, cookies locais)\nProblema: Distribuição desigual se IPs vêm de mesmo datacenter"
+    },
+    {
+      "id": "ex-caching-patterns",
+      "title": "Padrões de Cache: Trade-offs",
+      "description": "Cache-Aside vs Write-Through vs Write-Behind",
+      "code_or_diagram": "// CACHE-ASIDE (Lazy Loading)\n1. Request: \"Dados do usuário 123?\"\n2. Check cache: miss\n3. Query database: \"Aqui está\"\n4. Write cache: guardar em memória\n5. Return response\n\nProxima mesma query: cache hit (10x mais rápido)\n\nProblema: Dados desatualizam\nSolução: TTL (cache expira em 1 hora)\n\n// WRITE-THROUGH (Eager)\n1. Usuário atualiza nome\n2. Update database\n3. Update cache JUNTO\n4. Return response\n\nBenefício: Cache sempre atualizado\nProblema: 2 operações, mais lento, mais pontos de falha\n\n// WRITE-BEHIND (Eventual Consistency)\n1. Usuário atualiza nome\n2. Write cache IMEDIATAMENTE\n3. Return response (rápido!)\n4. Background job: update database depois\n\nBenefício: Muito rápido\nRisco: Se cache morre antes de persistir, dados se perdem\nBom para: Não-crítico (stats, views, social feed)\nMal para: Financial, auth, inventory"
+    },
+    {
+      "id": "ex-database-replication",
+      "title": "Database Replication: Master/Slave Pattern",
+      "description": "Como escalar leitura mantendo escriture",
+      "code_or_diagram": "// ARQUITETURA\n          ↓ Write\n    Master Database (escreve)\n          ↓ Replication (async)\n    ┌─────┴─────┬─────────┐\n    ↓           ↓         ↓\nSlave 1     Slave 2   Slave 3  (leitura)\n\n// FLUXO TÍPICO\nEscrever: usuário.name = \"João\" → Master (1 db)\nLer: select * from users → qualquer Slave (pode ser 10+ dbs)\n\n// VANTAGEM\nLeitura escala: 1 master, 100 slaves = 100x mais RPS leitura\n\n// PROBLEMA: Lag de Replicação\nUserário:\n1. Atualiza nome em master (escreve)\n2. Imediatamente lê de slave\n3. Vê valor velho por 100-500ms\n\nSolução 1: Sempre ler de master se recém-escreveu (read-after-write)\nSolução 2: Aceitar lag (típico para feeds, stats)\n\n// FALHA\nMaster cai → sem escrita possível\nSolução: Promover uma Slave para Master (manualmente ou automático)"
+    },
+    {
+      "id": "ex-sharding",
+      "title": "Sharding: Dividindo Dados Horizontalmente",
+      "description": "Quando replicação não é suficiente para volume",
+      "code_or_diagram": "// PROBLEMA\n100M usuários × 1KB por usuário = 100GB\nRéplicas 3x = 300GB total\nNenhum servidor aguenta (exceed memory/disk)\n\n// SOLUÇÃO: SHARDING\nCalcular shard key: shard_id = user_id % num_shards\n\nExemplo com 4 shards:\nUsuário 1 (1 % 4 = 1) → Shard 1\nUsuário 2 (2 % 4 = 2) → Shard 2\nUsuário 3 (3 % 4 = 3) → Shard 3\nUsuário 4 (4 % 4 = 0) → Shard 0\nUsuário 5 (5 % 4 = 1) → Shard 1 (volta ao 0)\n\n// RESULTADO\nCada shard: 100GB ÷ 4 = 25GB (cabe em servidor moderno)\nTotal: 4 servidores (+ réplicas = 12 servidores)\n\n// VANTAGENS\n- Dados distribuídos, cada shard menor\n- Escala indefinidamente (adiciona shards)\n- Leitura/escrita paralela em shards diferentes\n\n// DESVANTAGENS\n- Queries cross-shard são caras (precisa ir em múltiplos shards, merge)\n- Rebalancear é complexo (dados crescem desigualmente)\n- Escolher shard key é crítico (ruim = distribuição desigual)"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-8-2-1",
+      "type": "multiple_choice",
+      "question": "Você tem 10k RPS pico esperado. Qual estratégia você escolhe inicialmente?",
+      "options": [
+        "Vertical scaling: compre um servidor com 100 cores",
+        "Horizontal scaling: 10 servidores + load balancer",
+        "Database replicação: múltiplos databases",
+        "Sharding completo desde o início"
+      ],
+      "correct_answer": "Horizontal scaling: 10 servidores + load balancer",
+      "explanation": "10k RPS precisa distribuição. 1 servidor aguenta 1-5k RPS máximo. Logo: 10 servidores (2-3 vezes redundância) + load balancer distribui requisições. Simples, mas resolve. Sharding é premature optimization (banco ainda cabe em 1-2 máquinas)."
+    },
+    {
+      "id": "ex-8-2-2",
+      "type": "short_answer",
+      "question": "Você implementou load balancer round-robin, mas observa que 3 de 4 servidores ficam 70% utilizados enquanto 1 fica 20%. Qual é o problema e como fix?",
+      "expected_answer": "Round-robin ignora capacidade diferente dos servidores. Provável: 1 servidor é mais fraco (menos cores, menos memória) que os outros. Solução: trocar para Weighted Round-Robin (20% das requisições para servidor fraco, 30% para outros) ou Least Connections (distribui por conexões ativas, mais dinâmico).",
+      "explanation": "Round-robin é ceguinho: distribui uniformemente sem considerar capacidade. Least Connections é melhor default porque adapta-se dinamicamente. Weighted RR requer manual tuning, mas funciona se capacidades são conhecidas."
+    },
+    {
+      "id": "ex-8-2-3",
+      "type": "multiple_choice",
+      "question": "Qual padrão de cache você escolheria para guardar 'ranking de aulas mais populares'?",
+      "options": [
+        "Cache-Aside com TTL 1 dia (lazy, atualiza só se miss)",
+        "Write-Through (atualiza cache toda vez que ranking muda)",
+        "Write-Behind (atualiza cache rápido, persiste depois)",
+        "Sem cache (ranking é calculado sempre que pedido)"
+      ],
+      "correct_answer": "Cache-Aside com TTL 1 dia (lazy, atualiza só se miss)",
+      "explanation": "Ranking é leitura-pesada, muda pouco. Cache-Aside com TTL longo (1 dia) faz sentido: 99% de requisições vêm de cache (rápido), desatualização de 1 dia é aceitável. Write-Through é overkill (ranking muda de verdade raras vezes). Write-Behind é risco desnecessário (ranking não-crítico, mas você prefere não perder)."
+    },
+    {
+      "id": "ex-8-2-4",
+      "type": "code_review",
+      "question": "Você vê este código: 'Salva dados em cache, depois retorna. Database update é feito em background.' Qual é o risco?",
+      "expected_answer": "Isso é Write-Behind. Risco: se servidor de cache cai antes de persistir no database, dados se perdem. Para dados não-críticos (stats, rankings) é aceitável. Para dados críticos (auth, payment, inventory) é inaceitável.",
+      "explanation": "Write-Behind é trade-off: velocidade vs segurança. Bom para: social feed likes (não importa se perde alguns), metrics (aproximação é ok). Ruim para: transações financeiras, credenciais, inventário. Precisa decisão consciente do que é 'ok perder'."
+    },
+    {
+      "id": "ex-8-2-5",
+      "type": "prediction",
+      "question": "Você sharda database por user_id. Um dia, descobre que Shard 3 (usuários 3M-4M) tem 3x mais dados que outros shards. Por quê isso acontece e como fix?",
+      "options": [
+        "Usuários em faixa 3M-4M usam muito mais features (normal, sem problema)",
+        "Hash function é ruim (user_id % 4 é distribuição desigual)",
+        "Distribuição natural de dados: alguns usuários geram muito mais dados (fotos, vídeos)",
+        "Todas as opções acima são possíveis; precisa investigar"
+      ],
+      "correct_answer": "Todas as opções acima são possíveis; precisa investigar",
+      "explanation": "Distribuição desigual em shards é comum. Causas: (1) usuários famosos geram muito conteúdo, (2) distribuição temporal (alguns usuários joinaram cedo, têm mais dados), (3) algumas user_ids tendem ter mais dados (padrão não-óbvio). Solução: rebalancear (caro) ou usar consistent hashing com virtual nodes (melhor distribuição)."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-8-2",
+    "title": "Design: Escalando para 100k RPS",
+    "description": "Você tem sistema que hoje aguenta 5k RPS. Precisa escalar 20x (100k RPS). Desenhe arquitetura passo a passo.",
+    "context": "Plataforma educacional. Hoje: 1 app server, 1 database. Pico: 5k RPS, mas projeção é 100k RPS em 6 meses.",
+    "tasks": [
+      {
+        "task_id": "task-1",
+        "title": "Load Balancing Strategy",
+        "description": "Diagrama como distribuir 100k RPS entre múltiplos app servers. Qual estratégia escolher?",
+        "hints": ["1 servidor aguenta 5k RPS", "Logo: 20 servidores = 100k RPS", "Qual algoritmo de distribuição? Considere simplicidade vs otimalidade"],
+        "rubric": "Mostrar diagrama simples (usuário → load balancer → múltiplos servidores). Justificar escolha de estratégia"
+      },
+      {
+        "task_id": "task-2",
+        "title": "Caching Strategy",
+        "description": "Que dados você cachea para reduzir carga no database? Qual padrão de cache?",
+        "hints": ["Aulas (leitura-pesada, muda pouco)", "Progresso de usuário (leitura-pesada, muda frequente)", "Qual pattern (cache-aside, write-through, write-behind)?"],
+        "rubric": "Justificar o quê cachea e por quê. Argumentar padrão de cache escolhido"
+      },
+      {
+        "task_id": "task-3",
+        "title": "Database Escalation",
+        "description": "1 database não aguenta 100k RPS (maioria é leitura, alguns são escrita). Como escala?",
+        "hints": ["Read replicas para leitura", "Master para escrita", "Quando considerar sharding?"],
+        "rubric": "Mostrar arquitetura master/slave. Explicar quando sharding entra em jogo"
+      },
+      {
+        "task_id": "task-4",
+        "title": "Diagrama Final",
+        "description": "Desenhe arquitetura end-to-end que aguenta 100k RPS. Componentes: LB, app servers, cache, database.",
+        "hints": ["Usuário → CDN?", "CDN → Load Balancer → App Servers", "App Servers → Cache → Database"],
+        "rubric": "Diagrama claro mostrando fluxo de requisição e componentes. Números estimados (quantos servidores, cache size, etc)"
+      }
+    ],
+    "expected_output": "Documento com: (1) Diagrama de arquitetura, (2) Estratégias de caching, (3) Database scaling plan, (4) Estimativa de custos (servidores, storage, bandwidth)"
+  }
+}

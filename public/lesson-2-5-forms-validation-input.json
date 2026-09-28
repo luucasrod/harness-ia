@@ -1,0 +1,207 @@
+{
+  "lesson_id": "lesson-2-5-forms-validation-input",
+  "title": "Forms, Validation & Input",
+  "description": "Construção de formulários robustos com React Hook Form, validação client/server, Zod, uploads, multi-step forms e UX de erro aplicada a envio de exercícios.",
+  "duration_minutes": 45,
+  "target_audience": "Developers com mentalidade de engineer (pré-req: Lição 1.1)",
+  "learning_objectives": [
+    "Diferenciar controlled e uncontrolled inputs com critérios práticos",
+    "Comparar React Hook Form e Formik",
+    "Criar schemas Zod type-safe e reutilizáveis",
+    "Aplicar validação dupla no client e no server",
+    "Implementar upload com validação de tamanho e tipo",
+    "Projetar mensagens de erro úteis para o usuário"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "Formulários são fronteiras entre usuário e sistema",
+        "Usuários enviam dados incompletos, errados ou inesperados",
+        "O caso central é envio de exercício com anexo"
+      ]
+    },
+    {
+      "section_id": "controlled_uncontrolled",
+      "title": "Controlled vs Uncontrolled (8 minutos)",
+      "key_points": [
+        "Controlled guarda valor no estado React",
+        "Uncontrolled reduz renders em forms grandes",
+        "React Hook Form usa uncontrolled por padrão"
+      ]
+    },
+    {
+      "section_id": "rhf_vs_formik",
+      "title": "React Hook Form vs Formik (8 minutos)",
+      "key_points": [
+        "React Hook Form costuma ser melhor para novos forms grandes",
+        "Formik ainda aparece muito em codebases existentes",
+        "A escolha deve considerar filosofia e manutenção"
+      ]
+    },
+    {
+      "section_id": "zod_validation",
+      "title": "Zod e Validação Dupla (10 minutos)",
+      "key_points": [
+        "Client validation melhora UX",
+        "Server validation protege o sistema",
+        "Schema compartilhado reduz divergência"
+      ]
+    },
+    {
+      "section_id": "error_ux",
+      "title": "Form Complexo com Erros Úteis (10 minutos)",
+      "key_points": [
+        "Erros devem dizer o que aconteceu e como corrigir",
+        "Erros por campo e erro global têm papéis diferentes",
+        "Submit deve lidar com loading e falha do servidor"
+      ]
+    },
+    {
+      "section_id": "uploads_multistep",
+      "title": "Upload e Multi-step (8 minutos)",
+      "key_points": [
+        "Uploads validam tamanho, tipo e falha parcial",
+        "FormData é usado para envio de arquivos",
+        "Multi-step deve validar por etapa sem perder dados"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-controlled-answer",
+      "title": "Textarea Controlled",
+      "description": "Input simples com valor no estado React.",
+      "code_or_diagram": "const [answer, setAnswer] = React.useState('');"
+    },
+    {
+      "id": "ex-rhf-simple",
+      "title": "Form Simples com React Hook Form",
+      "description": "Registro de textarea sem estado por tecla no componente.",
+      "code_or_diagram": "const { register, handleSubmit } = useForm<ExerciseAnswerForm>();"
+    },
+    {
+      "id": "ex-zod-schema",
+      "title": "Schema Zod de Submissão",
+      "description": "Schema com lessonId, answer, confidence e attachmentUrl.",
+      "code_or_diagram": "export const exerciseSubmissionSchema = z.object({ lessonId: z.string().min(1), answer: z.string().min(40).max(5000), confidence: z.enum(['low', 'medium', 'high']), attachmentUrl: z.string().url().optional() });"
+    },
+    {
+      "id": "ex-server-validation",
+      "title": "Validação no Servidor",
+      "description": "safeParse antes de persistir submissão.",
+      "code_or_diagram": "const parsed = exerciseSubmissionSchema.safeParse(input); if (!parsed.success) return { ok: false, errors: parsed.error.flatten().fieldErrors };"
+    },
+    {
+      "id": "ex-form-errors",
+      "title": "Erros por Campo e Global",
+      "description": "Uso de errors.answer e setError('root').",
+      "code_or_diagram": "{errors.answer && <p role='alert'>{errors.answer.message}</p>}"
+    },
+    {
+      "id": "ex-upload-validation",
+      "title": "Upload com Limites",
+      "description": "Validação de tamanho e tipo antes de enviar FormData.",
+      "code_or_diagram": "if (file.size > 5 * 1024 * 1024) return 'Arquivo deve ter até 5MB.';"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "quiz-2-5-1",
+      "type": "multiple_choice",
+      "question": "Por que validar no servidor mesmo validando no client?",
+      "options": [
+        "Porque validação client nunca melhora UX.",
+        "Porque o client pode ser alterado, ignorado ou chamado diretamente por request manual.",
+        "Porque Zod só roda no servidor.",
+        "Porque HTML não valida nada."
+      ],
+      "correct_answer": "Porque o client pode ser alterado, ignorado ou chamado diretamente por request manual.",
+      "explanation": "Validação client é conveniência; validação server é segurança e integridade."
+    },
+    {
+      "id": "quiz-2-5-2",
+      "type": "short_answer",
+      "question": "Quando controlled input é uma boa escolha?",
+      "expected_answer": "Quando o valor precisa controlar UI imediatamente, há máscara/preview em tempo real ou o campo é simples o bastante para não gerar custo relevante.",
+      "explanation": "Controlled inputs são explícitos e úteis quando estado por tecla é necessário."
+    },
+    {
+      "id": "quiz-2-5-3",
+      "type": "code_review",
+      "question": "O formulário mostra apenas 'Erro'. O que melhorar?",
+      "expected_answer": "Mostrar mensagens específicas por campo e uma mensagem global acionável, indicando o que falhou e como corrigir.",
+      "explanation": "Erro útil reduz fricção e tickets de suporte."
+    },
+    {
+      "id": "quiz-2-5-4",
+      "type": "prediction",
+      "question": "O que acontece se upload conclui, mas envio final falha?",
+      "expected_answer": "O sistema precisa informar a falha final e decidir se preserva attachmentUrl para retry ou remove o arquivo órfão em cleanup.",
+      "explanation": "Uploads têm falhas parciais e precisam de estratégia explícita."
+    },
+    {
+      "id": "quiz-2-5-5",
+      "type": "multiple_choice",
+      "question": "React Hook Form tende a performar bem em forms grandes porque:",
+      "options": [
+        "Não valida dados.",
+        "Usa uncontrolled inputs por padrão.",
+        "Remove TypeScript.",
+        "Não usa HTML forms."
+      ],
+      "correct_answer": "Usa uncontrolled inputs por padrão.",
+      "explanation": "Menos estado por tecla no React reduz renderizações em muitos cenários."
+    }
+  ],
+  "practical_exercise": {
+    "id": "practice-2-5-exercise-answer-form",
+    "title": "Criar Form de Resposta com Validação Dupla",
+    "starting_code": "export function ExerciseAnswerForm() { return <form><textarea name='answer' /><button>Enviar</button></form>; }",
+    "problems_to_fix": [
+      "Sem validação client",
+      "Sem validação server",
+      "Sem erro por campo",
+      "Sem estado de submit",
+      "Sem validação de upload"
+    ],
+    "solution_outline": "Criar schema Zod compartilhado, usar React Hook Form com zodResolver, implementar endpoint/server action com safeParse e upload validado por tamanho/tipo.",
+    "acceptance_criteria": [
+      "Resposta exige mínimo de 40 caracteres",
+      "Confidence aceita apenas low, medium ou high",
+      "Upload limita 5MB e tipos PDF/PNG/JPEG",
+      "Erros aparecem junto aos campos",
+      "Servidor rejeita payload inválido mesmo se client for burlado"
+    ]
+  },
+  "summary_key_takeaways": [
+    "Forms são contratos de entrada",
+    "Controlled e uncontrolled têm trade-offs reais",
+    "React Hook Form é forte para forms modernos",
+    "Validação client e server são complementares",
+    "Mensagens de erro fazem parte da qualidade do sistema"
+  ],
+  "next_lesson": {
+    "id": "lesson-2-6-performance-optimization",
+    "title": "Performance & Optimization",
+    "preview": "Vamos medir renders, usar Profiler, otimizar imagens, analisar bundle e acompanhar Web Vitals em produção."
+  },
+  "resources": [
+    {
+      "title": "React Hook Form Docs",
+      "type": "article",
+      "link": "https://react-hook-form.com/"
+    },
+    {
+      "title": "Zod Docs",
+      "type": "article",
+      "link": "https://zod.dev/"
+    },
+    {
+      "title": "Formik Docs",
+      "type": "article",
+      "link": "https://formik.org/"
+    }
+  ]
+}

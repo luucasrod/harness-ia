@@ -1,0 +1,240 @@
+{
+  "id": "9-1",
+  "moduleId": "9",
+  "module": "Module 9: DevOps & Containerization",
+  "lessonNumber": "9.1",
+  "title": "Docker & Containerization - Do Código ao Container",
+  "duration": "60 min",
+  "wordCount": 2847,
+  "objectives": [
+    "Entender Docker e como funciona (não é máquina virtual)",
+    "Construir imagens Docker profissionais com multi-stage",
+    "Orquestrar containers localmente com Docker Compose",
+    "Entender trade-offs: quando usar Docker e quando ter cuidado",
+    "Deploy hands-on: build, push, pull, e rodar um container real"
+  ],
+  "sections": [
+    {
+      "id": "intro",
+      "title": "Introdução",
+      "duration": "8 min"
+    },
+    {
+      "id": "docker-fundamentals",
+      "title": "Entender Docker",
+      "duration": "15 min"
+    },
+    {
+      "id": "dockerfile-professional",
+      "title": "Dockerfile Profissional",
+      "duration": "20 min"
+    },
+    {
+      "id": "docker-compose",
+      "title": "Docker Compose e Orquestração Local",
+      "duration": "17 min"
+    },
+    {
+      "id": "images-registries",
+      "title": "Imagens, Registries e Best Practices",
+      "duration": "15 min"
+    }
+  ],
+  "keyTakeaways": [
+    "Docker encapsula tudo: código, dependências, config em um container único",
+    "Imagens ≠ VMs: mais leves, iniciam em ms, custam muito menos",
+    "Dockerfile é código: organize com layers eficientes, segurança em mente",
+    "Docker Compose orquestra múltiplos containers localmente",
+    "Registries distribuem imagens entre máquinas/equipas"
+  ],
+  "exercises": {
+    "main": {
+      "id": "exercise-docker-build-push",
+      "type": "hands-on",
+      "title": "Build, Push e Deploy Sua Primeira Image",
+      "description": "Criar Dockerfile profissional, build image, rodar localmente, e fazer push pra Docker Hub",
+      "estimatedTime": "30 min",
+      "steps": [
+        {
+          "number": 1,
+          "title": "Dockerfile",
+          "description": "Crie Dockerfile com app Python FastAPI e multi-stage build"
+        },
+        {
+          "number": 2,
+          "title": "Código da App",
+          "description": "Crie main.py com endpoints /health e /grade"
+        },
+        {
+          "number": 3,
+          "title": "Build",
+          "description": "Execute docker build -t meu-tutor-ia:1.0.0"
+        },
+        {
+          "number": 4,
+          "title": "Rodar Localmente",
+          "description": "docker run -p 8000:8000 e testar com curl"
+        },
+        {
+          "number": 5,
+          "title": "Docker Compose com DB",
+          "description": "Criar docker-compose.yml com API + PostgreSQL"
+        },
+        {
+          "number": 6,
+          "title": "Desafio Bônus",
+          "description": "Push pra Docker Hub (public)"
+        }
+      ],
+      "successCriteria": [
+        "Image buildada sem erros",
+        "Container roda em localhost:8000",
+        "curl /health retorna {\"status\": \"ok\"}",
+        "docker ps mostra container rodando",
+        "Docker Compose com DB funciona",
+        "Health check está OK"
+      ],
+      "hints": [
+        "Use python:3.11-slim para imagem menor",
+        "Multi-stage reduz tamanho final em 50%",
+        "Não rodar como root (segurança)",
+        "HEALTHCHECK é crítico em produção",
+        "PYTHONUNBUFFERED=1 pra logs em real-time"
+      ]
+    }
+  },
+  "quiz": [
+    {
+      "id": "q1",
+      "number": 1,
+      "type": "choice",
+      "difficulty": "fundamental",
+      "question": "Qual é a diferença principal entre Docker e máquina virtual?",
+      "options": [
+        {
+          "text": "Docker virtualiza hardware, VM virtualiza SO",
+          "correct": false
+        },
+        {
+          "text": "Docker virtualiza SO, VM virtualiza hardware",
+          "correct": true
+        },
+        {
+          "text": "Docker é mais lento que VM",
+          "correct": false
+        },
+        {
+          "text": "Docker não pode rodar em Windows",
+          "correct": false
+        }
+      ],
+      "explanation": "Docker compartilha o kernel do SO host, enquanto VMs virtualizam hardware completo. Por isso Docker é mais leve (~10-50MB vs ~500MB-2GB)."
+    },
+    {
+      "id": "q2",
+      "number": 2,
+      "type": "code_review",
+      "difficulty": "intermediate",
+      "question": "O que há de errado nesse Dockerfile?\n\n```dockerfile\nFROM python:3.11\nCOPY requirements.txt .\nRUN pip install -r requirements.txt\nCOPY . .\n```",
+      "expectedAnswer": "Usa python:3.11 (grande) em vez de slim. Não roda como não-root. Sem healthcheck. Sem PYTHONUNBUFFERED. Sem multi-stage.",
+      "hints": [
+        "Pense em: tamanho da image, segurança, debugging"
+      ]
+    },
+    {
+      "id": "q3",
+      "number": 3,
+      "type": "prediction",
+      "difficulty": "intermediate",
+      "question": "Se você mudar apenas seu main.py e rodar `docker build`, quais layers serão recriadas?",
+      "options": [
+        {
+          "text": "Apenas a layer de COPY . .",
+          "correct": false
+        },
+        {
+          "text": "COPY . . e todas as layers depois",
+          "correct": true
+        },
+        {
+          "text": "Todas as layers",
+          "correct": false
+        },
+        {
+          "text": "Nenhuma (cache reutiliza tudo)",
+          "correct": false
+        }
+      ],
+      "explanation": "Docker cache funciona por layer. Quando uma layer muda, todas as depois dela são recriadas. Por isso coloque COPY requirements.txt antes de COPY . . (mudar código não recria dependências)."
+    },
+    {
+      "id": "q4",
+      "number": 4,
+      "type": "debugging",
+      "difficulty": "intermediate",
+      "question": "Seu container para de funcionar. Você roda `docker ps` e ele não aparece. Qual é o problema mais provável?",
+      "options": [
+        {
+          "text": "Não bindou a porta corretamente",
+          "correct": false
+        },
+        {
+          "text": "Container crashou ou exited (tente `docker ps -a` e `docker logs <id>`)",
+          "correct": true
+        },
+        {
+          "text": "Docker não está instalado",
+          "correct": false
+        },
+        {
+          "text": "Firewall bloqueando",
+          "correct": false
+        }
+      ],
+      "explanation": "`docker ps` mostra apenas containers rodando. Crashou? Use `docker ps -a` pra ver histórico, e `docker logs <id>` pra ver a causa."
+    },
+    {
+      "id": "q5",
+      "number": 5,
+      "type": "choice",
+      "difficulty": "fundamental",
+      "question": "Em `docker-compose.yml`, qual é a função de `depends_on`?",
+      "options": [
+        {
+          "text": "Define ordem de startup",
+          "correct": true
+        },
+        {
+          "text": "Garante que serviço A espera B estar pronto (sem health check)",
+          "correct": false
+        },
+        {
+          "text": "Define permissões de rede",
+          "correct": false
+        },
+        {
+          "text": "Limita CPU/memória do serviço",
+          "correct": false
+        }
+      ],
+      "explanation": "`depends_on` inicia serviços em ordem, mas não espera estarem \"prontos\". Pra garantir saúde, use `condition: service_healthy` com healthcheck."
+    }
+  ],
+  "resources": {
+    "documentation": [
+      {
+        "title": "Docker Official Docs",
+        "url": "https://docs.docker.com"
+      },
+      {
+        "title": "Docker Best Practices",
+        "url": "https://docs.docker.com/develop/dev-best-practices"
+      }
+    ],
+    "tools": [
+      "Docker Desktop (docker-ce)",
+      "Docker Compose",
+      "Docker Hub"
+    ]
+  }
+}

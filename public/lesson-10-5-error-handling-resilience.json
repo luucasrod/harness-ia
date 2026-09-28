@@ -1,0 +1,224 @@
+{
+  "lesson_id": "lesson-10-5-error-handling-resilience",
+  "title": "Error Handling & Resilience - Rate Limits, Timeouts, Retries e Fallbacks",
+  "module_id": "module-10",
+  "module_title": "Claude AI Integration",
+  "description": "Transforme chamadas a Claude em uma dependencia confiavel: trate 429, 500, 504, 529, timeouts, cancelamento, idempotencia, filas e degradacao elegante.",
+  "duration_minutes": 90,
+  "word_count": 6612,
+  "target_audience": "Developers intermediarios criando features de IA em plataforma educacional",
+  "learning_objectives": [
+    "Classificar erros recuperaveis, permanentes e de produto.",
+    "Implementar retry com exponential backoff, jitter e respeito a retry-after.",
+    "Usar timeouts e cancelamento para proteger UX e custo.",
+    "Limitar concorrencia por usuario, turma e workspace.",
+    "Criar fallback educacional quando Claude esta indisponivel.",
+    "Registrar request IDs, usage, latencia e causa de falhas."
+  ],
+  "content_sections": [
+    {
+      "section_id": "ia-como-dependencia-externa",
+      "title": "IA como dependencia externa",
+      "key_points": [
+        "O SDK ja possui retries para falhas transientes, mas a aplicacao ainda precisa de politica propria.",
+        "429 indica limite; 529 indica sobrecarga; 504 pede streaming ou quebra da tarefa.",
+        "Retry sem jitter pode piorar um incidente.",
+        "Fallback bom preserva aprendizagem mesmo sem IA completa.",
+        "Observabilidade deve permitir responder: quem foi afetado, quanto custou e qual prompt falhou."
+      ],
+      "order": 1
+    },
+    {
+      "section_id": "taxonomia-de-erros-da-api",
+      "title": "Taxonomia de erros da API",
+      "key_points": [
+        "O SDK ja possui retries para falhas transientes, mas a aplicacao ainda precisa de politica propria.",
+        "429 indica limite; 529 indica sobrecarga; 504 pede streaming ou quebra da tarefa.",
+        "Retry sem jitter pode piorar um incidente.",
+        "Fallback bom preserva aprendizagem mesmo sem IA completa.",
+        "Observabilidade deve permitir responder: quem foi afetado, quanto custou e qual prompt falhou."
+      ],
+      "order": 2
+    },
+    {
+      "section_id": "retries-com-backoff-e-jitter",
+      "title": "Retries com backoff e jitter",
+      "key_points": [
+        "O SDK ja possui retries para falhas transientes, mas a aplicacao ainda precisa de politica propria.",
+        "429 indica limite; 529 indica sobrecarga; 504 pede streaming ou quebra da tarefa.",
+        "Retry sem jitter pode piorar um incidente.",
+        "Fallback bom preserva aprendizagem mesmo sem IA completa.",
+        "Observabilidade deve permitir responder: quem foi afetado, quanto custou e qual prompt falhou."
+      ],
+      "order": 3
+    },
+    {
+      "section_id": "timeouts-e-abort-controller",
+      "title": "Timeouts e abort controller",
+      "key_points": [
+        "O SDK ja possui retries para falhas transientes, mas a aplicacao ainda precisa de politica propria.",
+        "429 indica limite; 529 indica sobrecarga; 504 pede streaming ou quebra da tarefa.",
+        "Retry sem jitter pode piorar um incidente.",
+        "Fallback bom preserva aprendizagem mesmo sem IA completa.",
+        "Observabilidade deve permitir responder: quem foi afetado, quanto custou e qual prompt falhou."
+      ],
+      "order": 4
+    },
+    {
+      "section_id": "rate-limits-filas-e-concorrencia",
+      "title": "Rate limits, filas e concorrencia",
+      "key_points": [
+        "O SDK ja possui retries para falhas transientes, mas a aplicacao ainda precisa de politica propria.",
+        "429 indica limite; 529 indica sobrecarga; 504 pede streaming ou quebra da tarefa.",
+        "Retry sem jitter pode piorar um incidente.",
+        "Fallback bom preserva aprendizagem mesmo sem IA completa.",
+        "Observabilidade deve permitir responder: quem foi afetado, quanto custou e qual prompt falhou."
+      ],
+      "order": 5
+    },
+    {
+      "section_id": "fallbacks-pedagogicos",
+      "title": "Fallbacks pedagogicos",
+      "key_points": [
+        "O SDK ja possui retries para falhas transientes, mas a aplicacao ainda precisa de politica propria.",
+        "429 indica limite; 529 indica sobrecarga; 504 pede streaming ou quebra da tarefa.",
+        "Retry sem jitter pode piorar um incidente.",
+        "Fallback bom preserva aprendizagem mesmo sem IA completa.",
+        "Observabilidade deve permitir responder: quem foi afetado, quanto custou e qual prompt falhou."
+      ],
+      "order": 6
+    },
+    {
+      "section_id": "observabilidade-de-incidentes",
+      "title": "Observabilidade de incidentes",
+      "key_points": [
+        "O SDK ja possui retries para falhas transientes, mas a aplicacao ainda precisa de politica propria.",
+        "429 indica limite; 529 indica sobrecarga; 504 pede streaming ou quebra da tarefa.",
+        "Retry sem jitter pode piorar um incidente.",
+        "Fallback bom preserva aprendizagem mesmo sem IA completa.",
+        "Observabilidade deve permitir responder: quem foi afetado, quanto custou e qual prompt falhou."
+      ],
+      "order": 7
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-10-5-1",
+      "title": "Wrapper resiliente",
+      "description": "Centraliza tratamento de erro em uma funcao reutilizavel.",
+      "code_or_diagram": "export async function callClaudeWithPolicy<T>(operation: () => Promise<T>): Promise<T> {\n  let attempt = 0;\n  let lastError: unknown;\n\n  while (attempt < 3) {\n    try {\n      return await operation();\n    } catch (error) {\n      lastError = error;\n      if (!isRetryableClaudeError(error)) throw error;\n      const retryAfter = readRetryAfterSeconds(error);\n      const delayMs = retryAfter ? retryAfter * 1000 : backoffWithJitter(attempt);\n      await sleep(delayMs);\n      attempt += 1;\n    }\n  }\n\n  throw lastError;\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-5-2",
+      "title": "Backoff com jitter",
+      "description": "Evita que varios workers tentem novamente no mesmo milissegundo.",
+      "code_or_diagram": "export function backoffWithJitter(attempt: number) {\n  const base = 300;\n  const cap = 8_000;\n  const exponential = Math.min(cap, base * 2 ** attempt);\n  const jitter = Math.floor(Math.random() * exponential * 0.4);\n  return exponential + jitter;\n}\n\nexport const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-5-3",
+      "title": "Timeout por AbortController",
+      "description": "Cancela chamada longa antes que a experiencia do aluno quebre.",
+      "code_or_diagram": "export async function withTimeout<T>(promiseFactory: (signal: AbortSignal) => Promise<T>, ms: number) {\n  const controller = new AbortController();\n  const timer = setTimeout(() => controller.abort(), ms);\n  try {\n    return await promiseFactory(controller.signal);\n  } finally {\n    clearTimeout(timer);\n  }\n}\n\nconst result = await withTimeout(\n  (signal) => anthropic.messages.create({ model: CLAUDE_MODELS.tutor, max_tokens: 800, messages }, { signal }),\n  30_000,\n);",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-5-4",
+      "title": "Fila com concorrencia por usuario",
+      "description": "Impede que um aluno dispare dez chamadas caras em paralelo.",
+      "code_or_diagram": "import PQueue from \"p-queue\";\n\nconst queues = new Map<string, PQueue>();\n\nexport function queueForUser(userId: string) {\n  if (!queues.has(userId)) {\n    queues.set(userId, new PQueue({ concurrency: 1, interval: 10_000, intervalCap: 6 }));\n  }\n  return queues.get(userId)!;\n}\n\nexport function enqueueTutorCall<T>(userId: string, task: () => Promise<T>) {\n  return queueForUser(userId).add(task);\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-5-5",
+      "title": "Fallback educacional",
+      "description": "Responde com material local quando a API esta indisponivel.",
+      "code_or_diagram": "export async function safeTutorAnswer(input: TutorInput) {\n  try {\n    return await enqueueTutorCall(input.userId, () => callClaudeTutor(input));\n  } catch (error) {\n    await logAiFailure({ userId: input.userId, lessonId: input.lessonId, error });\n    const lesson = await loadLessonContext(input.lessonId);\n    return {\n      mode: \"fallback\",\n      text: `Nao consegui acionar o tutor agora. Enquanto isso, revise: ${lesson.objectives.slice(0, 3).join(\"; \")}. Tente escrever sua duvida em uma frase especifica e envie novamente.`,\n    };\n  }\n}",
+      "language": "typescript"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-10-5-1",
+      "type": "short_answer",
+      "question": "Qual erro normalmente indica rate limit?",
+      "correct_answer": "HTTP 429 com rate_limit_error e, quando aplicavel, retry-after.",
+      "explanation": "HTTP 429 com rate_limit_error e, quando aplicavel, retry-after."
+    },
+    {
+      "id": "q-10-5-2",
+      "type": "multiple_choice",
+      "question": "Qual erro indica sobrecarga temporaria da API?",
+      "options": [
+        "HTTP 529 overloaded_error.",
+        "Ignorar o problema e aumentar max_tokens",
+        "Enviar a API key para o browser",
+        "Remover logs para reduzir custo"
+      ],
+      "correct_answer": "HTTP 529 overloaded_error.",
+      "explanation": "HTTP 529 overloaded_error."
+    },
+    {
+      "id": "q-10-5-3",
+      "type": "debugging",
+      "question": "Por que respeitar retry-after?",
+      "correct_answer": "Porque a API informa quando nova tentativa tem chance de sucesso; tentar antes desperdiça limite.",
+      "explanation": "Porque a API informa quando nova tentativa tem chance de sucesso; tentar antes desperdiça limite."
+    },
+    {
+      "id": "q-10-5-4",
+      "type": "short_answer",
+      "question": "Por que usar fila por usuario?",
+      "correct_answer": "Para controlar custo, prevenir spam e manter ordem pedagogica das respostas.",
+      "explanation": "Para controlar custo, prevenir spam e manter ordem pedagogica das respostas."
+    },
+    {
+      "id": "q-10-5-5",
+      "type": "multiple_choice",
+      "question": "Quando preferir streaming a request normal?",
+      "options": [
+        "Em tarefas longas ou com max_tokens alto, reduzindo timeout e melhorando feedback.",
+        "Ignorar o problema e aumentar max_tokens",
+        "Enviar a API key para o browser",
+        "Remover logs para reduzir custo"
+      ],
+      "correct_answer": "Em tarefas longas ou com max_tokens alto, reduzindo timeout e melhorando feedback.",
+      "explanation": "Em tarefas longas ou com max_tokens alto, reduzindo timeout e melhorando feedback."
+    },
+    {
+      "id": "q-10-5-6",
+      "type": "debugging",
+      "question": "O que logar em falhas?",
+      "correct_answer": "Request ID, userId, lessonId, modelo, latencia, tipo de erro, tentativa e prompt version.",
+      "explanation": "Request ID, userId, lessonId, modelo, latencia, tipo de erro, tentativa e prompt version."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-10-5",
+    "title": "Gateway resiliente para Claude",
+    "description": "Crie uma funcao callTutorResilient com timeout, retry, fila por usuario, fallback local e logs estruturados.",
+    "expected_solution": "O gabarito tem wrapper com retry limitado, jitter, leitura de retry-after, AbortController, PQueue por usuario, fallback baseado na licao local, logging com requestId e testes simulando 429, 529, timeout e sucesso.",
+    "success_criteria": [
+      "Server-side only para chamadas Claude",
+      "Entrada validada",
+      "Prompt ou contrato versionado",
+      "Uso, custo, latencia e status registrados",
+      "Fallback ou tratamento de erro implementado",
+      "Testes cobrindo caminho feliz e falhas"
+    ]
+  },
+  "resources": {
+    "official_docs": [
+      "Anthropic Claude Platform Docs: API overview, Messages API, Authentication, Models overview, Pricing, Streaming messages, Rate limits, Errors, Prompting best practices.",
+      "Use current model and pricing IDs as configuration, not constants embedded across application code."
+    ],
+    "tools": [
+      "@anthropic-ai/sdk",
+      "zod",
+      "p-limit or p-queue",
+      "OpenTelemetry/logging",
+      "Next.js API routes"
+    ]
+  }
+}

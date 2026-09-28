@@ -1,0 +1,210 @@
+{
+  "lesson_id": "lesson-1-1-engineering-vs-coding",
+  "title": "Engineering vs. Coding - Mentalidade Profissional",
+  "description": "Compreender a diferença fundamental entre ser um coder e ser um engineer. Esta lição é o ponto de entrada para desenvolver mentalidade arquitetural profissional.",
+  "duration_minutes": 45,
+  "target_audience": "Developers com 1-5 anos de experiência",
+  "learning_objectives": [
+    "Entender a diferença fundamental entre coder (foco em fazer funcionar) e engineer (foco em escala, confiabilidade e manutenção)",
+    "Reconhecer como essa mentalidade afeta decisões de design e qualidade de código",
+    "Aplicar princípios SOLID em contextos reais (overview para aprofundamento posterior)",
+    "Pensar em sistemas completos, não apenas features isoladas",
+    "Identificar débito técnico e tomar decisões conscientes sobre qualidade de código",
+    "Refatorar código existente com aplicação de responsabilidades separadas"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "A diferença entre coder e engineer não é semântica; é prática",
+        "Um coder entrega features; um engineer entrega sistemas",
+        "Essa mentalidade impacta diretamente na escala, velocidade e satisfação de trabalho",
+        "Ninguém vira engineer lendo uma aula; vira praticando essas decisões"
+      ]
+    },
+    {
+      "section_id": "difference",
+      "title": "O Que Diferencia Engenheiro de Desenvolvedor (15 minutos)",
+      "key_points": [
+        "Coder pergunta: 'Como faço funcionar?' | Engineer pergunta: 'Como faço funcionar, escalar, manter e confiar?'",
+        "Código coder funciona hoje; código engineer funciona hoje, amanhã e no mês que vem",
+        "SQL injection, falta de validação, acoplamento alto = sinais de mentalidade coder",
+        "Separação clara de responsabilidades, testes, tratamento de erro = sinais de mentalidade engineer",
+        "SOLID não é dogma; é reconhecimento de padrões que reduzem complexidade real"
+      ]
+    },
+    {
+      "section_id": "solid_intro",
+      "title": "Introdução aos Princípios SOLID (10 minutos)",
+      "key_points": [
+        "Single Responsibility: Uma classe, uma razão para mudar",
+        "Open/Closed: Aberto para extensão, fechado para modificação",
+        "Interface Segregation: Não force implementação de métodos não usados",
+        "Liskov Substitution: Subclasses devem ser substituíveis (aprofunda em Módulo 7)",
+        "Dependency Inversion: Dependa de abstrações, não de implementações concretas",
+        "SOLID emerge de um objetivo: código fácil de entender, testar, modificar e estender"
+      ]
+    },
+    {
+      "section_id": "systems_thinking",
+      "title": "Pensamento em Sistemas vs. Features (8 minutos)",
+      "key_points": [
+        "Feature: 'Adiciono um botão.' | Sistema: 'Como se integra com autenticação, auditoria, recuperação?'",
+        "Um tutor de IA não é só chamar OpenAI; é considerar falhas, custo, cache, múltiplos provedores, qualidade",
+        "Tolerância a falhas: O sistema piora graciosamente quando algo falha",
+        "Observabilidade: Você sabe em tempo real se algo está errado",
+        "Escalabilidade: Funciona com 10x o volume? Com 100x?"
+      ]
+    },
+    {
+      "section_id": "quality",
+      "title": "Qualidade de Código como Arquitetura (5 minutos)",
+      "key_points": [
+        "Code quality não é só linting; é comunicação, isolamento, testabilidade",
+        "Débito técnico é real: atalhos hoje = correções caras depois",
+        "Engineers investem em qualidade estrategicamente, não blindamente",
+        "Alto risco, alto investimento em qualidade; prototipagem, menor investimento"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-intro-progression",
+      "title": "Cálculo de Progresso: Coder vs. Engineer",
+      "description": "Exemplo paralelo mostrando como a mesma funcionalidade é abordada de formas diferentes",
+      "code_or_diagram": "// CODER: Rápido, acoplado, arriscado\nasync function completeLessonQuick(userId, lessonId) {\n  const user = await db.query(\n    \"SELECT * FROM users WHERE id = '\" + userId + \"'\"\n  );\n  await db.query(\n    \"UPDATE lessons_completed SET completed = 1 WHERE user_id = '\" + userId + \"'\"\n  );\n  // ... SQL injection, sem validação, sem erro handling\n}\n\n// ENGINEER: Estruturado, testável, escalável\nclass LessonProgress {\n  getPercentage(): number {\n    if (this.totalLessons === 0) return 0;\n    return (this.completedCount / this.totalLessons) * 100;\n  }\n}\n\nclass LessonCompletionService {\n  async completeLessonForUser(userId: string, lessonId: string) {\n    if (!userId || !lessonId) throw new ValidationError(...);\n    const progress = await this.progressRepository.getProgress(...);\n    progress.addCompletedLesson(lessonId);\n    await this.progressRepository.save(progress);\n    this.eventBus.emit(\"LessonCompleted\", ...);\n  }\n}"
+    },
+    {
+      "id": "ex-single-resp",
+      "title": "Single Responsibility Principle: Antes e Depois",
+      "description": "Como separar uma classe que faz tudo em responsabilidades claras",
+      "code_or_diagram": "// ANTES: Múltiplas responsabilidades, múltiplas razões para mudar\nclass UserManager {\n  createUser(data) { /* ... */ }\n  saveToDatabase(user) { /* ... */ }\n  sendWelcomeEmail(user) { /* ... */ }\n  processPayment(user, amount) { /* ... */ }\n}\n\n// DEPOIS: Cada classe tem uma responsabilidade clara\nclass UserService { createUser(data) { /* ... */ } }\nclass UserRepository { save(user) { /* ... */ } }\nclass EmailService { sendWelcomeEmail(user) { /* ... */ } }\nclass PaymentService { processPayment(user, amount) { /* ... */ }"
+    },
+    {
+      "id": "ex-ai-tutor-feature-vs-system",
+      "title": "Tutor de IA: Feature vs. Sistema Completo",
+      "description": "Como um pensamento de sistema lida com falhas, cache, quota e observabilidade",
+      "code_or_diagram": "// FEATURE: Chamada direta, sem resiliência\nasync function getAIHelp(exerciseId) {\n  return await openai.createCompletion(...);\n}\n\n// SISTEMA: Resiliência, cache, quota, múltiplos provedores\nclass AiTutorService {\n  async explainError(context) {\n    if (!await quotaManager.canRequest()) return fallback();\n    const cached = await cache.get(context.id);\n    if (cached) return cached;\n    try {\n      const explanation = await aiProvider.explain(context);\n      await cache.set(context.id, explanation);\n      this.eventBus.emit(\"ExplanationGenerated\", ...);\n      return explanation;\n    } catch (error) {\n      this.logger.error(...);\n      return { fallback: true, message: \"Serviço indisponível\" };\n    }\n  }\n}"
+    },
+    {
+      "id": "ex-solid-open-closed",
+      "title": "Open/Closed Principle: Novos Tipos de Exercício Sem Modificar Código",
+      "description": "Como adicionar novo tipo de exercício sem tocar na lógica existente",
+      "code_or_diagram": "// ANTES: Switch gigante, cada novo tipo força modificação\nfunction gradeExercise(exercise, answer) {\n  if (exercise.type === \"multiple_choice\") return answer === exercise.expected;\n  if (exercise.type === \"essay\") return gradeEssay(...);\n  // Adicionar novo tipo = modificar essa função\n}\n\n// DEPOIS: Strategy pattern, novo tipo = nova classe\ninterface ExerciseStrategy {\n  grade(answer, exercise): boolean;\n}\n\nclass MultipleChoiceGrader implements ExerciseStrategy { /* ... */ }\nclass EssayGrader implements ExerciseStrategy { /* ... */ }\nclass CodeGrader implements ExerciseStrategy { /* ... */ }\n\nclass GraderFactory {\n  create(type: string): ExerciseStrategy { /* retorna strategy correta */ }\n}"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-1-1",
+      "type": "multiple_choice",
+      "question": "Qual é a diferença fundamental entre a pergunta de um coder e a de um engineer?",
+      "options": [
+        "Coders usam linguagens mais simples e engineers usam linguagens avançadas.",
+        "Coders perguntam 'Como faço funcionar?' enquanto engineers perguntam 'Como faço funcionar, escalar e manter confiável?'",
+        "Engineers ganham significativamente mais dinheiro.",
+        "Engineers não precisam de testes porque seu código é perfeito."
+      ],
+      "correct_answer": "Coders perguntam 'Como faço funcionar?' enquanto engineers perguntam 'Como faço funcionar, escalar e manter confiável?'",
+      "explanation": "Um coder foca em resolver o problema imediato. Um engineer pensa em como a solução se comportará em 6 meses, com mais usuários, com mudanças de requisito e com pessoas diferentes mantendo o código."
+    },
+    {
+      "id": "ex-1-2",
+      "type": "short_answer",
+      "question": "Por que o princípio de Responsabilidade Única reduz risco de mudanças futuras?",
+      "expected_answer": "Porque quando uma classe tem apenas uma razão para mudar, uma modificação em um comportamento não afeta outros. Se responsabilidades estão misturadas, uma mudança em uma pode quebrar inesperadamente uma outra.",
+      "explanation": "Exemplo: se salvar usuário e enviar email estão na mesma classe, trocar o provedor de email pode quebrar a lógica de salvamento. Separadas, trocar email não toca salvamento."
+    },
+    {
+      "id": "ex-1-3",
+      "type": "multiple_choice",
+      "question": "No exemplo do tutor de IA, qual é o risco de implementação 'feature' (chamada direta)?",
+      "options": [
+        "Usa mais memória que a abordagem de sistema.",
+        "A aula inteira fica inutilizável se o serviço de IA cair; sem cache, quota ou fallback.",
+        "É mais lenta que o sistema completo.",
+        "Não há risco; ambas são equivalentes em produção."
+      ],
+      "correct_answer": "A aula inteira fica inutilizável se o serviço de IA cair; sem cache, quota ou fallback.",
+      "explanation": "Abordagem feature resolve o caso feliz. Sistema completo lida com falhas graciosamente: se IA cai, aluno vê fallback; se quota é atingida, é informado; se já foi gerada, usa cache."
+    },
+    {
+      "id": "ex-1-4",
+      "type": "code_review",
+      "question": "Revise este trecho: 'async function processUser(data) { validate(data); db.save(data); email.send(data); analytics.track(data); return data; }' Qual é o problema arquitetural principal?",
+      "expected_answer": "Há mistura de responsabilidades: validação, persistência, notificação e observabilidade em um único lugar. Cada mudança em um desses afeta a função inteira. Impossível de testar sem banco e e-mail. Mudanças futuras são arriscadas.",
+      "explanation": "Solução: separar em funções especializadas. Validação retorna data validada. Serviço de usuário coordena salvamento. EventBus publica eventos que disparam e-mail e analytics independentemente."
+    },
+    {
+      "id": "ex-1-5",
+      "type": "multiple_choice",
+      "question": "O que é débito técnico?",
+      "options": [
+        "Dinheiro que o desenvolvedor deve ao projeto.",
+        "O custo de tomar atalhos hoje que é pago com 'juros' em forma de correções caras depois.",
+        "Um conceito teórico que não afeta código real.",
+        "Algo que só afeta startups com pouco investimento."
+      ],
+      "correct_answer": "O custo de tomar atalhos hoje que é pago com 'juros' em forma de correções caras depois.",
+      "explanation": "Exemplo: economizar 2 horas de design agora misturando responsabilidades. Mas 3 meses depois, uma mudança simples leva 10 horas porque tudo está acoplado. O 'juro' é a diferença (8 horas perdidas)."
+    }
+  ],
+  "practical_exercise": {
+    "id": "exercise-refactor-lesson-progression",
+    "title": "Refatore: Desbloqueio Automático de Lições",
+    "description": "Você recebe código que desbloquia automaticamente a próxima aula quando uma é completada. Está vulnerável a SQL injection, mistura responsabilidades e é impossível de testar. Refatore aplicando princípios desta lição.",
+    "starting_code": "function unlockNextLesson(userId, completedLessonId) {\n  const lesson = db.query(\n    `SELECT * FROM lessons WHERE id = '${completedLessonId}'`\n  )[0];\n  const nextLesson = db.query(\n    `SELECT * FROM lessons WHERE module_id = '${lesson.module_id}' AND order > ${lesson.order} LIMIT 1`\n  )[0];\n  if (nextLesson) {\n    db.query(\n      `UPDATE lessons_unlocked SET unlocked = 1 WHERE user_id = '${userId}' AND lesson_id = '${nextLesson.id}'`\n    );\n    sendSlackNotification(`User ${userId} unlocked ${nextLesson.id}`);\n    return { success: true, unlockedLessonId: nextLesson.id };\n  }\n  return { success: false, message: \"No more lessons\" };\n}",
+    "problems_to_fix": [
+      "SQL injection (concatenação de strings)",
+      "Mistura de responsabilidades (lógica, persistência, notificação)",
+      "Sem validação de entrada",
+      "Sem tratamento de erro",
+      "Sideeffect (Slack) dentro da função",
+      "Impossível de testar sem banco",
+      "Impossível reutilizar em outros contextos"
+    ],
+    "solution_outline": "1. Crie classe de domínio (CurriculumProgress) com lógica pura de desbloqueio\n2. Separe em serviço (LessonProgressionService) que coordena fluxo\n3. Use injeção de dependência para repository e eventBus\n4. Adicione validação no início\n5. Trate erros com logging seguro\n6. Publique evento ao invés de chamar Slack diretamente\n7. Escreva testes unitários da lógica sem banco",
+    "expected_improvements": [
+      "Lógica de negócio isolada e testável",
+      "Sem SQL injection",
+      "Fácil adicionar novos tipos de desbloqueio (pré-requisitos, ramificações)",
+      "Otros sistemas podem reagir a eventos",
+      "Logs estruturados para observabilidade"
+    ],
+    "deliverables": [
+      "Código refatorado com responsabilidades claras",
+      "Teste unitário da lógica de desbloqueio",
+      "Explicação (3-5 linhas) de cada melhoria aplicada"
+    ]
+  },
+  "summary_key_takeaways": [
+    "A diferença entre coder e engineer é mentalidade, não experiência",
+    "Engineers pensam em escalabilidade, confiabilidade e manutenção junto",
+    "SOLID é um framework que ajuda a manter código flexível",
+    "Pensamento em sistemas significa considerar falhas, observabilidade e evolução",
+    "Qualidade de código é sobre isolamento, clareza e testabilidade",
+    "Débito técnico é real; invista em qualidade estrategicamente"
+  ],
+  "next_lesson": {
+    "id": "lesson-1-2-system-architecture",
+    "title": "Arquitetura de Sistemas",
+    "preview": "Agora que você entende a mentalidade de engineer, vamos ver como estruturar uma aplicação real. Você aprenderá sobre componentes, camadas, monólitos, modulares e microsserviços."
+  },
+  "resources": [
+    {
+      "title": "Referência: Princípios SOLID",
+      "type": "article",
+      "link": "module-7-solid-principles"
+    },
+    {
+      "title": "Padrão: Strategy Pattern",
+      "type": "article",
+      "link": "module-2-design-patterns#strategy"
+    },
+    {
+      "title": "Prática: Design Patterns em Código Real",
+      "type": "exercise",
+      "link": "exercises-design-patterns"
+    }
+  ]
+}

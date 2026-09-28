@@ -1,0 +1,123 @@
+{
+  "id": "9-5",
+  "moduleId": "9",
+  "lessonNumber": "9.5",
+  "title": "Serverless & Edge - O Futuro da Infraestrutura",
+  "duration": "30 min",
+  "wordCount": 2134,
+  "objectives": [
+    "Entender serverless: pay only for what you use",
+    "FaaS (Functions as a Service): AWS Lambda, Google Cloud Functions",
+    "Plataformas gerenciadas: Vercel, Netlify, Fly.io",
+    "Edge computing: executar perto do usuário (menor latência)",
+    "Hands-on: Deploy app do 9.1 em Vercel (serverless)"
+  ],
+  "sections": [
+    {"id": "intro", "title": "Introdução"},
+    {"id": "fundamentals", "title": "Serverless Fundamentals"},
+    {"id": "lambda", "title": "AWS Lambda - FaaS Profissional"},
+    {"id": "vercel", "title": "Vercel - Platform as a Service"},
+    {"id": "edge", "title": "Edge Computing"}
+  ],
+  "keyTakeaways": [
+    "Serverless = pay per execution: muito mais barato pra apps com tráfego baixo/intermitente",
+    "Cold starts são trade-off: primeira invocação é lenta, mas isso é aceitável pra maioria",
+    "Lambda ideal pra: workers, processamento, webhooks, cron jobs",
+    "Vercel ideal pra: frontend + API leve (Next.js, React)",
+    "Edge computing reduz latência drasticamente (5ms vs 150ms)"
+  ],
+  "exercises": {
+    "main": {
+      "id": "exercise-vercel-deploy",
+      "type": "hands-on",
+      "title": "Deploy em Vercel (Serverless)",
+      "description": "Criar API serverless em Next.js, configurar no Vercel, fazer push, ver deploy automático, testar endpoints",
+      "estimatedTime": "25 min",
+      "steps": [
+        {"number": 1, "title": "Setup", "description": "Instalar Vercel CLI e criar account"},
+        {"number": 2, "title": "Link Project", "description": "vercel link (conecta GitHub)"},
+        {"number": 3, "title": "Criar API Serverless", "description": "pages/api/grade.ts com handler"},
+        {"number": 4, "title": "Test Localmente", "description": "npm run dev (teste em localhost:3000/api/grade)"},
+        {"number": 5, "title": "Push", "description": "git push origin main (Vercel detecta)"},
+        {"number": 6, "title": "Deploy Automático", "description": "Vercel executa build e deploy (~2 min)"},
+        {"number": 7, "title": "Testar Production", "description": "curl seu-app.vercel.app/api/grade"},
+        {"number": 8, "title": "Monitorar", "description": "Vercel dashboard → logs, analytics, billing"}
+      ],
+      "successCriteria": [
+        "Projeto linkado a Vercel",
+        "pages/api/grade.ts existe",
+        "Git push dispara deploy automático",
+        "API responde em <seu-app>.vercel.app/api/grade",
+        "Curl test retorna JSON correto",
+        "Vercel dashboard mostra invocações"
+      ],
+      "hints": [
+        "Vercel é especializada em Next.js (otimizada)",
+        "Deploy em 30 segundos (git push)",
+        "Automático HTTPS + CDN global",
+        "Free tier: 100 GB bandwidth/mês",
+        "Não precisa gerenciar servidores"
+      ]
+    }
+  },
+  "quiz": [
+    {
+      "id": "q1",
+      "number": 1,
+      "type": "choice",
+      "difficulty": "fundamental",
+      "question": "Qual é o maior benefício de serverless?",
+      "options": [
+        {"text": "Melhor latência que K8s", "correct": false},
+        {"text": "Pay only for what you use", "correct": true},
+        {"text": "Não precisa de banco de dados", "correct": false},
+        {"text": "Mais controle que VMs", "correct": false}
+      ],
+      "explanation": "Serverless escala de 0 → n automaticamente. Você paga por execução, não por tempo ocioso. $200/mês K8s vira $10-20/mês serverless."
+    },
+    {
+      "id": "q2",
+      "number": 2,
+      "type": "short_answer",
+      "difficulty": "intermediate",
+      "question": "Uma função Lambda demora 100ms pra executar e é chamada 1000x/mês. Qual é o custo?",
+      "expectedAnswer": "1000 execuções * 0.1 segundos = 100 segundos total. $0.20 por 1M segundos = 100 * $0.20 / 1000000 = ~$0.00002. Praticamente grátis. (primeiros 1M req/mês são grátis)"
+    },
+    {
+      "id": "q3",
+      "number": 3,
+      "type": "code_review",
+      "difficulty": "intermediate",
+      "question": "O que há de errado nesse Lambda?\n\n```python\ndef lambda_handler(event, context):\n    db = connect_db()  # Conectar BD a cada invocação\n    result = db.query(\"SELECT ...\")\n    return result\n```",
+      "expectedAnswer": "Conexão é recriada a cada invocação. Mover pra fora do handler para reusar entre warm lambdas. Connection pooling é essencial."
+    },
+    {
+      "id": "q4",
+      "number": 4,
+      "type": "prediction",
+      "difficulty": "intermediate",
+      "question": "Cold start de Lambda demora 500ms. Requisição que normalmente leva 10ms agora leva 510ms. Isso é problema?",
+      "options": [
+        {"text": "Sim, sempre inaceitável", "correct": false},
+        {"text": "Não se 510ms < SLA do serviço", "correct": true},
+        {"text": "Sim, precisa otimizar logo", "correct": false},
+        {"text": "Lambda não consegue fazer isso", "correct": false}
+      ],
+      "explanation": "Cold starts são esperados. Se seu SLA é 1s, 510ms está OK. Se é 100ms, precisa usar Provisioned Concurrency."
+    },
+    {
+      "id": "q5",
+      "number": 5,
+      "type": "debugging",
+      "difficulty": "intermediate",
+      "question": "Função Lambda retorna 502 'Bad Gateway'. Primeira coisa a verificar?",
+      "options": [
+        {"text": "CloudWatch logs da função", "correct": true},
+        {"text": "Aumentar timeout", "correct": false},
+        {"text": "Aumentar memory", "correct": false},
+        {"text": "Verificar DynamoDB", "correct": false}
+      ],
+      "explanation": "Logs revelam tudo: erros de sintaxe, timeout, acesso negado, etc. CloudWatch é seu amigo."
+    }
+  ]
+}

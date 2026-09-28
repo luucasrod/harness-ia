@@ -1,0 +1,139 @@
+{
+  "lesson_id": "lesson-5-5-monitoring",
+  "title": "Monitoring - Observabilidade em Produção",
+  "description": "Sem monitoring, você descobre de falhas quando usuários reclamam. Com monitoring, sabe em segundos. Aprenda logs estruturados, métricas, traces e alerting.",
+  "module_id": "module-5",
+  "duration_minutes": 45,
+  "learning_objectives": [
+    "Implementar observabilidade com three pillars: logs, métricas, traces",
+    "Usar structured logging (JSON) para debugging eficiente",
+    "Coletar métricas: latência, throughput, taxa de erro",
+    "Implementar distributed tracing para seguir requisições entre serviços",
+    "Configurar alerting que dispara por anomalias, não por limiar arbitrário",
+    "Definir e medir SLOs (Service Level Objectives)"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (6 minutos)",
+      "key_points": [
+        "Sem monitoring: descobre falha quando usuário reclamou (15min depois)",
+        "Com monitoring: sabe em 10 segundos + motivo + impacto",
+        "Monitoring não é vaidade; é manutenção, debugging, capacidade planejada"
+      ]
+    },
+    {
+      "section_id": "three_pillars",
+      "title": "Three Pillars (14 minutos)",
+      "key_points": [
+        "Logs: histórico textual estruturado de eventos (JSON, não strings)",
+        "Métricas: números agregados — latência, throughput, erros/min, percentis",
+        "Traces: follow uma requisição através de múltiplos serviços (correlation ID)"
+      ]
+    },
+    {
+      "section_id": "alerting",
+      "title": "Alerting (8 minutos)",
+      "key_points": [
+        "Alerte por anomalia, não por limiar arbitrário",
+        "Error rate 5+ por minuto = alerta. 1 erro raro = só log.",
+        "Escalation: on-call → lead → time completo",
+        "Error budget: 99.9% SLO = 8.64h downtime/mês de 'direito'"
+      ]
+    },
+    {
+      "section_id": "slos",
+      "title": "SLOs e Confiabilidade (10 minutos)",
+      "key_points": [
+        "SLO = promessa (99.9% uptime)",
+        "SLI = métrica real (99.87% uptime atual)",
+        "Error budget = quanto do allowed downtime já foi gasto",
+        "Dashboard: target vs actual vs remaining budget"
+      ]
+    },
+    {
+      "section_id": "implementation",
+      "title": "Implementação Completa (12 minutos)",
+      "key_points": [
+        "Winston ou Pino para structured logging",
+        "Prometheus/OpenTelemetry para métricas e traces",
+        "Middleware instrumenta todas as requisições",
+        "Grafana dashboard visualiza SLI vs SLO"
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-5-5-1",
+      "type": "multiple_choice",
+      "question": "Qual é a principal vantagem de structured logging (JSON) vs console.log()?",
+      "options": [
+        "Usa menos memória",
+        "Mais rápido de escrever",
+        "Searchable em ferramentas (ELK, Datadog) — filtra por campo sem regex",
+        "Mais seguro"
+      ],
+      "correct_answer": "Searchable em ferramentas (ELK, Datadog) — filtra por campo sem regex",
+      "explanation": "console.log('User user123 submitted') = não searchable. JSON {userId: 'user123', event: 'submit'} = query 'userId:user123 AND event:submit' funciona perfeitamente."
+    },
+    {
+      "id": "ex-5-5-2",
+      "type": "prediction",
+      "question": "Você tem SLO de 99.9% uptime por mês (2.6M requisições). Taxa de erro está em 0.05%. Quanto de error budget restante?",
+      "options": [
+        "99.9% - 0.05% = 99.85% restante",
+        "SLO permite 0.1% de erros, você usou 0.05%, restam 0.05%",
+        "Error budget é sobre downtime, não requisições — está em 50% do budget"
+      ],
+      "correct_answer": "SLO permite 0.1% de erros, você usou 0.05%, restam 0.05%",
+      "explanation": "99.9% SLO = 0.1% erro budget. Você usou 0.05%. Restam 0.05% (2600 requisições falhadas no mês). Quando gastar tudo, precisar corrigir bugs em vez de features."
+    },
+    {
+      "id": "ex-5-5-3",
+      "type": "code_review",
+      "question": "Revise este alerting: 'if (latency > 100ms) alert()' Problema?",
+      "expected_answer": "Gera alerta para QUALQUER requisição > 100ms. Muito barulho (false positives). Melhor: if (p95Latency > 500ms for 10min) alert().",
+      "explanation": "Uma requisição lenta = normal. 95% das requisições lentas por 10 minutos = problema. Alerte por padrão, não por outlier."
+    },
+    {
+      "id": "ex-5-5-4",
+      "type": "short_answer",
+      "question": "O que é um trace e por que é importante para debugging?",
+      "expected_answer": "Trace segue uma requisição por múltiplos serviços (API → DB → Queue → Worker → PubSub). Permite ver exatamente onde o tempo é gasto e onde falhou.",
+      "explanation": "Exemplo: requisição é lenta. Trace mostra: API 50ms, DB 20ms, Queue 5ms, Worker 1200ms. Problema está no Worker/AI, não nos outros. Sem trace, você gasta horas investigando."
+    },
+    {
+      "id": "ex-5-5-5",
+      "type": "debugging",
+      "question": "Erro rate dispara alerta. Você checka logs. Vê: '1000 'User not found' errors'. Próxima ação?",
+      "options": [
+        "Acordar dev team, é bug crítico",
+        "Checkar trace para ver qual endpoint causou",
+        "Revisar logs estruturados, ver qual userId/endpoint teve erro",
+        "Tudo acima"
+      ],
+      "correct_answer": "Tudo acima",
+      "explanation": "1. Trace mostra qual endpoint. 2. Logs estruturados com userId mostram qual usuário. 3. Se sistemático, é bug (acordar team). Se isolado, é fake data (ignorar)."
+    }
+  ],
+  "practical_exercise": {
+    "id": "practical-5-5",
+    "title": "Dashboard de Saúde da Plataforma com SLO",
+    "description": "Implementar monitoring completo: estrutured logging, métricas de latência/erro, traces distribuídos e alerting.",
+    "hints": [
+      "Winston para logs JSON estruturados",
+      "Prometheus/OpenTelemetry para métricas",
+      "Middleware instrumenta requisições HTTP",
+      "Tracer com correlation ID para traces",
+      "Grafana dashboard: uptime (SLI), error rate, p95 latência, error budget"
+    ],
+    "success_criteria": [
+      "Logs estruturados searchable por campo",
+      "Métricas coletadas: latência histogram, erro rate, throughput",
+      "Traces conectam requisições entre serviços",
+      "Alerting dispara por anomalia (p95 > 500ms por 10min)",
+      "Dashboard mostra SLO vs SLI vs error budget",
+      "Correlate logs + métricas + traces: investigação rápida"
+    ]
+  }
+}

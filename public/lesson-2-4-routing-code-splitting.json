@@ -1,0 +1,100 @@
+{
+  "lesson_id": "lesson-2-4-routing-code-splitting",
+  "title": "Routing & Code Splitting - Next.js App Router",
+  "description": "App Router moderno: layouts nested, Server/Client Components, code splitting automático, Metadata/SEO. Estrutura escalável pra plataforma educacional.",
+  "duration_minutes": 45,
+  "learning_objectives": [
+    "Estruturar rotas com App Router (pastas = rotas)",
+    "Layouts nested e compartilhados",
+    "Server Components vs Client Components",
+    "Code splitting automático e lazy loading",
+    "Metadata dinâmica pra SEO"
+  ],
+  "content_sections": [
+    {"section_id": "intro", "title": "Introdução", "key_points": ["App Router moderno (v13+)", "Pastas são rotas", "Layouts compostos", "Server Components reduzem JS"]},
+    {"section_id": "app_router", "title": "App Router Basics", "key_points": ["Estrutura pasta = estrutura URL", "Dynamic routes: [id]", "Layouts nested por path"]},
+    {"section_id": "server_client", "title": "Server vs Client Components", "key_points": ["Server: padrão, fetch direto, sem JS no cliente", "Client: 'use client', hooks, interativo"]},
+    {"section_id": "code_splitting", "title": "Code Splitting", "key_points": ["Automático por rota", "dynamic() lazy load componentes", "Reduz bundle inicial"]}
+  ],
+  "examples": [
+    {
+      "id": "ex-2-4-1",
+      "title": "Estrutura de rotas App Router",
+      "description": "Pasta structure = URL structure",
+      "code_or_diagram": "app/\n├── page.tsx → /\n├── lesson/\n│   └── [id]/page.tsx → /lesson/:id\n└── dashboard/\n    └── progress/page.tsx → /dashboard/progress"
+    },
+    {
+      "id": "ex-2-4-2",
+      "title": "Server Component: fetch direto",
+      "description": "Sem JavaScript no cliente",
+      "code_or_diagram": "// Server Component (padrão)\nexport default async function LessonPage({ params }: Props) {\n  const lesson = await fetchLesson(params.id); // Roda no servidor\n  return <div>{lesson.title}</div>; // Sem JS no cliente\n}"
+    },
+    {
+      "id": "ex-2-4-3",
+      "title": "Client Component: interativo",
+      "description": "Hooks, state, event listeners",
+      "code_or_diagram": "'use client';\nimport { useState } from 'react';\nexport default function Quiz() {\n  const [answer, setAnswer] = useState('');\n  // ..."
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-2-4-q1",
+      "type": "multiple_choice",
+      "question": "Em App Router, como rotas são definidas?",
+      "options": [
+        "routes.ts arquivo",
+        "Estrutura de pastas (folder structure)",
+        "@Component decorator",
+        "router.push() no componente"
+      ],
+      "correct_answer": "Estrutura de pastas (folder structure)",
+      "explanation": "App Router: app/lesson/[id]/page.tsx → /lesson/:id. Pastas = segmentos de URL."
+    },
+    {
+      "id": "ex-2-4-q2",
+      "type": "short_answer",
+      "question": "Qual é vantagem de Server Components sobre Client Components?",
+      "expected_answer": "Menos JavaScript no cliente, acesso direto ao banco, API keys seguras no servidor, melhor performance inicial.",
+      "explanation": "Server Components renderizam no servidor, cliente recebe só HTML. Client Components renderizam no browser, precisam de JavaScript."
+    },
+    {
+      "id": "ex-2-4-q3",
+      "type": "code_review",
+      "question": "Revise: // Server Component\nconst [state, setState] = useState('');\n// ... Problema?",
+      "expected_answer": "Server Components não podem usar hooks como useState. Se precisa state, marque como Client Component com 'use client'.",
+      "explanation": "Hooks só trabalham em Client Components. Server Components rodambno servidor e renderizam dinâmicamente."
+    }
+  ],
+  "practical_exercise": {
+    "id": "exercise-2-4-routing",
+    "title": "Estruturar rotas da plataforma com App Router",
+    "description": "Crie estrutura de rotas pra: home, login, dashboard (com nested progress), lesson/[id] com Server Component, quiz dinâmico.",
+    "starting_code": "// Atualmente Pages Router\npages/\n├── index.tsx\n├── login.tsx\n├── dashboard.tsx\n└── lesson/\n    └── [id].tsx",
+    "problems_to_fix": [
+      "Migrar pra App Router",
+      "Layouts não reutilizados",
+      "Tudo é Client Component"
+    ],
+    "solution_outline": "1. Criar app/ folder\n2. Root layout (navbar, providers)\n3. app/page.tsx (home)\n4. app/(auth)/login/page.tsx\n5. app/dashboard/layout.tsx + page.tsx\n6. app/lesson/[id]/page.tsx (Server Component)\n7. app/lesson/[id]/quiz.tsx (Client Component)",
+    "deliverables": ["Estrutura de app folder", "Root layout", "Lesson page (Server) + Quiz (Client)"]
+  },
+  "summary_key_takeaways": [
+    "App Router: pastas = rotas, layouts compostos",
+    "Server Components padrão: menos JS, seguro",
+    "Client Components pra interativo: hooks, state",
+    "Code splitting automático por rota",
+    "Metadata: SEO automático por rota"
+  ],
+  "next_lesson": {
+    "id": "lesson-2-5-forms-validation",
+    "title": "Forms, Validation & Input",
+    "preview": "Rotas estruturadas. Agora formulários: React Hook Form, validação client+server, Zod schemas, uploads de arquivo, UX de erros."
+  },
+  "resources": [
+    {
+      "title": "Next.js App Router Docs",
+      "type": "article",
+      "link": "https://nextjs.org/docs/app"
+    }
+  ]
+}

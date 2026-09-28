@@ -1,0 +1,208 @@
+{
+  "lesson_id": "lesson-8-1-estimations",
+  "title": "Estimations - Ferramentas Mentais para Escala",
+  "module_id": "module-8",
+  "module_title": "System Design & Scalability",
+  "description": "Aprenda técnicas de Fermi estimation e back-of-the-envelope calculations para estimar requisitos de sistema em escala. Aprenda a decompor problemas complexos e comunicar suposições tecnicamente.",
+  "duration_minutes": 45,
+  "target_audience": "Developers 2-5 anos, arquitetos iniciantes",
+  "learning_objectives": [
+    "Decompor problemas de escala complexos em estimativas respondíveis",
+    "Aplicar Fermi estimation para chegar a respostas de ordem de magnitude",
+    "Executar back-of-the-envelope calculations rapidamente em conversas",
+    "Memorizar números de referência (latência, armazenamento, throughput)",
+    "Validar se uma estimativa é 'boa o suficiente' para decisão de arquitetura",
+    "Comunicar suposições e incertezas de forma técnica e profissional"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "Estimação não é adivinhação; é lógica estruturada baseada em suposições comunicadas",
+        "Engineers precisam responder perguntas de escala mesmo com dados incompletos",
+        "Ordem de magnitude é suficiente para decisões arquiteturais (10x diferença muda tudo)",
+        "Validação de estimativas: você frequentemente descobre suposições erradas durante implementação"
+      ]
+    },
+    {
+      "section_id": "decomposition",
+      "title": "Decomposição - Quebrando Gigantes (12 minutos)",
+      "key_points": [
+        "Quebra de problema: grandes perguntas viram respondíveis quando decompostas",
+        "Top-down (população global → usuários finais) vs bottom-up (um usuário → multiplicado)",
+        "YouTube example: 10-15 uploads/segundo baseline de usuários humanos vs 8,300 real (bots, streaming)",
+        "Sempre comunique suposições: 'Assumindo 2M usuários, 30% engajados...'",
+        "Padrão: faça estimativa, depois valida se resultado faz sentido"
+      ]
+    },
+    {
+      "section_id": "fermi",
+      "title": "Fermi Estimation - Arte e Ciência (13 minutos)",
+      "key_points": [
+        "Fermi estimation: chegar a resposta razoável com lógica e aproximação, não dados exatos",
+        "Enrique Fermi estimou potência de bomba atômica observando papel cair",
+        "Encadeamento: estima vários números pequenos, depois multiplica",
+        "Netflix catálogo: 6k filmes × 114GB = 684TB, mas realidade é 15-30PB (redundância, idiomas, backups)",
+        "Ordem de magnitude é a resposta: 10 vs 1,000 vs 1M muda arquitetura completamente"
+      ]
+    },
+    {
+      "section_id": "back_of_envelope",
+      "title": "Back-of-the-Envelope - Rápido e Prático (14 minutos)",
+      "key_points": [
+        "Quando você tem 2 minutos em conversa, não pode correr para spreadsheet",
+        "Números redondos e divisão fácil: 1M × 5 Mbps = 5 Pbps (usa aritmética mental)",
+        "Livestream: 1M usuários × 5 Mbps = 5,000 datacenters OR distribuído via CDN",
+        "Conversas chatbot: 100 mensagens × 200 chars × 30KB overhead = 3MB por conversa de média",
+        "Validação rápida: seu resultado é 'humano-estimável'? (10 horas, não 10 anos)"
+      ]
+    },
+    {
+      "section_id": "reference_numbers",
+      "title": "Números Que Todo Engineer Precisa Saber (15 minutos)",
+      "key_points": [
+        "Latência (Jeff Dean referência): L1 0.5ns, memória 100ns, disco 10ms, rede 0.5ms",
+        "Hierarquia: memória 100x mais rápida que disco, disco 100x mais rápido que rede",
+        "Armazenamento: 1TB = 1,000 filmes HD; 1PB = YouTube ~2PB/dia",
+        "Throughput: disco mecânico 100MB/s, SSD 3,000MB/s, gigabit 125MB/s",
+        "Confiabilidade (nines): 99.9% = 8.7h/ano, 99.99% = 52min/ano, 99.999% = 5min/ano"
+      ]
+    },
+    {
+      "section_id": "synthesis",
+      "title": "Síntese - Juntando Tudo (5 minutos)",
+      "key_points": [
+        "Checklist: comunique suposições, quebre em partes, use números redondos, valide no meio",
+        "Sua estimativa não precisa ser perfeita; precisa ser 'boa o suficiente para decisão'",
+        "Quando estimativa vai estar errada: fatores não técnicos, comportamento não-linear, casos esquecidos",
+        "Documentação: próximo engineer precisa entender como você chegou nos números",
+        "Próximo: estimativas são para design estático; sistemas precisam escalar quando realidade muda"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-youtube-uploads",
+      "title": "YouTube Upload Scale: Estimativa vs Realidade",
+      "description": "Decomposição de 'quantos uploads/segundo' e validação com números reais",
+      "code_or_diagram": "// ESTIMATIVA ESTRUTURADA:\n// Usuários globais: 2.5B\n// Uploadadores: 1% = 25M\n// Frequência: 1 upload/mês = 25M/30 dias = 833k/dia = ~10 uploads/segundo\n// Influencers (1k x 50/dia): +0.6 uploads/segundo\n// Total: 10-15 uploads/segundo baseline\n// Picos (premieres): 10x = 100-150 uploads/segundo\n\n// REALIDADE:\n// YouTube confirma ~500h de video por minuto = ~8,300 uploads/segundo\n// Por quê? DAU 1.5B (não 2.5B MAU), muitos uploads de bots, streaming contínuo, câmeras\n// Nossa estimativa: ordem de magnitude correta (10 vs 8,300 = mesmo planeta)"
+    },
+    {
+      "id": "ex-netflix-storage",
+      "title": "Netflix Armazenamento: Estimativa Estruturada",
+      "description": "Decompõe conteúdo + qualidades + redundância",
+      "code_or_diagram": "// BREAKDOWN:\nFilmes: 6,000 títulos\nQualidades: 5 (4K, 1080p, 720p, 480p, 240p)\nTamanho médio por filme:\n  - 4K: 100GB (2h, alta taxa de bits)\n  - 1080p: 10GB\n  - 720p: 3GB\n  - 480p: 1GB\n  - 240p: 0.5GB\n  Total: 114.5GB por filme\n\nFilmes: 6,000 × 114.5GB = 687TB\n\nSéries: 2,000 títulos × 20 episódios = 40k episódios\n  40k × (114.5GB / 2) = 2,290TB\n\nTOTAL CONTEÚDO: 687TB + 2,290TB = 2.977TB ≈ 3PB\n\nREDUNDÂNCIA E OVERHEAD:\n- Múltiplas cópias (3-4x)\n- Diferentes idiomas, legendas\n- Transcodificação temporária\n- Backups\n- RESULTADO ESTIMADO: 15-30PB\n\n// VALIDAÇÃO: Netflix não divulga, mas rumores confirmam 15-30PB"
+    },
+    {
+      "id": "ex-livestream-bandwidth",
+      "title": "Livestream: Estimativa Rápida de Bandwidth",
+      "description": "Back-of-the-envelope para decisão de arquitetura",
+      "code_or_diagram": "// PERGUNTA: 1M usuários simultâneos em livestream, quanto bandwidth?\n\n// BREAKDOWN RÁPIDO (2 minutos):\nBitrate 1080p @ 60fps: 5 Mbps (número realista)\n1M usuários × 5 Mbps = 5M Mbps = 5 Pbps (petabits/segundo)\n\n// PARA TRÁS PARA TERMOS REAIS:\n5 Pbps = 5,000 Tbps\nDatacenter típico output: 1 Tbps\nLogo: você precisa de 5,000 datacenters EM PARALELO\n\n// DECISÃO ARQUITETURAL:\nUm datacenter não aguenta 1M usuarios simultâneos\nSolução: CDN (Akamai, Cloudflare tem ~5,000 pontos de presença)\nArquitetura: origem no datacenter central + edge servers em CDN\n\n// CONCLUSÃO:\nPossível com CDN global\nNetflix/YouTube fazem isso todos os dias"
+    },
+    {
+      "id": "ex-chatbot-storage",
+      "title": "Chatbot: Armazenamento por Conversa",
+      "description": "Pequeno número que escala para grandes aplicações",
+      "code_or_diagram": "// PROBLEMA: Quanto espaço uma conversa precisa?\n\n// ESTIMATIVA:\nConversa média: 50 mensagens bidirecional = 100 mensagens total\nTamanho médio: 200 caracteres/mensagem\n100 × 200 = 20,000 caracteres = 20KB texto puro\n\nMETADADOS por mensagem:\n- timestamp: 16 bytes\n- user_id (UUID): 36 bytes\n- model_used: 20 bytes\n- embedding_id (referência): 8 bytes\n- status: 4 bytes\n= ~100 bytes overhead por mensagem\n\nTotal: 100 mensagens × 100 bytes = 10KB metadata\n\nTOTAL POR CONVERSA: 20KB + 10KB = 30KB\n\nPARA 1M CONVERSAS:\n1M × 30KB = 30TB texto + metadata\n\nCOM ÍNDICES E REPLICAÇÃO:\n30TB × (1 replicação + 2x índices) = 90TB\nMais backups (2x): 180TB\n\n// VALIDAÇÃO:\n180TB cabe em ~20 máquinas high-end (10TB cada)\nCusto: moderado (não é petabytes)\nPerf: indexação é crítica para buscar conversas rápido"
+    },
+    {
+      "id": "ex-latency-hierarchy",
+      "title": "Hierarquia de Latência: Por Que Importa",
+      "description": "Números de Jeff Dean e implicações práticas",
+      "code_or_diagram": "// LATÊNCIA REFERENCE (nanosegundos)\nL1 cache hit: 0.5 ns\nL2 cache hit: 7 ns (14x mais lento que L1)\nMain memory: 100 ns (100x mais lento que L1)\nDisk seek: 10ms = 10,000,000 ns (100,000x mais lento que memória)\nNetwork (datacenter): 0.5ms = 500,000 ns (5,000x mais lento que memória)\n\n// INSIGHT:\nMemória é 100x mais rápida que disco\nDisco é 100x mais rápido que rede de longa distância\nRede é 10x mais rápida que disco seek\n\n// IMPLICAÇÕES PRÁTICAS:\n1. Caching é crítico: evita disco (10x) e rede (100x)\n2. Batching requisições: múltiplas operações em 1 network call\n3. Índices: evitam varredura de disco (100x mais rápido)\n4. Pre-warming de cache: preparar dados antes de pico\n5. CDN: reduz network latency (edge perto do usuário)\n\n// EXEMPLO REAL:\nSem cache: 100 ms latência = 1 network call (0.5ms) + disco (10ms) + computação (90ms)\nCom cache: 1 ms latência = 1 network call (0.5ms) + memória (0.5ms)\nDiferença: 100x mais rápido"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-8-1-1",
+      "type": "multiple_choice",
+      "question": "Por que ordem de magnitude é suficiente em Fermi estimation, ao invés de precisão exata?",
+      "options": [
+        "Porque dados exatos são impossíveis de encontrar.",
+        "Porque a diferença entre 10, 100 e 1,000 muda fundamentalmente a arquitetura; precisão dentro de um fator 2-3 não afeta decisão.",
+        "Porque engineers preguiçosos não querem fazer contas exatas.",
+        "Porque computadores modernos não conseguem processar números grandes."
+      ],
+      "correct_answer": "Porque a diferença entre 10, 100 e 1,000 muda fundamentalmente a arquitetura; precisão dentro de um fator 2-3 não afeta decisão.",
+      "explanation": "Estimação é para decisão, não para previsão exata. A diferença entre 100 RPS (cabe em 1 servidor) e 10,000 RPS (precisa distribuição) é arquitetural. Mas 9,800 vs 10,200 RPS? Ambas precisam mesma solução. Logo, estar próximo de ordem de magnitude é sucesso."
+    },
+    {
+      "id": "ex-8-1-2",
+      "type": "short_answer",
+      "question": "Você está em conversa com PM que pergunta: 'Quanto armazenamento precisamos para guardar 100M fotos em 1080p?' Faça estimativa rápida e explique suposições.",
+      "expected_answer": "100M fotos × 3MB por foto (1080p típica) = 300TB. Suposições: resolução 1080p, compressão JPEG padrão, sem redundância. Para produção, multiplica por 3-4x (réplicas, backups) = 900TB-1.2PB. Logo: precisa object storage distribuído (S3, Google Cloud) ou datacenter próprio com 10-20 máquinas.",
+      "explanation": "Decomposição: foto típica 1080p = 3-5MB (JPEG). 100M × 3MB = 300TB é baseline. Produção precisa redundância e backups, que multiplica por 3-4x. Conclusão: ordem de magnitude 1PB, decisão = não cabe em servidor único, precisa scale-out."
+    },
+    {
+      "id": "ex-8-1-3",
+      "type": "multiple_choice",
+      "question": "Qual hierarquia de latência está correta segundo Jeff Dean?",
+      "options": [
+        "Memória é 10x mais rápida que disco; disco é 10x mais rápido que rede.",
+        "Disco é 1000x mais rápido que memória; rede é 100x mais rápida que disco.",
+        "Memória é 100x mais rápida que disco; disco é 100x mais rápido que rede.",
+        "Todas têm latência similiar; otimização é em software, não hardware."
+      ],
+      "correct_answer": "Memória é 100x mais rápida que disco; disco é 100x mais rápido que rede.",
+      "explanation": "Números reais: memória ~100ns, disco ~10ms (100,000x), rede datacenter ~0.5ms (5,000x). Isso explica por que caching é crítico (evita disco) e batching ajuda (reduz chamadas de rede). Uma query sem cache em disco é 1000x mais lenta que com cache em memória."
+    },
+    {
+      "id": "ex-8-1-4",
+      "type": "code_review",
+      "question": "Você estimou 50k RPS para plataforma de vídeo, baseado em 1M DAU × 50 requests/usuário. Manager questiona: 'Isso é realista?' Como você valida sua estimativa?",
+      "expected_answer": "Quebre a validação: 1M usuários espalhados em 24h = ~41k usuários/hora. Se 50 requests/usuário significa streaming (1 request/segundo × 30 min) + interações (10-20 requests), = ~0.8-1 request/segundo por usuário ativo. 41k × 1 req/s = 41k RPS, próximo do 50k. Se pico é 3-4 horas (19-22h), 1M DAU ÷ 18h = 55k usuários/hora. Conclusão: 50k RPS é razoável. Validação: 1 servidor aguenta 1k-5k RPS, logo precisa 10-50 servidores com load balancing.",
+      "explanation": "Validação de estimativa requer decomposição reversa. Se você estimou 50k RPS, quebre: quantos usuários simultâneos? (1M DAU ÷ 24h = ~40k/hora, picos 3-4x = 120-160k simultâneos). Cada usuário faz quantas requisições/segundo? (0.5-1 é típico). 120k × 0.5 = 60k RPS. Logo, 50k é razoável e validado."
+    },
+    {
+      "id": "ex-8-1-5",
+      "type": "prediction",
+      "question": "Uma startup estimou que precisa de 10TB armazenamento no ano 1. No ano 2, crescimento previsto é 3x. Você diria que 30TB resolve, ou há problemas?",
+      "options": [
+        "30TB é suficiente; 3x crescimento = 3x armazenamento.",
+        "30TB é risco; crescimento exponencial 3x/ano = ano 3 é 90TB, ano 4 é 270TB. Melhor arquitetura scale-out desde início.",
+        "Armazenamento nunca é gargalo; CPU e memória são críticos.",
+        "Não há como saber sem dados de carga de trabalho específicos."
+      ],
+      "correct_answer": "30TB é risco; crescimento exponencial 3x/ano = ano 3 é 90TB, ano 4 é 270TB. Melhor arquitetura scale-out desde início.",
+      "explanation": "Extrapolação exponencial: 10TB (ano 1) → 30TB (ano 2) → 90TB (ano 3) → 270TB (ano 4). Infraestrutura única (um NAS de 30TB) não escala. Decisão: usar object storage (S3, Google Cloud) que escala automaticamente, ao invés de hardware físico que precisa expansão cada ano. Lição: estimativas exponenciais precisam arquitetura distribuída desde o início."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-8-1",
+    "title": "Projeto: Estimativa de Sistema de E-learning Global",
+    "description": "Você é designado para estimar requisitos de infraestrutura para uma plataforma e-learning que está escalando globalmente. Objetivo: apresentar estimativas informadas e documentadas.",
+    "context": "Plataforma educacional com 1M usuários esperados no ano 2. Ciclo acadêmico: janeiros-junho = pico (60%), julho-agosto = férias (20%), setembro-dezembro = volta (80%).",
+    "tasks": [
+      {
+        "task_id": "task-1",
+        "title": "Estimativa de DAU (Daily Active Users)",
+        "description": "Baseado em 1M MAU no ano 2, e sabendo que períodos de pico têm 3-4x mais atividade que períodos de baixa, estime DAU durante pico e período normal.",
+        "hints": ["Típico: 15-30% de MAU viram DAU", "Pico aumenta isso em 2-4x", "Período baixo diminui em 0.5x"],
+        "rubric": "Estimativa deve ter suposições claras (ex: 20% MAU em DAU normal, 3x em pico) e explicação de como chegou no número"
+      },
+      {
+        "task_id": "task-2",
+        "title": "Estimativa de Requisições por Segundo (RPS)",
+        "description": "Um usuário durante sessão de estudo faz: login (1 req), carrega aula (3 reqs), assiste vídeo (1 req/10s), interage exercícios (5 reqs/exercício). Sessão média é 45 minutos. Estime RPS durante pico.",
+        "hints": ["Sessão: 45 minutos x 60s = 2,700 segundos", "Vídeo durante sessão = 45 req (1/10s)", "Total por usuário = 1+3+1+45+(5x5) = ~80 reqs por sessão", "RPS = DAU × reqs/sessão ÷ 86,400s"],
+        "rubric": "Mostrar cálculo estruturado, não adivinhação. Suposições claras (tempo médio de sessão, distribuição ao longo do dia)"
+      },
+      {
+        "task_id": "task-3",
+        "title": "Armazenamento de Conteúdo",
+        "description": "Plataforma tem 100 cursos, 10 aulas por curso, cada aula tem vídeo 1080p (30 min) + materiais. Estime espaço total considerando redundância para produção.",
+        "hints": ["Vídeo 1080p 30min ≈ 5GB", "Materiais (PDFs, código) ≈ 200MB por aula", "Produção precisa de redundância 3x e backups 2x"],
+        "rubric": "Mostrar breakdown claro: conteúdo base + redundância + backups. Ordem de magnitude correta (TB vs PB)"
+      },
+      {
+        "task_id": "task-4",
+        "title": "Validação de Arquitetura",
+        "description": "Baseado em suas estimativas RPS e armazenamento, determinar se é 'possível' com: (A) 1 servidor de 100GB, (B) 10 servidores + S3, (C) depende de mais informações.",
+        "hints": ["Lembre: 1 servidor aguenta ~1-5k RPS máximo", "Seus RPS estimados são? Se >5k, precisa scale-out", "Armazenamento: S3 escala, servidor único não"],
+        "rubric": "Escolha baseada em números reais, não em 'parece bom'. Explique por quê escolheu essa arquitetura"
+      }
+    ],
+    "expected_output": "Documento (~2-3 páginas) com: (1) Estimativas de DAU, RPS, armazenamento, (2) Suposições comunicadas, (3) Arquitetura recomendada, (4) Validação (seus números fazem sentido?)"
+  }
+}

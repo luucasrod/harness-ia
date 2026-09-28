@@ -1,0 +1,224 @@
+{
+  "lesson_id": "lesson-10-3-building-ai-tutors",
+  "title": "Building AI Tutors - Contexto, Feedback, Guardrails e Pedagogia",
+  "module_id": "module-10",
+  "module_title": "Claude AI Integration",
+  "description": "Projete um tutor de IA para a Harness IA que entende a licao atual, diagnostica tentativas, da feedback progressivo e protege alunos contra respostas erradas ou atalhos ruins.",
+  "duration_minutes": 100,
+  "word_count": 6690,
+  "target_audience": "Developers intermediarios criando features de IA em plataforma educacional",
+  "learning_objectives": [
+    "Modelar um tutor que usa objetivos da licao, historico do aluno e rubrica.",
+    "Implementar recuperacao de contexto por lessonId e snippets relevantes.",
+    "Construir feedback em camadas: diagnostico, dica, exemplo e desafio.",
+    "Aplicar guardrails contra cola, alucinacao, conteudo fora do curso e vazamento de dados.",
+    "Usar ferramentas internas para buscar progresso, rubricas e exercicios.",
+    "Medir se o tutor melhora aprendizado com eventos e avaliacoes."
+  ],
+  "content_sections": [
+    {
+      "section_id": "o-que-diferencia-chatbot-de-tutor",
+      "title": "O que diferencia chatbot de tutor",
+      "key_points": [
+        "Um tutor bom adapta a explicacao ao erro do aluno.",
+        "RAG nao precisa comecar complexo; recuperar a licao certa ja resolve muito.",
+        "Guardrails pedagogicos devem incentivar tentativa, nao bloquear ajuda.",
+        "Privacidade de alunos e API keys fazem parte do design do tutor.",
+        "A metrica central e aprendizagem demonstrada, nao volume de mensagens."
+      ],
+      "order": 1
+    },
+    {
+      "section_id": "context-aware-responses-com-rag-leve",
+      "title": "Context-aware responses com RAG leve",
+      "key_points": [
+        "Um tutor bom adapta a explicacao ao erro do aluno.",
+        "RAG nao precisa comecar complexo; recuperar a licao certa ja resolve muito.",
+        "Guardrails pedagogicos devem incentivar tentativa, nao bloquear ajuda.",
+        "Privacidade de alunos e API keys fazem parte do design do tutor.",
+        "A metrica central e aprendizagem demonstrada, nao volume de mensagens."
+      ],
+      "order": 2
+    },
+    {
+      "section_id": "feedback-por-rubrica",
+      "title": "Feedback por rubrica",
+      "key_points": [
+        "Um tutor bom adapta a explicacao ao erro do aluno.",
+        "RAG nao precisa comecar complexo; recuperar a licao certa ja resolve muito.",
+        "Guardrails pedagogicos devem incentivar tentativa, nao bloquear ajuda.",
+        "Privacidade de alunos e API keys fazem parte do design do tutor.",
+        "A metrica central e aprendizagem demonstrada, nao volume de mensagens."
+      ],
+      "order": 3
+    },
+    {
+      "section_id": "guardrails-pedagogicos",
+      "title": "Guardrails pedagogicos",
+      "key_points": [
+        "Um tutor bom adapta a explicacao ao erro do aluno.",
+        "RAG nao precisa comecar complexo; recuperar a licao certa ja resolve muito.",
+        "Guardrails pedagogicos devem incentivar tentativa, nao bloquear ajuda.",
+        "Privacidade de alunos e API keys fazem parte do design do tutor.",
+        "A metrica central e aprendizagem demonstrada, nao volume de mensagens."
+      ],
+      "order": 4
+    },
+    {
+      "section_id": "moderacao-privacidade-e-seguranca",
+      "title": "Moderacao, privacidade e seguranca",
+      "key_points": [
+        "Um tutor bom adapta a explicacao ao erro do aluno.",
+        "RAG nao precisa comecar complexo; recuperar a licao certa ja resolve muito.",
+        "Guardrails pedagogicos devem incentivar tentativa, nao bloquear ajuda.",
+        "Privacidade de alunos e API keys fazem parte do design do tutor.",
+        "A metrica central e aprendizagem demonstrada, nao volume de mensagens."
+      ],
+      "order": 5
+    },
+    {
+      "section_id": "ferramentas-internas-do-tutor",
+      "title": "Ferramentas internas do tutor",
+      "key_points": [
+        "Um tutor bom adapta a explicacao ao erro do aluno.",
+        "RAG nao precisa comecar complexo; recuperar a licao certa ja resolve muito.",
+        "Guardrails pedagogicos devem incentivar tentativa, nao bloquear ajuda.",
+        "Privacidade de alunos e API keys fazem parte do design do tutor.",
+        "A metrica central e aprendizagem demonstrada, nao volume de mensagens."
+      ],
+      "order": 6
+    },
+    {
+      "section_id": "medindo-aprendizado-nao-apenas-cliques",
+      "title": "Medindo aprendizado, nao apenas cliques",
+      "key_points": [
+        "Um tutor bom adapta a explicacao ao erro do aluno.",
+        "RAG nao precisa comecar complexo; recuperar a licao certa ja resolve muito.",
+        "Guardrails pedagogicos devem incentivar tentativa, nao bloquear ajuda.",
+        "Privacidade de alunos e API keys fazem parte do design do tutor.",
+        "A metrica central e aprendizagem demonstrada, nao volume de mensagens."
+      ],
+      "order": 7
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-10-3-1",
+      "title": "Recuperacao de contexto da licao",
+      "description": "Busca apenas material necessario para responder a pergunta.",
+      "code_or_diagram": "type LessonContext = {\n  title: string;\n  objectives: string[];\n  excerpt: string;\n  exerciseRubric?: string;\n};\n\nexport async function getTutorContext(lessonId: string, question: string): Promise<LessonContext> {\n  const lesson = await db.lesson.findUniqueOrThrow({ where: { id: lessonId } });\n  const relevantBlocks = rankByRelevance(lesson.blocks, question).slice(0, 4);\n  return {\n    title: lesson.title,\n    objectives: lesson.objectives,\n    excerpt: relevantBlocks.map((b) => b.markdown).join(\"\\n\\n\"),\n    exerciseRubric: lesson.currentExercise?.rubric,\n  };\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-3-2",
+      "title": "Feedback por rubrica",
+      "description": "Avalia tentativa sem transformar Claude em juiz opaco.",
+      "code_or_diagram": "export async function gradeAttempt(input: {\n  rubric: string;\n  attemptCode: string;\n  lessonContext: string;\n}) {\n  return anthropic.messages.create({\n    model: CLAUDE_MODELS.tutor,\n    max_tokens: 1000,\n    temperature: 0.2,\n    system: \"You are a strict but supportive software engineering tutor. Use the rubric exactly.\",\n    messages: [{\n      role: \"user\",\n      content: `<rubric>${input.rubric}</rubric>\n<lesson>${input.lessonContext}</lesson>\n<attempt language=\"typescript\">${input.attemptCode}</attempt>\nReturn JSON: score, strengths, issues, next_hint.`,\n    }],\n  });\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-3-3",
+      "title": "Guardrail anti-cola",
+      "description": "Ajuda sem entregar solucao completa em exercicio avaliativo.",
+      "code_or_diagram": "export function classifyTutorIntent(message: string) {\n  const lower = message.toLowerCase();\n  const wantsFinal =\n    lower.includes(\"resposta final\") ||\n    lower.includes(\"codigo completo\") ||\n    lower.includes(\"faz pra mim\");\n\n  return {\n    wantsFinalAnswer: wantsFinal,\n    shouldRequireAttempt: wantsFinal,\n  };\n}\n\nexport function guardrailInstruction(intent: ReturnType<typeof classifyTutorIntent>) {\n  if (!intent.shouldRequireAttempt) return \"\";\n  return \"The student may be asking for a final graded answer. Ask for their attempt first and provide at most one hint.\";\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-3-4",
+      "title": "Tool definitions do tutor",
+      "description": "Claude pode pedir dados de progresso sem receber banco inteiro.",
+      "code_or_diagram": "export const tutorTools = [\n  {\n    name: \"get_student_progress\",\n    description: \"Read mastery signals for the current student and module.\",\n    input_schema: {\n      type: \"object\",\n      properties: { moduleId: { type: \"string\" } },\n      required: [\"moduleId\"],\n    },\n  },\n  {\n    name: \"get_lesson_rubric\",\n    description: \"Read the rubric for one lesson exercise.\",\n    input_schema: {\n      type: \"object\",\n      properties: { lessonId: { type: \"string\" } },\n      required: [\"lessonId\"],\n    },\n  },\n] as const;",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-3-5",
+      "title": "Eventos de aprendizagem",
+      "description": "Registra sinais que mostram se o tutor esta ajudando.",
+      "code_or_diagram": "export async function recordTutorEvent(event: {\n  userId: string;\n  lessonId: string;\n  type: \"asked_question\" | \"received_hint\" | \"submitted_attempt\" | \"improved_score\";\n  metadata?: Record<string, unknown>;\n}) {\n  await db.learningEvent.create({\n    data: {\n      userId: event.userId,\n      lessonId: event.lessonId,\n      type: event.type,\n      metadata: event.metadata ?? {},\n      createdAt: new Date(),\n    },\n  });\n}",
+      "language": "typescript"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-10-3-1",
+      "type": "short_answer",
+      "question": "Qual e a diferenca entre chatbot e tutor?",
+      "correct_answer": "Tutor diagnostica conhecimento, usa contexto curricular e conduz o aluno para aprendizagem mensuravel.",
+      "explanation": "Tutor diagnostica conhecimento, usa contexto curricular e conduz o aluno para aprendizagem mensuravel."
+    },
+    {
+      "id": "q-10-3-2",
+      "type": "multiple_choice",
+      "question": "Por que recuperar contexto por lessonId ja e poderoso?",
+      "options": [
+        "Porque reduz alucinacao e ancora a resposta na aula que o aluno esta estudando.",
+        "Ignorar o problema e aumentar max_tokens",
+        "Enviar a API key para o browser",
+        "Remover logs para reduzir custo"
+      ],
+      "correct_answer": "Porque reduz alucinacao e ancora a resposta na aula que o aluno esta estudando.",
+      "explanation": "Porque reduz alucinacao e ancora a resposta na aula que o aluno esta estudando."
+    },
+    {
+      "id": "q-10-3-3",
+      "type": "debugging",
+      "question": "Guardrail anti-cola deve fazer o que?",
+      "correct_answer": "Pedir tentativa, dar dica progressiva e preservar aprendizagem sem abandonar o aluno.",
+      "explanation": "Pedir tentativa, dar dica progressiva e preservar aprendizagem sem abandonar o aluno."
+    },
+    {
+      "id": "q-10-3-4",
+      "type": "short_answer",
+      "question": "Por que nao mandar todo o banco para o modelo?",
+      "correct_answer": "Custo, privacidade, latencia e risco de expor dados desnecessarios.",
+      "explanation": "Custo, privacidade, latencia e risco de expor dados desnecessarios."
+    },
+    {
+      "id": "q-10-3-5",
+      "type": "multiple_choice",
+      "question": "Qual metrica e melhor que numero de chats?",
+      "options": [
+        "Melhora em tentativas, conclusao de exercicios, retencao e reducao de erros recorrentes.",
+        "Ignorar o problema e aumentar max_tokens",
+        "Enviar a API key para o browser",
+        "Remover logs para reduzir custo"
+      ],
+      "correct_answer": "Melhora em tentativas, conclusao de exercicios, retencao e reducao de erros recorrentes.",
+      "explanation": "Melhora em tentativas, conclusao de exercicios, retencao e reducao de erros recorrentes."
+    },
+    {
+      "id": "q-10-3-6",
+      "type": "debugging",
+      "question": "Quando usar ferramentas internas?",
+      "correct_answer": "Quando Claude precisa consultar dados autorizados e atuais, como progresso ou rubrica.",
+      "explanation": "Quando Claude precisa consultar dados autorizados e atuais, como progresso ou rubrica."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-10-3",
+    "title": "Tutor de feedback progressivo",
+    "description": "Crie fluxo que recebe tentativa de codigo, classifica intencao, recupera rubrica, chama Claude e retorna uma dica adequada ao nivel do aluno.",
+    "expected_solution": "O gabarito inclui intent classifier, recuperacao da rubrica por lessonId, prompt com regra anti-cola, JSON de feedback com score parcial, log de evento e teste garantindo que pedidos de codigo completo recebem dica, nao solucao.",
+    "success_criteria": [
+      "Server-side only para chamadas Claude",
+      "Entrada validada",
+      "Prompt ou contrato versionado",
+      "Uso, custo, latencia e status registrados",
+      "Fallback ou tratamento de erro implementado",
+      "Testes cobrindo caminho feliz e falhas"
+    ]
+  },
+  "resources": {
+    "official_docs": [
+      "Anthropic Claude Platform Docs: API overview, Messages API, Authentication, Models overview, Pricing, Streaming messages, Rate limits, Errors, Prompting best practices.",
+      "Use current model and pricing IDs as configuration, not constants embedded across application code."
+    ],
+    "tools": [
+      "@anthropic-ai/sdk",
+      "zod",
+      "p-limit or p-queue",
+      "OpenTelemetry/logging",
+      "Next.js API routes"
+    ]
+  }
+}

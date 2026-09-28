@@ -1,0 +1,164 @@
+{
+  "lesson_id": "lesson-2-3-global-state",
+  "title": "Estado Global - Redux/Zustand",
+  "description": "Context API vs Redux vs Zustand: quando usar cada um, trade-offs, exemplos reais. Quando global state é overkill.",
+  "duration_minutes": 60,
+  "learning_objectives": [
+    "Comparar Context API, Redux e Zustand com trade-offs reais",
+    "Implementar Zustand para maioria dos casos",
+    "Entender quando Redux é necessário (complexo, middleware)",
+    "Identificar quando global state é overkill"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução",
+      "key_points": ["Context suficiente pra simples", "Redux powerfully controlled mas overhead", "Zustand moderno e lightweight", "Maioria dos casos: Zustand"]
+    },
+    {
+      "section_id": "context_redux_zustand",
+      "title": "Comparação: Context vs Redux vs Zustand",
+      "key_points": [
+        "Context: nativo React, simples, sem boilerplate, sem DevTools",
+        "Redux: robusto, time-travel debugging, middleware, boilerplate alto",
+        "Zustand: lightweight, simples, DevTools plugin, seletores otimizados"
+      ]
+    },
+    {
+      "section_id": "when_not_to_use",
+      "title": "Quando NÃO Usar Global State",
+      "key_points": [
+        "State local pra formulário específico (não global)",
+        "State que muda frequentemente só em uma rota",
+        "Evitar: tudo no store (anti-pattern)"
+      ]
+    },
+    {
+      "section_id": "real_example",
+      "title": "Exemplo Real: Zustand na Plataforma",
+      "key_points": [
+        "LearningStore: currentLesson, userProgress, quizState",
+        "Actions: setCurrentLesson, updateQuizAnswer, submitQuiz",
+        "Seletores: useLearningStore((state) => state.currentLesson)",
+        "Scalable: adiciona novos fields sem refatorar store"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-2-3-1",
+      "title": "Context simples vs Zustand",
+      "description": "Mesmo aplicativo em 2 abordagens",
+      "code_or_diagram": "// Context\nconst AuthContext = createContext(null);\n<AuthProvider><App /></AuthProvider>\n\n// Zustand\nconst useAuthStore = create(set => ({ user: null, setUser: (u) => set({ user: u }) }));\nfunction App() { const user = useAuthStore(s => s.user); }"
+    },
+    {
+      "id": "ex-2-3-2",
+      "title": "Redux Toolkit simplifica",
+      "description": "Menos boilerplate que Redux clássico",
+      "code_or_diagram": "const userSlice = createSlice({\n  name: 'user',\n  initialState: null,\n  reducers: {\n    setUser: (state, action) => action.payload\n  }\n});\nconst store = configureStore({ reducer: { user: userSlice.reducer } });\nfunction App() { const user = useSelector(s => s.user); }"
+    },
+    {
+      "id": "ex-2-3-3",
+      "title": "Zustand middleware + persistence",
+      "description": "Persist store ao localStorage",
+      "code_or_diagram": "export const useLearningStore = create(\n  persist(\n    (set) => ({ ... }),\n    { name: 'learning-store' }\n  )\n);\n// Auto-persists ao localStorage e hydrates ao iniciar"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-2-3-q1",
+      "type": "multiple_choice",
+      "question": "Quando Redux é melhor que Zustand?",
+      "options": [
+        "Redux é sempre melhor.",
+        "Quando precisa time-travel debugging, middleware complexo, comunidade grande.",
+        "Nunca, Zustand é superior.",
+        "Quando state é simples."
+      ],
+      "correct_answer": "Quando precisa time-travel debugging, middleware complexo, comunidade grande.",
+      "explanation": "Redux é robusto e tem excelentes DevTools. Zustand é simpler e melhor na maioria dos casos. Redux para time grande com estado muito complexo."
+    },
+    {
+      "id": "ex-2-3-q2",
+      "type": "short_answer",
+      "question": "Por que colocar state de form específico em global store é anti-pattern?",
+      "expected_answer": "Form state é local ao componente, não compartilhado. Colocar em global store acopla o componente ao store, dificulta reutilização, e polui o store com state trivial.",
+      "explanation": "Global store é pra estado compartilhado (auth, lesson, progress). Form state local usa useState e é mais eficiente."
+    },
+    {
+      "id": "ex-2-3-q3",
+      "type": "code_review",
+      "question": "Revise: 'const store = create(set => ({ formEmail: '', setFormEmail: (e) => set({ formEmail: e }) }))' Problema?",
+      "expected_answer": "Form state não é global. Deveria ser useState local no formulário. Global store polui com state trivial.",
+      "explanation": "Correto: function Form() { const [email, setEmail] = useState(''); ... }"
+    },
+    {
+      "id": "ex-2-3-q4",
+      "type": "prediction",
+      "question": "Zustand store atualiza, qual é overhead comparado com Context?",
+      "options": [
+        "Zustand re-renderiza toda árvore, mais lento.",
+        "Zustand usa seletores, re-renderiza só componente que précisa.",
+        "Sem diferença, ambos iguais.",
+        "Zustand é 10x mais lento."
+      ],
+      "correct_answer": "Zustand usa seletores, re-renderiza só componente que précisa.",
+      "explanation": "Context força re-render de toda árvore. Zustand seletores (state => state.field) re-renderiza só componente. Maior performance."
+    },
+    {
+      "id": "ex-2-3-q5",
+      "type": "multiple_choice",
+      "question": "Qual é vantagem de Redux middleware?",
+      "options": [
+        "Middleware é desnecessário.",
+        "Intercepta actions: logging, persistence, API calls, etc.",
+        "Middleware torna Redux mais lento.",
+        "Redux sem middleware é melhor."
+      ],
+      "correct_answer": "Intercepta actions: logging, persistence, API calls, etc.",
+      "explanation": "Middleware (thunk, saga) permite async actions, side effects. Exemplo: dispatch(fetchUser) automaticamente chama API, logueia, persiste. Zustand middleware menos comum."
+    }
+  ],
+  "practical_exercise": {
+    "id": "exercise-2-3-zustand",
+    "title": "Converter Context + useState para Zustand",
+    "description": "Você tem componentes usando Context de Quiz + useState local. Refatore para Zustand store.",
+    "starting_code": "const QuizContext = createContext(null);\nfunction Quiz() {\n  const [questions, setQuestions] = useState([]);\n  const [currentIndex, setCurrentIndex] = useState(0);\n  const [answers, setAnswers] = useState({});\n  const [submitted, setSubmitted] = useState(false);\n  return <QuizContext.Provider value={{ ... }}><Quiz /></QuizContext.Provider>;\n}",
+    "problems_to_fix": [
+      "State distribuído entre Context e useState",
+      "Sem seletores otimizados (força re-render da árvore)",
+      "Sem DevTools",
+      "Difícil testar (precisa de Prov ider)"
+    ],
+    "solution_outline": "1. Crie useQuizStore com Zustand\n2. State: questions, currentIndex, answers, submitted\n3. Actions: setQuestions, updateAnswer, nextQuestion, submit\n4. Refatore Quiz componente pra usar hooks\n5. Teste store diretamente (sem Provider)",
+    "deliverables": [
+      "useQuizStore Zustand store",
+      "Quiz refatorado (remove Context)",
+      "Testes do store"
+    ]
+  },
+  "summary_key_takeaways": [
+    "Context pra simples (auth), Zustand pra maioria, Redux pra complexo",
+    "Zustand: lightweight, seletores otimizados, DevTools plugin",
+    "Global state anti-pattern: form state local, não global",
+    "Seletores previnem re-renders desnecessários",
+    "Redux middleware útil pra side effects complexos"
+  ],
+  "next_lesson": {
+    "id": "lesson-2-4-routing-code-splitting",
+    "title": "Routing & Code Splitting - Next.js",
+    "preview": "Estado global pronto. Agora estruturemos a aplicação: Next.js App Router, layouts nested, Server/Client Components, code splitting automático e Metadata/SEO por rota."
+  },
+  "resources": [
+    {
+      "title": "Zustand Docs",
+      "type": "article",
+      "link": "https://github.com/pmndrs/zustand"
+    },
+    {
+      "title": "Redux Toolkit",
+      "type": "article",
+      "link": "https://redux-toolkit.js.org"
+    }
+  ]
+}

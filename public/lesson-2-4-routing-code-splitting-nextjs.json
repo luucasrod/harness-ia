@@ -1,0 +1,204 @@
+{
+  "lesson_id": "lesson-2-4-routing-code-splitting-nextjs",
+  "title": "Routing & Code Splitting - Next.js App Router",
+  "description": "Arquitetura de rotas com Next.js App Router, layouts aninhados, Server e Client Components, loading/error states, metadata e divisão de código.",
+  "duration_minutes": 45,
+  "target_audience": "Developers com mentalidade de engineer (pré-req: Lição 1.1)",
+  "learning_objectives": [
+    "Organizar a árvore app/ como mapa de produto e performance",
+    "Usar layouts aninhados para UI compartilhada",
+    "Diferenciar Server Components e Client Components",
+    "Implementar loading.tsx, error.tsx e metadata por rota",
+    "Aplicar code splitting automático e dinâmico com critério"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "Rota define URL, carregamento, layout, erro, metadata e chunk",
+        "A lição usa App Router, não Pages Router",
+        "O LMS terá dashboard, módulos, lições e admin"
+      ]
+    },
+    {
+      "section_id": "project_structure",
+      "title": "Estrutura de Projeto (8 minutos)",
+      "key_points": [
+        "app/layout.tsx define estrutura global",
+        "page.tsx define tela de rota",
+        "loading.tsx e error.tsx ficam próximos do segmento"
+      ]
+    },
+    {
+      "section_id": "nested_layouts",
+      "title": "Layouts Nested (8 minutos)",
+      "key_points": [
+        "Layouts persistem entre navegações do mesmo segmento",
+        "Sidebar de módulo pertence ao layout de modules",
+        "Layout compartilhado reduz duplicação"
+      ]
+    },
+    {
+      "section_id": "server_client",
+      "title": "Server vs Client Components (10 minutos)",
+      "key_points": [
+        "Server Components são padrão",
+        "Client Components são necessários para estado, eventos e browser APIs",
+        "Interatividade deve ser isolada em ilhas client"
+      ]
+    },
+    {
+      "section_id": "loading_error_metadata",
+      "title": "Loading, Error e Metadata (8 minutos)",
+      "key_points": [
+        "loading.tsx fornece fallback do segmento",
+        "error.tsx precisa ser client para retry interativo",
+        "generateMetadata permite SEO dinâmico por lição"
+      ]
+    },
+    {
+      "section_id": "code_splitting",
+      "title": "Code Splitting (8 minutos)",
+      "key_points": [
+        "Next divide código por rota automaticamente",
+        "dynamic import adia componentes pesados",
+        "Dependências pesadas em layouts globais prejudicam todas as rotas"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-app-tree",
+      "title": "Árvore app/ para LMS",
+      "description": "Estrutura com dashboard, modules, lessons e admin.",
+      "code_or_diagram": "app/modules/[moduleId]/lessons/[lessonId]/page.tsx"
+    },
+    {
+      "id": "ex-root-layout",
+      "title": "Root Layout com Metadata",
+      "description": "Layout raiz com html, body e metadata padrão.",
+      "code_or_diagram": "export const metadata = { title: 'Engineering LMS', description: 'Plataforma educacional com tutor de IA' };"
+    },
+    {
+      "id": "ex-modules-layout",
+      "title": "Layout Compartilhado de Módulos",
+      "description": "Sidebar persistente para rotas dentro de /modules.",
+      "code_or_diagram": "export default function ModulesLayout({ children }) { return <div className='module-shell'><ModuleSidebar /><section>{children}</section></div>; }"
+    },
+    {
+      "id": "ex-server-page",
+      "title": "LessonPage como Server Component",
+      "description": "Busca lição no servidor e renderiza conteúdo com ilha client para tutor.",
+      "code_or_diagram": "export default async function LessonPage({ params }) { const lesson = await getLesson((await params).lessonId); return <AiTutorClient lessonId={lesson.id} />; }"
+    },
+    {
+      "id": "ex-error-page",
+      "title": "error.tsx Client",
+      "description": "Tratamento de erro com botão de retry.",
+      "code_or_diagram": "'use client'; export default function LessonError({ error, retry }) { return <button onClick={retry}>Tentar novamente</button>; }"
+    },
+    {
+      "id": "ex-dynamic-editor",
+      "title": "Import Dinâmico do Editor",
+      "description": "Adia download de editor pesado até a área de exercício.",
+      "code_or_diagram": "const CodeEditor = dynamic(() => import('@/components/lesson/code-editor'), { loading: () => <p>Carregando editor...</p> });"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "quiz-2-4-1",
+      "type": "multiple_choice",
+      "question": "No App Router, componentes são por padrão:",
+      "options": [
+        "Client Components",
+        "Server Components",
+        "Hybrid Components",
+        "Static Components"
+      ],
+      "correct_answer": "Server Components",
+      "explanation": "No App Router, arquivos são Server Components por padrão até que usem a diretiva 'use client'."
+    },
+    {
+      "id": "quiz-2-4-2",
+      "type": "short_answer",
+      "question": "Quando usar 'use client'?",
+      "expected_answer": "Quando o componente usa estado, eventos, effects, hooks client-side ou APIs do browser.",
+      "explanation": "A diretiva cria uma fronteira de componente cliente."
+    },
+    {
+      "id": "quiz-2-4-3",
+      "type": "code_review",
+      "question": "Um editor Monaco é importado no layout raiz. Qual risco?",
+      "expected_answer": "O bundle pesado pode afetar todas as rotas, mesmo as que não usam o editor. O ideal é importar dinamicamente próximo do uso.",
+      "explanation": "Layouts globais devem evitar dependências pesadas e específicas."
+    },
+    {
+      "id": "quiz-2-4-4",
+      "type": "prediction",
+      "question": "O que acontece com layout.tsx durante navegação entre páginas do mesmo segmento?",
+      "expected_answer": "Ele persiste e não é remontado como uma página comum, preservando UI compartilhada.",
+      "explanation": "Essa é uma das vantagens dos layouts aninhados."
+    },
+    {
+      "id": "quiz-2-4-5",
+      "type": "multiple_choice",
+      "question": "error.tsx precisa ser Client Component porque:",
+      "options": [
+        "Todo erro é client-side.",
+        "Ele recebe retry, que é handler interativo.",
+        "Metadata exige client.",
+        "loading.tsx também exige client."
+      ],
+      "correct_answer": "Ele recebe retry, que é handler interativo.",
+      "explanation": "O botão de retry usa interação no cliente."
+    }
+  ],
+  "practical_exercise": {
+    "id": "practice-2-4-module-overview-route",
+    "title": "Adicionar Rota de Overview do Módulo",
+    "starting_code": "app/modules/[moduleId]/layout.tsx existe com sidebar compartilhada. Crie app/modules/[moduleId]/overview/page.tsx.",
+    "problems_to_fix": [
+      "Overview não deve duplicar layout de módulo",
+      "Dados do módulo devem ser buscados no servidor",
+      "Widgets interativos precisam ficar em componente client",
+      "Editor pesado não deve entrar nessa rota"
+    ],
+    "solution_outline": "Criar page.tsx server para getModule, loading.tsx, generateMetadata e um componente client pequeno apenas para filtros ou ações interativas.",
+    "acceptance_criteria": [
+      "Rota usa layout compartilhado automaticamente",
+      "Metadata usa título do módulo",
+      "loading.tsx existe no segmento",
+      "Nenhum import pesado desnecessário aparece na overview"
+    ]
+  },
+  "summary_key_takeaways": [
+    "App Router torna rotas fronteiras de arquitetura",
+    "Layouts aninhados preservam UI compartilhada",
+    "Server Components reduzem JavaScript no cliente",
+    "Client Components devem ser usados para interatividade",
+    "Code splitting depende de bons limites de importação"
+  ],
+  "next_lesson": {
+    "id": "lesson-2-5-forms-validation-input",
+    "title": "Forms, Validation & Input",
+    "preview": "Vamos construir formulários robustos com React Hook Form, validação client/server, Zod e upload de arquivos."
+  },
+  "resources": [
+    {
+      "title": "Next.js Docs - App Router",
+      "type": "article",
+      "link": "https://nextjs.org/docs/app"
+    },
+    {
+      "title": "Next.js Docs - Server and Client Components",
+      "type": "article",
+      "link": "https://nextjs.org/docs/app/getting-started/server-and-client-components"
+    },
+    {
+      "title": "Next.js Docs - Dynamic Imports",
+      "type": "article",
+      "link": "https://nextjs.org/docs/app/guides/lazy-loading"
+    }
+  ]
+}

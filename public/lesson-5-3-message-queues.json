@@ -1,0 +1,139 @@
+{
+  "lesson_id": "lesson-5-3-message-queues",
+  "title": "Message Queues - Async em Escala",
+  "description": "Transforme operações lentas em respostas rápidas. Aprenda padrões async, idempotência, dead letter queues e como evitar perda de dados com message queues.",
+  "module_id": "module-5",
+  "duration_minutes": 45,
+  "learning_objectives": [
+    "Entender por que async melhor que sync: respostas rápidas, processamento em background",
+    "Dominar padrões: fire-and-forget (at-least-once), exactly-once semantics, DLQ",
+    "Implementar idempotência: processar 2x = resultado igual a processar 1x",
+    "Usar message queues em escala: múltiplas filas, prioridades, workers"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (6 minutos)",
+      "key_points": [
+        "Sync = usuário espera tudo terminar (3000ms se 5 operações × 600ms cada)",
+        "Async = usuário tem resposta rápida (300ms) enquanto background processa",
+        "10x melhor UX com message queues",
+        "Trade-off: complexidade, eventual consistency, falhas de workers"
+      ]
+    },
+    {
+      "section_id": "patterns",
+      "title": "Async Patterns (12 minutos)",
+      "key_points": [
+        "Fire-and-forget: enfileira, retorna imediatamente, worker processa depois",
+        "At-least-once: mensagem pode ser processada 1+ vezes (requer idempotência)",
+        "Exactly-once: processada exatamente 1 vez (complexo, requer de-duplication)",
+        "Dead letter queues: mensagens que falham N vezes vão para DLQ"
+      ]
+    },
+    {
+      "section_id": "idempotence",
+      "title": "Idempotência (10 minutos)",
+      "key_points": [
+        "Se worker processa 2x, resultado final = resultado de processar 1x",
+        "Gere ID determinístico baseado em input, use UNIQUE constraint",
+        "Catch duplicate constraint violations, ignora a segunda tentativa",
+        "Sem idempotência, retries duplicam dados"
+      ]
+    },
+    {
+      "section_id": "implementation",
+      "title": "Implementação Completa (12 minutos)",
+      "key_points": [
+        "Bull.js: queue library para Node.js com Redis backend",
+        "Enfileira job com jobId único (previne duplicatas)",
+        "Worker processa com retry automático + backoff exponencial",
+        "DLQ para jobs que falham para sempre"
+      ]
+    },
+    {
+      "section_id": "priorities",
+      "title": "Múltiplas Filas e Prioridades (8 minutos)",
+      "key_points": [
+        "Critical queue: pagamentos, autenticação (1 worker, máxima atenção)",
+        "Normal queue: grading, feedback (4-8 workers)",
+        "Background queue: analytics, limpeza (1-2 workers)",
+        "Prioridades garantem que crítico é processado rápido"
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-5-3-1",
+      "type": "multiple_choice",
+      "question": "Por que async com message queue é melhor que processar tudo antes de retornar?",
+      "options": [
+        "Usa menos memória",
+        "É mais fácil de debugar",
+        "Usuário tem resposta rápida enquanto background processa em paralelo — 10x mais rápido",
+        "Message queues fazem código mais simples"
+      ],
+      "correct_answer": "Usuário tem resposta rápida enquanto background processa em paralelo — 10x mais rápido",
+      "explanation": "Se você faz 5 operações sequencialmente (600ms cada), usuário espera 3 segundos. Com async, retorna em 100-300ms enquanto workers processam. Percepção de velocidade é transformada."
+    },
+    {
+      "id": "ex-5-3-2",
+      "type": "code_review",
+      "question": "Revise: 'queue.process((job) => { aiTutor.grade(job.data.answer); db.save(result); })' Qual é o risco?",
+      "expected_answer": "Se falha ao salvar, mensagem reentra na fila e grade NOVAMENTE, gerando 2 feedbacks. Não é idempotente.",
+      "explanation": "Solução: gere feedbackId determinístico, use INSERT IGNORE ou UPSERT. Ou cheque se feedback já existe antes de gerar."
+    },
+    {
+      "id": "ex-5-3-3",
+      "type": "prediction",
+      "question": "Job falha 3 vezes com erro 'AI service down'. O que deve acontecer?",
+      "options": [
+        "Ignorar e continuar",
+        "Retornar erro ao usuário imediatamente",
+        "Enfileirar retry com backoff crescente (1s, 2s, 4s) até max 3 tentativas",
+        "Parar processamento do worker"
+      ],
+      "correct_answer": "Enfileirar retry com backoff crescente (1s, 2s, 4s) até max 3 tentativas",
+      "explanation": "Transient failures (serviço temporariamente down) devem retentar. Após max tentativas, mover para DLQ para investigação manual."
+    },
+    {
+      "id": "ex-5-3-4",
+      "type": "short_answer",
+      "question": "O que é uma Dead Letter Queue e por que é importante?",
+      "expected_answer": "DLQ é uma fila para mensagens que falharam após todas as tentativas. Importante para não perder dados — permite investigação manual, fix e re-enfileiramento.",
+      "explanation": "Sem DLQ, jobs que falham são descartados silenciosamente. Com DLQ, você vê tudo que falhou e pode investigar o motivo."
+    },
+    {
+      "id": "ex-5-3-5",
+      "type": "debugging",
+      "question": "Você tem 1000 exercise submissions/segundo. Há 10 workers para grading. Feedback leva 2 segundos por exercise. Quantos exercícios ficam em fila de espera?",
+      "options": [
+        "Nenhum, 10 workers conseguem processar 1000/s",
+        "~19.000 (2000ms ÷ 100ms por worker = backlog)",
+        "Backlog cresce infinitamente",
+        "Exatamente 100"
+      ],
+      "correct_answer": "~19.000 (2000ms ÷ 100ms por worker = backlog)",
+      "explanation": "10 workers × 2s por job = 10 processados a cada 2 segundos. 1000 chegam a cada segundo. Em 2 segundos chegam 2000, processam 10. Backlog = 1990 + 1990 + ... = cresce. Solução: mais workers ou otimizar processamento."
+    }
+  ],
+  "practical_exercise": {
+    "id": "practical-5-3",
+    "title": "Sistema de Processamento de Exercícios com Retry e DLQ",
+    "description": "Implementar queue de processamento com idempotência, retry automático, DLQ e monitoramento.",
+    "hints": [
+      "Use Bull.js ou RabbitMQ",
+      "Enfileira com jobId único baseado em responseId",
+      "Retry automático com backoff exponencial",
+      "Idempotência: INSERT IGNORE ou catch UNIQUE_VIOLATION",
+      "DLQ após 3 falhas"
+    ],
+    "success_criteria": [
+      "Usuário submete, recebe resposta em <100ms",
+      "Feedback gerado em background",
+      "Se falha, retry automático",
+      "Processado 1x mesmo que retried 3 vezes",
+      "Falhas permanentes vão para DLQ"
+    ]
+  }
+}

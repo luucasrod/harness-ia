@@ -1,0 +1,181 @@
+{
+  "lesson_id": "lesson-11-2-cli-tool",
+  "title": "Capstone 11.2 - Building the CLI Tool (init/chat/test/submit)",
+  "module_id": "module-11",
+  "module_title": "Capstone Project: Build Your Harness Tutor",
+  "description": "Implemente o harness-tutor: quatro subcomandos com contratos distintos, streaming de resposta com Ctrl+C tratado, modo offline deterministico e saida --json consumivel por maquina.",
+  "duration_minutes": 150,
+  "word_count": 5634,
+  "target_audience": "Devs que criaram o monorepo na 11.1 e vao expor o dominio por uma interface de terminal",
+  "learning_objectives": [
+    "Estruturar um CLI com Commander, subcomandos, opcoes globais e codigos de saida documentados.",
+    "Implementar init com escrita segura, fusao incremental de .gitignore e dry-run.",
+    "Implementar chat com streaming SSE, buffer de frames parciais e AbortController para Ctrl+C.",
+    "Separar o evaluator (schemas no dominio) dos checks (I/O no adaptador).",
+    "Bloquear rede no modo --offline, garantindo CI deterministico e reproduzivel.",
+    "Emitir test --json com JSON puro em stdout, validado pelo schema antes de imprimir."
+  ],
+  "content_sections": [
+    {
+      "section_id": "tres-comandos-tres-contratos",
+      "title": "Tres comandos, tres contratos diferentes",
+      "key_points": [
+        "init e comando de escrita em disco: unico que pode destruir trabalho do usuario, portanto nunca sobrescreve sem confirmacao e sempre oferece --dry-run.",
+        "chat e comando interativo de leitura e escrita remota: cache local de sessao, streaming e Ctrl+C sem estado corrompido.",
+        "test e comando de leitura com saida dupla: humano por padrao, maquina sob demanda via --json consumido pela Licao 11.5.",
+        "Tratar 'o chat falhou' como 'o init falhou' e o caminho para catch (e) { console.log(e) } e tickets de 'init quebrou minha maquina'.",
+        "EXIT e contrato publico exportado; ninguem alem dos testes deve ler process.exitCode diretamente."
+      ],
+      "order": 1
+    },
+    {
+      "section_id": "streaming-e-o-que-ele-muda",
+      "title": "Streaming e o que ele muda",
+      "key_points": [
+        "Sem streaming o aluno espera 4s olhando para tela vazia; com streaming o primeiro token chega em cerca de 600ms.",
+        "O primeiro token e o melhor sinal de saude: conexao lenta, modelo sobrecarregado ou prompt grande demais aparecem antes de qualquer token completar.",
+        "Implementar streaming e, de quebra, instrumentacao gratuita de TTFT para as Licoes 10.1 e 10.5.",
+        "Ctrl+C precisa de tratamento explicito: sem process.exit() o Node mantem o stream aberto e o ^C nao faz nada.",
+        "Tokens por segundo e fato medido, nao estimativa: so pode ser exibido depois que o stream fecha."
+      ],
+      "order": 2
+    },
+    {
+      "section_id": "passo-a-passo-implementacao",
+      "title": "Passo a passo de implementacao (14 passos)",
+      "key_points": [
+        "Passos 1-4: dependencias, casca do Commander com parseAsync unico, wrapper CliError com hint mapeando ENOTFOUND/ECONNREFUSED/401/429, e spinner em stderr com guarda isTTY.",
+        "Passos 5-7: init com escrita segura e fusao de .gitignore sem perda de linhas, cliente de chat com buffer SSE para frames parciais, e o comando chat com AbortController, finally removendo listener e TTFT impresso.",
+        "Passos 8-10: evaluator.ts no core com CheckResultSchema e ReportSchema, checks de filesystem no adaptador, e check de saude da API com timeout que nunca lanca.",
+        "Passos 11-14: test com saida dupla e ReportSchema.safeParse, teste protegendo stdout JSON puro, validacao ponta a ponta com pipeline node -e, e publicacao do bin com docs/cli.md."
+      ],
+      "order": 3
+    },
+    {
+      "section_id": "armadilhas-de-cli",
+      "title": "Armadilhas de CLI que custam horas",
+      "key_points": [
+        "parse seguido de parseAsync executa os handlers duas vezes, criando dois .env - use apenas parseAsync.",
+        "process.exit() descarta o buffer do stdout e corta a ultima parte da resposta; process.exitCode deixa o event loop drenar.",
+        "Um console.log de progresso em stdout corrompe o --json e a falha so aparece no servidor de certificados, tres licoes depois.",
+        "process.off no finally evita MaxListenersExceededWarning quando o usuario usa Ctrl+C em sessoes sucessivas.",
+        "O check de .env valida presenca, nao valor: validar valor duplicaria loadServerEnv e criaria duas fontes de verdade."
+      ],
+      "order": 4
+    },
+    {
+      "section_id": "transicao-para-o-dashboard",
+      "title": "Transicao: a mesma fronteira, outra interface",
+      "key_points": [
+        "O --json ja e contrato publico do projeto e a Licao 11.5 dependera dele para emitir o certificado.",
+        "O next passo nao e um segundo produto: e a mesma fronteira de dominio com renderizador diferente.",
+        "O sessionReducer testado com tres casos na 11.1 vira a maquina de estado do chat no navegador.",
+        "O dominio continua intocado: nenhuma regra de negocio muda, apenas o adaptador."
+      ],
+      "order": 5
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-11-2-1",
+      "title": "Casca do CLI com Commander e contrato de exit code",
+      "description": "Quatro subcomandos, opcoes globais e EXIT exportado como contrato publico.",
+      "code_or_diagram": "export const EXIT = { ok: 0, fail: 1, usage: 2, interrupted: 130 } as const;\n\nexport function buildProgram(): Command {\n  const program = new Command();\n  program\n    .name(\"harness-tutor\")\n    .version(\"0.1.0\")\n    .option(\"--no-color\", \"desativa cor no output\")\n    .option(\"--json\", \"emite saida JSON em stdout\", false)\n    .showHelpAfterError();\n\n  program.command(\"init\")\n    .option(\"-y, --yes\", \"nao pergunta nada\")\n    .option(\"-d, --dir <path>\", \"diretorio alvo\", \".\")\n    .option(\"--dry-run\", \"mostra o que faria sem escrever\")\n    .action(runInit);\n\n  program.command(\"chat\")\n    .option(\"-m, --message <text>\", \"faz uma unica pergunta e sai\")\n    .option(\"--offline\", \"nao chama a rede\")\n    .action(runChat);\n\n  program.command(\"test\").option(\"--bail\", \"para na primeira falha\").action(runTest);\n  program.command(\"submit\").option(\"--repo <url>\", \"URL do repositorio\").action(runSubmit);\n\n  return program;\n}\n\n// No main use apenas: await program.parseAsync(argv)",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-11-2-2",
+      "title": "CliError com hint acionavel",
+      "description": "Traduz codigo de rede e status HTTP em mensagem + o que fazer.",
+      "code_or_diagram": "export class CliError extends Error {\n  constructor(message: string, readonly exitCode: number = 1, readonly hint?: string) {\n    super(message);\n    this.name = \"CliError\";\n  }\n}\n\nexport function toCliError(error: unknown): CliError {\n  if (error instanceof CliError) return error;\n  if (error instanceof Error) {\n    const e = error as Error & { status?: number; code?: string };\n    if (e.code === \"ENOTFOUND\")\n      return new CliError(\"Host da API nao resolvido.\", EXIT.fail, \"Verifique a conexao e TUTOR_API_URL.\");\n    if (e.code === \"ECONNREFUSED\")\n      return new CliError(\"Conexao recusada pela API.\", EXIT.fail, \"A API esta no ar? Use: pnpm dev\");\n    if (e.status === 401)\n      return new CliError(\"Credencial invalida.\", EXIT.fail, \"Rode: harness-tutor init --yes para regerar a chave.\");\n    if (e.status === 429)\n      return new CliError(\"Limite de taxa atingido.\", EXIT.fail, \"Aguarde 30s ou reduza TUTOR_MAX_CONCURRENCY.\");\n    return new CliError(error.message, EXIT.fail);\n  }\n  return new CliError(\"Erro desconhecido.\", EXIT.fail);\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-11-2-3",
+      "title": "Streaming SSE com buffer de frames parciais",
+      "description": "Um chunk de rede nao corresponde a um frame: o loop interno so consome eventos completos.",
+      "code_or_diagram": "const reader = response.body.getReader();\nconst decoder = new TextDecoder();\nlet buffer = \"\";\n\nfor (;;) {\n  const { done, value } = await reader.read();\n  if (done) break;\n  buffer += decoder.decode(value, { stream: true });\n\n  let sep = buffer.indexOf(\"\\n\\n\");\n  while (sep !== -1) {\n    const raw = buffer.slice(0, sep).trim();\n    buffer = buffer.slice(sep + 2);\n    sep = buffer.indexOf(\"\\n\\n\");\n    if (!raw.startsWith(\"data:\")) continue;\n\n    const payload = raw.slice(5).trim();\n    if (payload === \"[DONE]\") { yield { type: \"done\", stopReason: \"end_turn\" }; return; }\n\n    try {\n      const event = JSON.parse(payload) as { type: string; delta?: string; usage?: { input_tokens: number; output_tokens: number } };\n      if (event.type === \"text\" && event.delta) yield { type: \"text\", delta: event.delta };\n      if (event.type === \"usage\" && event.usage)\n        yield { type: \"usage\", inputTokens: event.usage.input_tokens, outputTokens: event.usage.output_tokens };\n    } catch {\n      yield { type: \"error\", message: \"Frame SSE invalido recebido.\" };\n      return;\n    }\n  }\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-11-2-4",
+      "title": "Chat com AbortController e TTFT",
+      "description": "Ctrl+C tratado, listener removido no finally e metrica de primeiro token ao final.",
+      "code_or_diagram": "const controller = new AbortController();\nlet interrupted = false;\nconst onSigint = () => { interrupted = true; controller.abort(); };\nprocess.on(\"SIGINT\", onSigint);\n\nlet firstTokenAt: number | undefined;\nconst consume = async function* (events) {\n  for await (const event of events) {\n    if (event.type === \"text\") {\n      if (firstTokenAt === undefined) { firstTokenAt = performance.now(); spinner.stop(); }\n      stdout.write(event.delta);\n    }\n    yield event;\n  }\n};\n\ntry {\n  for await (const event of consume(streamChat(body, { signal: controller.signal }))) {\n    if (event.type === \"error\") throw new CliError(event.message, EXIT.fail);\n  }\n} catch (error) {\n  const cliError = toCliError(error);\n  process.exitCode = interrupted ? EXIT.interrupted : cliError.exitCode;\n} finally {\n  process.off(\"SIGINT\", onSigint);\n}\n\nconst ttft = firstTokenAt ? firstTokenAt - startedAt : null;",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-11-2-5",
+      "title": "Evaluator no dominio e checks no adaptador",
+      "description": "Schemas de contrato em core; quem depende de disco e rede fica em packages/cli.",
+      "code_or_diagram": "// packages/core/src/evaluator.ts  (dominio puro)\nexport const CheckResultSchema = z.object({\n  id: z.string(),\n  name: z.string(),\n  status: z.enum([\"passed\", \"failed\", \"skipped\"]),\n  durationMs: z.number().int().nonnegative(),\n  message: z.string(),\n});\n\nexport const ReportSchema = z.object({\n  harnessTutorVersion: z.string(),\n  checks: z.array(CheckResultSchema),\n  passed: z.number().int().nonnegative(),\n  failed: z.number().int().nonnegative(),\n  durationMs: z.number().int().nonnegative(),\n});\n\n// packages/cli/src/checks/health-check.ts  (adaptador: depende de rede)\nexport async function runHealthCheck(baseUrl: string, timeoutMs = 3000): Promise<CheckResult> {\n  const controller = new AbortController();\n  const timer = setTimeout(() => controller.abort(), timeoutMs);\n  try {\n    const response = await fetch(`${baseUrl}/health`, { signal: controller.signal });\n    return { id: \"api-health\", name: `API saudavel em ${baseUrl}`, status: response.ok ? \"passed\" : \"failed\", durationMs: 0, message: response.ok ? \"OK\" : `HTTP ${response.status}` };\n  } catch (error) {\n    return { id: \"api-health\", name: `API saudavel em ${baseUrl}`, status: \"failed\", durationMs: 0, message: error instanceof Error ? error.message : \"falha desconhecida\" };\n  } finally {\n    clearTimeout(timer);\n  }\n}",
+      "language": "typescript"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-11-2-1",
+      "type": "debugging",
+      "question": "init chama program.parse(argv) e depois await program.parseAsync(argv). O que acontece e por que?",
+      "correct_answer": "Os handlers executam duas vezes, criando dois .env e imprimindo o relatorio duas vezes. Use apenas parseAsync no main.",
+      "explanation": "parse() sincrono e parseAsync() assincrono processam a mesma argv. No Commander 13 isso gera aviso de deprecation e bug real de escrita duplicada em disco."
+    },
+    {
+      "id": "q-11-2-2",
+      "type": "short_answer",
+      "question": "Por que o check de saude da API retorna um CheckResult falhado em vez de lancar excecao?",
+      "correct_answer": "Porque um check que lanca aborta o relatorio inteiro e o aluno perde a informacao de quais outros checks passaram. O padrao coletar-e-continuar mantem o relatorio completo mesmo com falhas parciais.",
+      "explanation": "Um relatorio de saude so e util se mostrar o panorama. Perder 4 checks bons por causa do 5o ter lancado e transformar diagnostico em adivinhacao."
+    },
+    {
+      "id": "q-11-2-3",
+      "type": "code_review",
+      "question": "Revise este trecho dentro de runTest com --json ativo: if (!asJson) process.stdout.write('> verificando API...'); process.stdout.write(JSON.stringify(report)); process.stdout.write('\\n'); Qual o problema quando --json esta ligado?",
+      "correct_answer": "O problema e minimo aqui porque o progresso e guardado por asJson, mas o desenho e fragil: qualquer progresso futuro adicionado sem guarda vira corrupcao de stdout. Todo texto de progresso deve ir incondicionalmente para stderr, e stdout deve conter apenas o JSON.",
+      "explanation": "A propriedade que o consumidor da Licao 11.5 precisa e stdout contem JSON puro. Tornar isso estrutural (stdout so para dados) e melhor do que depender de cada linha respeitar a flag."
+    },
+    {
+      "id": "q-11-2-4",
+      "type": "short_answer",
+      "question": "Por que process.exitCode e preferivel a process.exit() num CLI com streaming?",
+      "correct_answer": "process.exit() encerra o processo imediatamente e pode descartar o que ainda esta no buffer do stdout, cortando a ultima parte da resposta do tutor. process.exitCode deixa o event loop drenar e sair naturalmente.",
+      "explanation": "Em respostas longas o usuario perderia os ultimos tokens sem nenhuma explicacao - e o sintoma classico de 'o Claude cortou minha resposta'."
+    },
+    {
+      "id": "q-11-2-5",
+      "type": "prediction",
+      "question": "Voce remove o buffer de SSE do streamChat e testa apenas com respostas curtas de 1 frase. O teste passa. Em producao, o que acontece?",
+      "correct_answer": "Em producao, com respostas longas divididas em muitos chunks, JSON.parse recebe payload truncado e lanca SyntaxError, quebrando a transmissao no meio da resposta.",
+      "explanation": "Respostas curtas cabem em um chunk. O bug so aparece quando o stream e fragmentado - exatamente o caso comum em producao e o pior caso para aprender."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-11-2",
+    "title": "Adicionar o subcomando harness-tutor doctor",
+    "description": "Crie doctor com quatro checks - versao do Node dentro do requisito, presenca de ANTHROPIC_API_KEY, conectividade com a API e uso de memoria do processo - funcionando offline e online, degradando cada check separadamente.",
+    "expected_solution": "Um DoctorContext com env, fetchFn injetavel e cwd. Cada check e uma funcao pura que retorna CheckResult sem lancar; o doctor agrega e escolhe entre tabela humana com picocolors e saida --json. O teste injeta fetchFn que resolve ou rejeita, tornando o check de conectividade deterministico sem rede.",
+    "success_criteria": [
+      "Nenhum check faz console.log; a saida passa pelo agregador",
+      "doctor --json produz JSON valido com zero texto extra em stdout",
+      "Falha de um check nao interrompe os demais",
+      "fetchFn injetavel torna os testes 100% offline e deterministicos",
+      "doctor roda em diretorio vazio sem lancar excecao nao tratada",
+      "docs/cli.md atualizado com a linha de doctor"
+    ]
+  },
+  "resources": {
+    "official_docs": [
+      "Commander.js: subcomandos, showHelpAfterError, parseAsync e o aviso de deprecation ao combinar parse com parseAsync.",
+      "Node.js: ReadableStream.getReader, TextDecoder com stream, AbortController e process.exitCode versus process.exit.",
+      "Server-Sent Events: formato de frame com data: e separador de linha em branco, e a razao pela qual um chunk de rede pode conter frames parciais.",
+      "Claude API: Messages API com streaming e a leitura de usage no evento final, usada no TTFT."
+    ],
+    "tools": [
+      "commander 13",
+      "picocolors 1",
+      "@clack/prompts 0.11",
+      "Vitest 3 (mock de process.stdout.write)",
+      "@harness/core (schemas do evaluator)"
+    ]
+  }
+}

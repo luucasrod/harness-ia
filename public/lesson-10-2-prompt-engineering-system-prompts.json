@@ -1,0 +1,224 @@
+{
+  "lesson_id": "lesson-10-2-prompt-engineering-system-prompts",
+  "title": "Prompt Engineering & System Prompts - Padroes para Tutores Confiaveis",
+  "module_id": "module-10",
+  "module_title": "Claude AI Integration",
+  "description": "Construa prompts de sistema, few-shot examples, XML tags e contratos de saida para transformar Claude em um tutor consistente, seguro e mensuravel.",
+  "duration_minutes": 95,
+  "word_count": 6756,
+  "target_audience": "Developers intermediarios criando features de IA em plataforma educacional",
+  "learning_objectives": [
+    "Escrever system prompts que definem papel, politica pedagogica e limites operacionais.",
+    "Usar XML tags para separar licao, pergunta, tentativa do aluno, rubrica e formato esperado.",
+    "Aplicar few-shot examples sem criar vieses acidentais.",
+    "Pedir explicacoes verificaveis sem solicitar chain-of-thought privado.",
+    "Forcar JSON estruturado quando a plataforma precisa renderizar feedback.",
+    "Criar uma suite de avaliacao para comparar prompts antes de publicar."
+  ],
+  "content_sections": [
+    {
+      "section_id": "prompt-engineering-como-engenharia-de-requisitos",
+      "title": "Prompt engineering como engenharia de requisitos",
+      "key_points": [
+        "Prompt e uma especificacao executavel; clareza vence truques.",
+        "O system prompt deve explicar o por que das regras, nao apenas listar proibicoes.",
+        "Examples bons cobrem casos normais, casos limite e respostas recusadas.",
+        "Nao peca chain-of-thought; peca resumo, criterios, passos publicos ou justificativa curta.",
+        "Toda mudanca de prompt importante deve rodar contra evals fixos."
+      ],
+      "order": 1
+    },
+    {
+      "section_id": "system-prompt-identidade-limites-e-comportamento",
+      "title": "System prompt: identidade, limites e comportamento",
+      "key_points": [
+        "Prompt e uma especificacao executavel; clareza vence truques.",
+        "O system prompt deve explicar o por que das regras, nao apenas listar proibicoes.",
+        "Examples bons cobrem casos normais, casos limite e respostas recusadas.",
+        "Nao peca chain-of-thought; peca resumo, criterios, passos publicos ou justificativa curta.",
+        "Toda mudanca de prompt importante deve rodar contra evals fixos."
+      ],
+      "order": 2
+    },
+    {
+      "section_id": "contexto-com-xml-tags-e-separacao-de-instrucoes",
+      "title": "Contexto com XML tags e separacao de instrucoes",
+      "key_points": [
+        "Prompt e uma especificacao executavel; clareza vence truques.",
+        "O system prompt deve explicar o por que das regras, nao apenas listar proibicoes.",
+        "Examples bons cobrem casos normais, casos limite e respostas recusadas.",
+        "Nao peca chain-of-thought; peca resumo, criterios, passos publicos ou justificativa curta.",
+        "Toda mudanca de prompt importante deve rodar contra evals fixos."
+      ],
+      "order": 3
+    },
+    {
+      "section_id": "few-shot-examples-para-corrigir-formato-e-tom",
+      "title": "Few-shot examples para corrigir formato e tom",
+      "key_points": [
+        "Prompt e uma especificacao executavel; clareza vence truques.",
+        "O system prompt deve explicar o por que das regras, nao apenas listar proibicoes.",
+        "Examples bons cobrem casos normais, casos limite e respostas recusadas.",
+        "Nao peca chain-of-thought; peca resumo, criterios, passos publicos ou justificativa curta.",
+        "Toda mudanca de prompt importante deve rodar contra evals fixos."
+      ],
+      "order": 4
+    },
+    {
+      "section_id": "raciocinio-sem-vazar-chain-of-thought",
+      "title": "Raciocinio sem vazar chain-of-thought",
+      "key_points": [
+        "Prompt e uma especificacao executavel; clareza vence truques.",
+        "O system prompt deve explicar o por que das regras, nao apenas listar proibicoes.",
+        "Examples bons cobrem casos normais, casos limite e respostas recusadas.",
+        "Nao peca chain-of-thought; peca resumo, criterios, passos publicos ou justificativa curta.",
+        "Toda mudanca de prompt importante deve rodar contra evals fixos."
+      ],
+      "order": 5
+    },
+    {
+      "section_id": "contratos-de-saida-estruturada",
+      "title": "Contratos de saida estruturada",
+      "key_points": [
+        "Prompt e uma especificacao executavel; clareza vence truques.",
+        "O system prompt deve explicar o por que das regras, nao apenas listar proibicoes.",
+        "Examples bons cobrem casos normais, casos limite e respostas recusadas.",
+        "Nao peca chain-of-thought; peca resumo, criterios, passos publicos ou justificativa curta.",
+        "Toda mudanca de prompt importante deve rodar contra evals fixos."
+      ],
+      "order": 6
+    },
+    {
+      "section_id": "evals-para-prompts-de-tutoria",
+      "title": "Evals para prompts de tutoria",
+      "key_points": [
+        "Prompt e uma especificacao executavel; clareza vence truques.",
+        "O system prompt deve explicar o por que das regras, nao apenas listar proibicoes.",
+        "Examples bons cobrem casos normais, casos limite e respostas recusadas.",
+        "Nao peca chain-of-thought; peca resumo, criterios, passos publicos ou justificativa curta.",
+        "Toda mudanca de prompt importante deve rodar contra evals fixos."
+      ],
+      "order": 7
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-10-2-1",
+      "title": "System prompt pedagogico",
+      "description": "Define o papel do tutor e como lidar com exercicios avaliativos.",
+      "code_or_diagram": "export const HARNESS_TUTOR_SYSTEM = `\nYou are Harness IA Tutor, a senior software engineering educator.\nYour job is to help students learn, not to simply finish graded work for them.\n\nBehavior:\n1. Use the provided lesson context as the primary source.\n2. Explain with practical TypeScript examples when useful.\n3. If the student asks for a final answer to an exercise, guide with hints first.\n4. If context is missing, say what is missing and ask one focused question.\n5. Never claim a course fact that is not in the supplied context.\n\nOutput style:\n- Portuguese by default.\n- Short sections.\n- End with one check-for-understanding question.\n`;",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-2-2",
+      "title": "Prompt com XML tags",
+      "description": "Evita misturar instrucao da aplicacao com texto do aluno.",
+      "code_or_diagram": "export function buildTutorPrompt(input: {\n  lesson: string;\n  studentQuestion: string;\n  previousAttempt?: string;\n}) {\n  return `\n<task>\nHelp the student understand the concept. Do not solve graded work directly.\n</task>\n<lesson_context>\n${input.lesson}\n</lesson_context>\n<student_question>\n${input.studentQuestion}\n</student_question>\n<previous_attempt>\n${input.previousAttempt ?? \"No attempt yet.\"}\n</previous_attempt>\n<response_contract>\nReturn: explanation, example, next_step_question.\n</response_contract>`;\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-2-3",
+      "title": "Few-shot feedback",
+      "description": "Mostra o formato esperado sem depender de descricao abstrata.",
+      "code_or_diagram": "const FEEDBACK_EXAMPLES = `\n<examples>\n  <example>\n    <student>useEffect roda sempre?</student>\n    <good_response>\n      Depende do array de dependencias. Sem array, roda apos todo render.\n      Com [], roda apos o primeiro render. Com [userId], roda quando userId muda.\n      Check: qual dessas opcoes voce usaria para buscar dados de um curso uma vez?\n    </good_response>\n  </example>\n  <example>\n    <student>me da a resposta final do quiz</student>\n    <good_response>\n      Posso te ajudar a chegar nela. Primeiro identifique qual parte do codigo\n      controla o estado. O que acontece quando o evento onClick dispara?\n    </good_response>\n  </example>\n</examples>`;",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-2-4",
+      "title": "Contrato JSON para feedback renderizavel",
+      "description": "Permite UI com cards, highlights e proximos passos.",
+      "code_or_diagram": "import { z } from \"zod\";\n\nexport const TutorFeedback = z.object({\n  summary: z.string(),\n  concepts: z.array(z.string()).max(5),\n  explanation: z.string(),\n  codeExample: z.string().optional(),\n  nextQuestion: z.string(),\n  confidence: z.enum([\"low\", \"medium\", \"high\"]),\n});\n\nexport type TutorFeedback = z.infer<typeof TutorFeedback>;\n\nexport function parseTutorJson(text: string): TutorFeedback {\n  return TutorFeedback.parse(JSON.parse(text));\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-2-5",
+      "title": "Prompt A/B testavel",
+      "description": "Compara duas versoes de prompt com a mesma bateria de casos.",
+      "code_or_diagram": "type EvalCase = { id: string; lesson: string; question: string; expected: string[] };\n\nexport async function runPromptEval(promptVersion: string, cases: EvalCase[]) {\n  return Promise.all(\n    cases.map(async (c) => {\n      const answer = await callTutor({ promptVersion, lesson: c.lesson, question: c.question });\n      const passed = c.expected.every((needle) =>\n        answer.toLowerCase().includes(needle.toLowerCase()),\n      );\n      return { caseId: c.id, promptVersion, passed, answer };\n    }),\n  );\n}",
+      "language": "typescript"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-10-2-1",
+      "type": "short_answer",
+      "question": "Qual e a funcao principal do system prompt?",
+      "correct_answer": "Definir papel, prioridades e limites globais do assistente naquela chamada.",
+      "explanation": "Definir papel, prioridades e limites globais do assistente naquela chamada."
+    },
+    {
+      "id": "q-10-2-2",
+      "type": "multiple_choice",
+      "question": "Por que XML tags ajudam?",
+      "options": [
+        "Porque separam claramente instrucoes, contexto e input do aluno, reduzindo ambiguidade.",
+        "Ignorar o problema e aumentar max_tokens",
+        "Enviar a API key para o browser",
+        "Remover logs para reduzir custo"
+      ],
+      "correct_answer": "Porque separam claramente instrucoes, contexto e input do aluno, reduzindo ambiguidade.",
+      "explanation": "Porque separam claramente instrucoes, contexto e input do aluno, reduzindo ambiguidade."
+    },
+    {
+      "id": "q-10-2-3",
+      "type": "debugging",
+      "question": "Few-shot examples podem prejudicar?",
+      "correct_answer": "Sim; exemplos pouco diversos fazem o modelo copiar padroes indesejados ou ignorar casos limite.",
+      "explanation": "Sim; exemplos pouco diversos fazem o modelo copiar padroes indesejados ou ignorar casos limite."
+    },
+    {
+      "id": "q-10-2-4",
+      "type": "short_answer",
+      "question": "O que pedir no lugar de chain-of-thought?",
+      "correct_answer": "Pedir justificativa breve, criterios usados, resumo do raciocinio ou passos publicos verificaveis.",
+      "explanation": "Pedir justificativa breve, criterios usados, resumo do raciocinio ou passos publicos verificaveis."
+    },
+    {
+      "id": "q-10-2-5",
+      "type": "multiple_choice",
+      "question": "Quando usar saida JSON?",
+      "options": [
+        "Quando a UI ou outro servico precisa interpretar a resposta de forma confiavel.",
+        "Ignorar o problema e aumentar max_tokens",
+        "Enviar a API key para o browser",
+        "Remover logs para reduzir custo"
+      ],
+      "correct_answer": "Quando a UI ou outro servico precisa interpretar a resposta de forma confiavel.",
+      "explanation": "Quando a UI ou outro servico precisa interpretar a resposta de forma confiavel."
+    },
+    {
+      "id": "q-10-2-6",
+      "type": "debugging",
+      "question": "Como saber que um prompt melhorou?",
+      "correct_answer": "Rodando evals fixos e comparando taxa de acerto, formato, seguranca, custo e latencia.",
+      "explanation": "Rodando evals fixos e comparando taxa de acerto, formato, seguranca, custo e latencia."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-10-2",
+    "title": "Criar prompt versionado para feedback de exercicios",
+    "description": "Escreva system prompt, template XML, tres examples e contrato JSON para feedback de uma tentativa de exercicio TypeScript.",
+    "expected_solution": "O gabarito deve conter papel do tutor, regra de nao entregar resposta final, contexto da licao em tag propria, tentativa do aluno em tag propria, rubrica, tres exemplos diversos, schema Zod e um pequeno eval com pelo menos cinco casos.",
+    "success_criteria": [
+      "Server-side only para chamadas Claude",
+      "Entrada validada",
+      "Prompt ou contrato versionado",
+      "Uso, custo, latencia e status registrados",
+      "Fallback ou tratamento de erro implementado",
+      "Testes cobrindo caminho feliz e falhas"
+    ]
+  },
+  "resources": {
+    "official_docs": [
+      "Anthropic Claude Platform Docs: API overview, Messages API, Authentication, Models overview, Pricing, Streaming messages, Rate limits, Errors, Prompting best practices.",
+      "Use current model and pricing IDs as configuration, not constants embedded across application code."
+    ],
+    "tools": [
+      "@anthropic-ai/sdk",
+      "zod",
+      "p-limit or p-queue",
+      "OpenTelemetry/logging",
+      "Next.js API routes"
+    ]
+  }
+}

@@ -1,0 +1,183 @@
+{
+  "lesson_id": "lesson-5-1-redis-caching",
+  "title": "Redis & Caching - Padrões e Estratégias",
+  "description": "Caching não é otimização; é arquitetura. Aprenda quando cachear, quais padrões usar e como evitar armadilhas como cache stampede e inconsistência de dados.",
+  "module_id": "module-5",
+  "module_title": "Caching, Performance & Real-time",
+  "duration_minutes": 45,
+  "target_audience": "Developers com experiência em arquitetura de sistemas, enfoque em performance",
+  "learning_objectives": [
+    "Entender quando e o quê cachear — decisão arquitetural baseada em frequência e custo",
+    "Dominar padrões de cache: Cache-Aside, Write-Through, Write-Behind — quando usar cada um",
+    "Resolver problemas de invalidação usando TTL, eventos e soft expiration",
+    "Evitar cache stampede usando probabilistic early expiration ou locking",
+    "Escalar cache horizontalmente com Redis distribuído",
+    "Implementar cache em contexto real (tutor de IA com quota e persistência)"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (6 minutos)",
+      "key_points": [
+        "Caching resolve gargalo real: banco de dados sobrecarregado com leituras repetidas",
+        "Caching não é detalhe de performance; é decisão arquitetural crítica",
+        "Trade-off: Latência vs. Consistência — caching sempre tem essa tensão",
+        "Mal implementado, cache causa corrupção de dados e bugs silenciosos"
+      ]
+    },
+    {
+      "section_id": "when_what",
+      "title": "Quando e O Quê Cachear (12 minutos)",
+      "key_points": [
+        "Equação: Benefício (custo computacional × frequência) >> Custo (implementação + risco)",
+        "Candidatos ideais: dados que mudam pouco mas são lidos muito",
+        "Péssimos candidatos: dados críticos (saldo) ou que mudam constantemente",
+        "Matriz de decisão: cada tipo de dado merece abordagem diferente"
+      ]
+    },
+    {
+      "section_id": "patterns",
+      "title": "Padrões de Cache (16 minutos)",
+      "key_points": [
+        "Cache-Aside (Lazy Loading): consulta cache, se miss carrega e armazena — simples, TTL resolve invalidação",
+        "Write-Through: escreve cache+banco ao mesmo tempo — consistência garantida, mas mais lento",
+        "Write-Behind: escreve cache, persiste em background — rápido mas risco de data loss se cache falha",
+        "Cada padrão resolve um problema específico; não existe 'melhor'"
+      ]
+    },
+    {
+      "section_id": "invalidation",
+      "title": "Invalidação e TTL (14 minutos)",
+      "key_points": [
+        "Cache cria dois sources of truth — como garantir que não divergem?",
+        "TTL (Time-To-Live): dados expiram automaticamente, permite inconsistência temporária",
+        "Invalidação por evento: quando dados mudam, invalida cache manualmente",
+        "Soft invalidation: marca como vencido, continua servindo enquanto recarrega"
+      ]
+    },
+    {
+      "section_id": "stampede",
+      "title": "Cache Stampede e Escalabilidade (12 minutos)",
+      "key_points": [
+        "Cache stampede: quando cache expira em high traffic, todos atacam banco ao mesmo tempo",
+        "Probabilistic early expiration: recarrega antes de expirar, evita thundering herd",
+        "Probabilistic locking: apenas um thread recarrega, outros esperam",
+        "Cache distribuído (Redis central) necessário para escala — cache local quebra em múltiplos servidores"
+      ]
+    },
+    {
+      "section_id": "implementation",
+      "title": "Implementação Completa (10 minutos)",
+      "key_points": [
+        "Tutor de IA com cache: Cache-Aside para explicações + Write-Through para quota",
+        "Persistência em background com fila (write-behind)",
+        "Integração de cache, rate limiting e database em um serviço consistente",
+        "Tratamento de erros: cache não disponível não deve quebrar o sistema"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-cache-decision-matrix",
+      "title": "Matriz de Decisão: Quando Cachear",
+      "description": "Exemplo de cada tipo de dado e como decidir se deve cachear",
+      "code_or_diagram": "| Tipo de Dado | Frequência | Mudança | Cache? | Padrão |\n|---|---|---|---|---|\n| Conteúdo de aula | 1000x/dia | 1x/mês | ✅ Sim | Cache-aside (1h) |\n| Progresso de aluno | 100x/dia | 1x/hora | ⚠️ Talvez | Cache-aside (5min) + evento |\n| Resultado de prova | 10x/dia | Nunca | ✅ Sim | Cache-aside (forever) |\n| Posição de usuário | 10x/sec | 10x/sec | ❌ Não | Redis primary store |\n| Saldo de crédito | 50x/dia | 50x/dia | ❌ Não | Sempre banco |\n| Config de plataforma | 1000x/dia | 1x/semana | ✅ Sim | Cache-aside (1h) |"
+    },
+    {
+      "id": "ex-cache-patterns-comparison",
+      "title": "Comparação de Padrões: Cache-Aside vs Write-Through vs Write-Behind",
+      "description": "Mesma operação em três padrões diferentes",
+      "code_or_diagram": "// CACHE-ASIDE: Lazy loading\nasync getLesson(id) {\n  const cached = await cache.get(`lesson:${id}`);\n  if (cached) return cached; // Hit\n  const lesson = await db.findLesson(id); // Miss, vai ao banco\n  await cache.set(`lesson:${id}`, lesson, 3600);\n  return lesson;\n}\n\n// WRITE-THROUGH: Escrita síncrona\nasync updateLesson(id, data) {\n  await cache.set(`lesson:${id}`, data);\n  await db.updateLesson(id, data); // Bloqueia\n  return data;\n}\n\n// WRITE-BEHIND: Escrita assíncrona\nasync updateLesson(id, data) {\n  await cache.set(`lesson:${id}`, data); // Rápido\n  this.queue.enqueue('persist-lesson', {id, data}); // Background\n  return data; // Retorna imediatamente\n}"
+    },
+    {
+      "id": "ex-cache-stampede",
+      "title": "Cache Stampede: O Problema e Duas Soluções",
+      "description": "O que acontece quando cache expira em high traffic e como evitar",
+      "code_or_diagram": "// PROBLEMA\n1:00:00 Cache expira para lesson:123\n1:00:01 1000 requisições simultâneas\n1:00:02 Todas fazem SELECT * FROM lessons (1000 queries paralelas)\n1:00:03 Banco timeout, requisições falham\n\n// SOLUÇÃO 1: Probabilistic Early Expiration\nif (Math.random() < expiration) {\n  reloadInBackground(); // Recarrega antes de expirar\n}\n\n// SOLUÇÃO 2: Probabilistic Locking\nconst lockId = await cache.set(lockKey, id, {nx: true, ex: 10});\nif (lockId) {\n  reload(); // Este thread recarrega\n} else {\n  waitForCacheOrTimeout(); // Outros esperam\n}"
+    },
+    {
+      "id": "ex-ai-tutor-caching",
+      "title": "Serviço Real: Tutor de IA com Cache + Quota + Persistência",
+      "description": "Implementação completa combinando cache-aside, write-through e write-behind",
+      "code_or_diagram": "async explainError(questionId, studentError) {\n  // 1. Cache-Aside: tenta cache\n  const cacheKey = `explanation:${questionId}`;\n  const cached = await cache.get(cacheKey);\n  if (cached) return cached;\n  \n  // 2. Write-Through: verifica quota\n  const quotaKey = `quota:${today}`;\n  if (await redis.get(quotaKey) >= 10000) {\n    return { explanation: 'Limite atingido' };\n  }\n  \n  // 3. Chamar IA (operação cara)\n  const explanation = await ai.generate(questionId, studentError);\n  \n  // 4. Write-Behind: persiste em background\n  queue.enqueue('persist-explanation', {questionId, explanation});\n  \n  // 5. Atualizar cache e quota\n  await Promise.all([\n    cache.setex(cacheKey, 7*24*3600, explanation),\n    redis.incr(quotaKey)\n  ]);\n  \n  return explanation;\n}"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-5-1-1",
+      "type": "multiple_choice",
+      "question": "Qual é o indicador mais importante para decidir se deve cachear um dado?",
+      "options": [
+        "Tamanho do dado em bytes",
+        "Tipo de banco de dados (SQL vs NoSQL)",
+        "Razão entre frequência de leitura e frequência de mudança",
+        "Nível de experiência do desenvolvedor"
+      ],
+      "correct_answer": "Razão entre frequência de leitura e frequência de mudança",
+      "explanation": "Um dado lido 1000x/dia mas que muda 1x/mês é excelente candidato para cache. Um dado que muda 100x/dia nunca deve ser cacheado. Tamanho, tipo de BD e experiência não são os fatores primários."
+    },
+    {
+      "id": "ex-5-1-2",
+      "type": "code_review",
+      "question": "Revise este código: 'async function getSaldo(userId) { const cached = await cache.get(`saldo:${userId}`); if (cached) return cached; const saldo = await db.getSaldo(userId); await cache.set(`saldo:${userId}`, saldo, 60); return saldo; }' Qual é o problema?",
+      "expected_answer": "Saldo é dado crítico que não deve ser cacheado. Um usuário pode gastar créditos, mas a cache (60 segundos) pode retornar um saldo desatualizado, causando duplicação de transação ou inconsistência. Para dados críticos, sempre ir ao banco; cache-aside é perigoso.",
+      "explanation": "Cache-aside é ótimo para conteúdo, mas perigoso para dados financeiros ou de segurança. Use apenas para dados que podem estar temporariamente desatualizados sem risco. Para saldo, use banco sempre, ou máximo um cache muito curto (5s) com monitoramento."
+    },
+    {
+      "id": "ex-5-1-3",
+      "type": "prediction",
+      "question": "Em uma plataforma com 1000 requisições/segundo, a lesson:123 é acessada 100x/segundo. O cache expira a cada 1 hora. O que provavelmente acontece quando expirar?",
+      "options": [
+        "Cache é recarregado normalmente, sem impacto",
+        "Todos os 100 requisições/segundo tentam recarregar do banco simultaneamente (cache stampede)",
+        "O sistema usa cache local em memória para evitar o problema",
+        "Redis detecta a expiração e recarrega automaticamente"
+      ],
+      "correct_answer": "Todos os 100 requisições/segundo tentam recarregar do banco simultaneamente (cache stampede)",
+      "explanation": "Isso é o thundering herd problem. Quando cache expira, todas as requisições que chegam no mesmo segundo não encontram cache e atacam o banco. Um banco que aguenta 100 queries/segundo pode ser sobrecarregado por 100 requisições que chegam no mesmo milissegundo. Solução: probabilistic early expiration ou locking."
+    },
+    {
+      "id": "ex-5-1-4",
+      "type": "short_answer",
+      "question": "Qual é a diferença fundamental entre Cache-Aside e Write-Behind em termos de quando o banco é atualizado?",
+      "expected_answer": "Cache-Aside: banco é atualizado quando a cache miss acontece (passivo). Write-Behind: banco é atualizado em background após a escrita no cache (ativo, assíncrono).",
+      "explanation": "Cache-Aside é reativo — você espera o cache expirar ou ser invalidado, depois carrega do banco. Write-Behind é pró-ativo — a escrita dispara uma fila que persiste em background. Write-Behind é mais rápido (retorna imediatamente) mas mais complexo."
+    },
+    {
+      "id": "ex-5-1-5",
+      "type": "debugging",
+      "question": "Seu serviço usa cache-aside com TTL de 1 hora. Um editor atualiza uma aula às 14:00. Alunos veem a versão antiga até 15:00. Como resolveria isso mantendo cache-aside?",
+      "options": [
+        "Reduzir TTL para 5 minutos",
+        "Usar Write-Through em vez de Cache-Aside",
+        "Adicionar invalidação por evento: quando aula é editada, delete do cache",
+        "Remover cache completamente"
+      ],
+      "correct_answer": "Adicionar invalidação por evento: quando aula é editada, delete do cache",
+      "explanation": "TTL curto (5min) é caro — invalidaria cache frequentemente. Write-Through é mais complexo. Event-based invalidation é ideal: quando editor atualiza aula, você delete `lesson:123` do cache imediatamente. Próxima requisição carrega versão nova. Combina simplicidade de cache-aside com reatividade de mudanças."
+    }
+  ],
+  "practical_exercise": {
+    "id": "practical-5-1",
+    "title": "Implementar Serviço de Cache com Tratamento de Stampede",
+    "description": "Construir um serviço de cache para cálculo de progresso de aluno com proteção contra stampede",
+    "challenge": "Você tem um cálculo de progresso que é caro (10 queries + lógica complexa, leva 500ms). Precisa servir 1000 requisições/segundo. Sem cache, banco morre. Implementar cache-aside com probabilistic early expiration para evitar stampede.",
+    "starter_code": "class ProgressCacheService {\n  constructor(\n    private redis: Redis,\n    private progressRepo: ProgressRepository,\n    private logger: Logger\n  ) {}\n  \n  async getProgress(userId: string, moduleId: string): Promise<Progress> {\n    // TODO: Implementar cache-aside com probabilistic early expiration\n  }\n  \n  private async calculateProgress(userId: string, moduleId: string): Promise<Progress> {\n    // Operação cara: 10 queries\n    return { completed: 45, total: 100, percentage: 45 };\n  }\n}",
+    "hints": [
+      "Use cache.get() para tentar hit",
+      "Se miss, execute calculateProgress()",
+      "Ao salvar, inclua metadata: {data, createdAt, loadTime}",
+      "Para early expiration: if (Math.random() < probability) reloadInBackground()",
+      "Probability = exp((age - ttl) / (beta * delta))",
+      "Beta ~1 funciona bem empiricamente"
+    ],
+    "success_criteria": [
+      "Cache hit retorna em <5ms",
+      "Cache miss carrega dados e os armazena",
+      "TTL é respeitado",
+      "Probabilistic early expiration evita stampede",
+      "Se Redis falha, fallback para banco (não quebra)"
+    ],
+    "solution_overview": "Use cache-aside com metadata de tempo. Implemente early reload probabilístico que aumenta conforme a cache fica velha. Quando expira naturalmente, só uma requisição recarrega; outras usam valor velho. Se cache não está disponível, fallback para banco (fail-open)."
+  }
+}

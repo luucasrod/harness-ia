@@ -1,0 +1,188 @@
+{
+  "lesson_id": "lesson-11-3-dashboard-nextjs",
+  "title": "Capstone 11.3 - Building the Dashboard (Next.js 16, App Router, streaming)",
+  "module_id": "module-11",
+  "module_title": "Capstone Project: Build Your Harness Tutor",
+  "description": "Construa o dashboard em Next.js 16 com App Router, Server Components, Route Handler com streaming SSE e um Client Component que reusa o sessionReducer do dominio sem alteracao.",
+  "duration_minutes": 150,
+  "word_count": 6054,
+  "target_audience": "Devs que construiram o dominio e o CLI e agora vao expor o mesmo dominio no navegador",
+  "learning_objectives": [
+    "Reusar @harness/core no servidor do Next sem duplicar regra de negocio.",
+    "Montar a arvore de rotas do App Router com layout, loading, error e not-found.",
+    "Implementar Route Handler com ReadableStream e streaming SSE da API upstream.",
+    "Consumir o stream no cliente com useReducer e o mesmo sessionReducer do dominio.",
+    "Aplicar Suspense, cache() e revalidate para perceived performance e deduplicacao.",
+    "Garantir que ANTHROPIC_API_KEY nunca alcance o bundle do navegador."
+  ],
+  "content_sections": [
+    {
+      "section_id": "onde-a-chave-secreta-pode-e-nao-pode-existir",
+      "title": "Onde a chave secreta pode e nao pode existir",
+      "key_points": [
+        "O Next injeta no browser apenas variaveis com prefixo NEXT_PUBLIC_; ANTHROPIC_API_KEY nunca chega ao cliente - a menos que um modulo lido por Client Component a copie.",
+        "A falha classica e silenciosa: config.ts com process.env.ANTHROPIC_API_KEY importado por Client Component vira undefined, o cliente manda requisicao sem credencial e a API responde 500 sem mensagem util.",
+        "Regra estrutural: o unico lugar que le a chave e o Route Handler em app/api/, no runtime Node.",
+        "O dashboard fala com a API via NEXT_PUBLIC_API_URL, que por definicao pode ir ao browser, usando o proxy como unico intermediario.",
+        "A chave nunca atravessa a fronteira cliente-servidor."
+      ],
+      "order": 1
+    },
+    {
+      "section_id": "streaming-na-web",
+      "title": "Por que streaming e ainda mais importante na web",
+      "key_points": [
+        "No terminal 4s de espera sao toleraveis; na web comecam a parecer pagina quebrada e o usuario recarrega, disparando segunda chamada e dobrando o custo.",
+        "A combinacao que funciona e Route Handler com ReadableStream mais useReducer no cliente, no mesmo formato SSE consumido na 11.2.",
+        "Da tres coisas de uma vez: primeira pintura rapida, estado tipado pelo reducer, e a mesma logica de estado testada na 11.1 rodando em dois runtimes.",
+        "Next 16: params e searchParams sao Promises e o acesso sincrono foi removido; toda pagina dinamica precisa de await props.params.",
+        "Server e Client Components sao o padrao; 'use client' e explicito e essa fronteira e o que mantem a chave fora do bundle."
+      ],
+      "order": 2
+    },
+    {
+      "section_id": "passo-a-passo-implementacao",
+      "title": "Passo a passo de implementacao (14 passos)",
+      "key_points": [
+        "Passos 1-4: create-next-app dentro de apps/web sem ESLint local conflitante, turbopack.resolveAlias para packages/core/src, tsconfig sem composite com moduleResolution bundler, e messages.ts no core com WireEventSchema e encodeSse.",
+        "Passos 5-8: layout com metadata exportado e children ReactNode, pagina inicial como Server Component assincrono em Suspense, Route Handler com ReadableStream repassando request.signal e x-accel-buffering: no, e o Client Component com useReducer e a traducao WireEvent para SessionEvent.",
+        "Passos 9-11: pagina dinamica com params: Promise e generateMetadata, loading.tsx mais error.tsx com reset e not-found.tsx, e camada de dados com cache() e revalidate 300 validada por Zod.",
+        "Passos 12-14: teste de componente com ReadableStream SSE real, checklist de verificacao manual em quatro camadas, e build de producao com checagem de bundle e tamanho de first-load JS."
+      ],
+      "order": 3
+    },
+    {
+      "section_id": "armadilhas-do-app-router",
+      "title": "Armadilhas do App Router que custam uma hora cada",
+      "key_points": [
+        "Falta de x-accel-buffering: no faz o streaming funcionar em localhost e quebrar atras de proxy ou CDN - o sintoma mais enganoso do modulo.",
+        "error.tsx precisa de 'use client' porque recebe reset, que e funcao passada do servidor; e o boundary que permite retry sem recarregar a pagina.",
+        "cache() do React memoiza por requisicao, resolve o duplo fetch de generateMetadata e nao e cache distribuido.",
+        "Validar a resposta da API com Zod no servidor transforma erro de contrato em erro com stack, em vez de undefined silencioso na tela.",
+        "Misturar politicas de revalidate no mesmo componente e a causa classica de dado velho na tela; conteudo curricular usa 300s, progresso do aluno usa 0.",
+        "O formato do wire vive no dominio: mudar o SSE obriga CLI e web a mudar juntos, e a migracao de um cliente protege o outro."
+      ],
+      "order": 4
+    },
+    {
+      "section_id": "transicao-para-infra",
+      "title": "Transicao: os artefatos que a 11.4 precisa",
+      "key_points": [
+        "O mesmo dominio tem agora tres interfaces: terminal, API e navegador, com sessionReducer rodando no useReducer sem alteracao.",
+        "O SSE do CLI e identico ao que o Route Handler emite, porque ambos usam encodeSse do dominio.",
+        "Ficam prontos os dois artefatos da Licao 11.4: dashboard com build de producao e Route Handler com streaming.",
+        "A proxima licao conecta tudo em infra real: Docker multi-stage, GitHub Actions e deploy na Vercel."
+      ],
+      "order": 5
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-11-3-1",
+      "title": "Alias do monorepo e tsconfig do app",
+      "description": "turbopack.resolveAlias aponta para src do core; tsconfig sem composite e com moduleResolution bundler.",
+      "code_or_diagram": "// apps/web/next.config.ts\nimport type { NextConfig } from \"next\";\nimport { fileURLToPath } from \"node:url\";\n\nconst core = fileURLToPath(new URL(\"../../packages/core/src\", import.meta.url));\n\nexport default {\n  reactStrictMode: true,\n  turbopack: { resolveAlias: { \"@harness/core\": core } },\n} satisfies NextConfig;\n\n// apps/web/tsconfig.json (trecho)\n{\n  \"compilerOptions\": {\n    \"moduleResolution\": \"bundler\",\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"noEmit\": true,\n    \"jsx\": \"preserve\",\n    \"plugins\": [{ \"name\": \"next\" }],\n    \"paths\": { \"@/*\": [\"./src/*\"], \"@harness/core\": [\"../../packages/core/src/index.ts\"] }\n  },\n  \"include\": [\"next-env.d.ts\", \"**/*.ts\", \"**/*.tsx\", \".next/types/**/*.ts\"]\n}",
+      "language": "json"
+    },
+    {
+      "id": "ex-11-3-2",
+      "title": "Contrato de wire no dominio",
+      "description": "O mesmo formato SSE do CLI, em um unico lugar, para as duas interfaces nao divergirem.",
+      "code_or_diagram": "// packages/core/src/messages.ts\nexport const WireEventSchema = z.discriminatedUnion(\"type\", [\n  z.object({ type: z.literal(\"first_token\") }),\n  z.object({ type: z.literal(\"text\"), delta: z.string() }),\n  z.object({ type: z.literal(\"usage\"), inputTokens: z.number().int().nonnegative(), outputTokens: z.number().int().nonnegative() }),\n  z.object({ type: z.literal(\"done\"), stopReason: z.string().nullable() }),\n  z.object({ type: z.literal(\"error\"), message: z.string() }),\n]);\nexport type WireEvent = z.infer<typeof WireEventSchema>;\n\nexport function encodeSse(event: WireEvent): string {\n  return `data: ${JSON.stringify(event)}\\n\\n`;\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-11-3-3",
+      "title": "Route Handler com streaming",
+      "description": "ReadableStream, runtime explicito, cancelamento propagado e header anti-buffer de proxy.",
+      "code_or_diagram": "export const runtime = \"nodejs\";\nexport const dynamic = \"force-dynamic\";\n\nexport async function POST(request: Request): Promise<Response> {\n  const env = loadServerEnv();\n  const parsed = ChatRequestSchema.safeParse(await request.json().catch(() => null));\n  if (!parsed.success) return Response.json({ error: \"Payload invalido\" }, { status: 400 });\n\n  const encoder = new TextEncoder();\n  const stream = new ReadableStream<Uint8Array>({\n    async start(controller) {\n      const send = (event: WireEvent) => controller.enqueue(encoder.encode(encodeSse(event)));\n      try {\n        send({ type: \"first_token\" });\n        const upstream = await fetch(`${env.TUTOR_API_URL}/v1/messages`, {\n          method: \"POST\",\n          headers: { \"content-type\": \"application/json\", \"x-api-key\": env.ANTHROPIC_API_KEY, \"anthropic-version\": \"2023-06-01\" },\n          body: JSON.stringify({ model: env.TUTOR_MODEL, max_tokens: 2048, stream: true, messages: parsed.data.history }),\n          signal: request.signal,\n        });\n        // ... parse do SSE upstream e reenvio com send(...)\n      } finally {\n        controller.close();\n      }\n    },\n  });\n\n  return new Response(stream, {\n    headers: {\n      \"content-type\": \"text/plain; charset=utf-8\",\n      \"cache-control\": \"no-cache, no-transform\",\n      \"x-accel-buffering\": \"no\",\n    },\n  });\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-11-3-4",
+      "title": "Traducao WireEvent para SessionEvent",
+      "description": "Os dois vocabularios sao diferentes; despachar o wire direto trava a maquina de estado.",
+      "code_or_diagram": "function toSessionEvent(event: WireEvent): SessionEvent {\n  switch (event.type) {\n    case \"first_token\": return { type: \"first_token\" };\n    case \"text\":       return { type: \"done\" }; // texto chegando JA significa que o primeiro token saiu\n    case \"usage\":      return { type: \"done\" };\n    case \"done\":       return { type: \"done\" };\n    case \"error\":      return { type: \"error\", reason: event.message };\n  }\n}\n\nconst session = sessionReducer(state.session, toSessionEvent(action.event));\nif (action.event.type === \"text\") return { ...state, session, text: state.text + action.event.delta };",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-11-3-5",
+      "title": "Camada de dados com cache por requisicao",
+      "description": "cache() deduplica o duplo fetch de generateMetadata sem cache distribuido.",
+      "code_or_diagram": "const baseUrl = process.env[\"NEXT_PUBLIC_API_URL\"] ?? \"http://localhost:4000\";\n\nexport const getLesson = cache(async (lessonId: string): Promise<Lesson | null> => {\n  const response = await fetch(`${baseUrl}/lessons/${lessonId}`, { next: { revalidate: 300 } });\n  if (response.status === 404) return null;\n  if (!response.ok) throw new Error(`API respondeu ${response.status}`);\n  return LessonSchema.parse(await response.json());\n});\n\n// pagina: const { lessonId } = await params;\n//         if (!lesson) notFound();",
+      "language": "typescript"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-11-3-1",
+      "type": "debugging",
+      "question": "O dashboard mostra streaming perfeito em localhost, mas em producao a resposta chega inteira de uma vez. Qual a causa mais provavel?",
+      "correct_answer": "O proxy ou CDN no caminho esta bufferizando a resposta; falta o header x-accel-buffering: no, que desliga o buffer em nginx e CDN.",
+      "explanation": "Em localhost nao existe camada intermediaria. O sintoma classico de 'funciona local, nao funciona em producao' em qualquer sistema com streaming, e a causa nao esta no codigo da aplicacao."
+    },
+    {
+      "id": "q-11-3-2",
+      "type": "short_answer",
+      "question": "Por que error.tsx precisa de 'use client'?",
+      "correct_answer": "Porque ele recebe a prop reset, que e uma funcao passada do servidor. Client Components podem receber funcao do servidor; Server Components nao podem.",
+      "explanation": "E o que torna o error boundary do App Router tao util: um arquivo client minimo que captura erro de renderizacao do subtree e oferece retry sem recarregar a pagina inteira."
+    },
+    {
+      "id": "q-11-3-3",
+      "type": "multiple_choice",
+      "question": "generateMetadata e a pagina chamam getLesson e a API responde duas vezes. Como evitar sem cache distribuido?",
+      "options": [
+        "Envolver getLesson em cache() do React, que memoiza por requisicao e compartilha a promessa entre os dois chamadores.",
+        "Mover os dados para um arquivo estatico gerado no build.",
+        "Desativar generateMetadata e escrever o titulo com dangerouslySetInnerHTML.",
+        "Aumentar o timeout do fetch para forcar reuso de conexao."
+      ],
+      "correct_answer": "Envolver getLesson em cache() do React, que memoiza por requisicao e compartilha a promessa entre os dois chamadores.",
+      "explanation": "cache() e request deduplication: mesmo dado, mesma requisicao, uma unica chamada de rede. E o mesmo principio do Modulo 8.2, com API diferente e sem infraestrutura extra."
+    },
+    {
+      "id": "q-11-3-4",
+      "type": "short_answer",
+      "question": "Por que toSessionEvent existe em vez de despachar WireEvent direto para o sessionReducer?",
+      "correct_answer": "Porque os dois vocabularios sao diferentes. 'text' no wire significa 'chegou pedaco de texto', mas no estado significa 'chegou o primeiro token'. Despachar direto faria transicoes invalidas e a maquina ficaria presa em thinking.",
+      "explanation": "Camada de traducao entre protocolo e estado e o que permite que o mesmo reducer sirva a CLI e ao navegador sem que nenhum dos dois precise conhecer o vocabulario do outro."
+    },
+    {
+      "id": "q-11-3-5",
+      "type": "code_review",
+      "question": "Um modulo em app/lib/tutor.ts exporta TUTOR_CONFIG com apiKey: process.env.ANTHROPIC_API_KEY e e importado por um Client Component. O que acontece em producao?",
+      "correct_answer": "A variavel nao tem prefixo NEXT_PUBLIC_, entao chega undefined no bundle. O cliente envia requisicao sem credencial, a API responde 500, e o usuario ve um erro generico sem nenhuma pista da causa.",
+      "explanation": "A falha e silenciosa no build: o TypeScript aceita, o bundler substitui por undefined, e o diagnostico so aparece como erro 500 em producao. Por isso a regra e estrutural - nenhum modulo lido por Client Component acessa process.env sem NEXT_PUBLIC_."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-11-3",
+    "title": "Adicionar a rota de quiz com estado otimista e rollback",
+    "description": "Crie /lessons/[lessonId]/quiz onde o aluno responde a uma pergunta de multipla escolha, o resultado e avaliado no cliente com um schema do dominio, e o progresso e enviado para a API com fetch e estado otimista com rollback.",
+    "expected_solution": "gradeQuiz() puro em packages/core/src/quiz.ts devolvendo { correct, correctOptionId, explanation }, testavel sem React e sem rede. O Client Component marca a opcao imediatamente, reverte com setState quando o POST falha e exibe a mensagem; 409 e tratado como 'outro dispositivo respondeu' e dispara refetch.",
+    "success_criteria": [
+      "gradeQuiz esta em packages/core e o teste nao precisa de React nem de fetch",
+      "Nenhum modulo lido por Client Component acessa process.env sem NEXT_PUBLIC_",
+      "A pagina usa params: Promise<...> e compila no Next 16",
+      "O rollback do estado otimista esta coberto por teste",
+      "O 409 tem tratamento explicito e recuperavel, com refetch",
+      "O componente usa aria-live e rotulos acessiveis nos controles"
+    ]
+  },
+  "resources": {
+    "official_docs": [
+      "node_modules/next/dist/docs/01-app/02-guides/upgrading/version-16.md: async params/searchParams como Promise-only, tipos globais de rota e Turbopack por padrao.",
+      "node_modules/next/dist/docs/01-app/03-api-reference: route handlers, streaming com ReadableStream, error/loading/not-found e metadata.",
+      "React 19: cache() para deduplicacao por requisicao e a regra de que Server Components nao recebem funcao como prop.",
+      "SSE: formato data: com separador de linha em branco e o comportamento de buffering em proxies e CDNs."
+    ],
+    "tools": [
+      "Next.js 16.3.6 (App Router, Turbopack)",
+      "React 19.2",
+      "Tailwind CSS 4",
+      "Vitest 3 + Testing Library 16",
+      "Zod 4"
+    ]
+  }
+}

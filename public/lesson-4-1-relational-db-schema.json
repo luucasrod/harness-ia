@@ -1,0 +1,222 @@
+{
+  "lesson_id": "lesson-4-1-relational-db-schema",
+  "title": "Relational Databases & Schema Design",
+  "description": "Fundamentos de design relacional: modelo relacional, normalização, índices, constraints e integridade de dados. Construir schemas eficientes, escaláveis e fáceis de manter.",
+  "duration_minutes": 45,
+  "module_id": "module-4",
+  "module_title": "Databases & Data Modeling",
+  "target_audience": "Developers com 1-3 anos de experiência que precisam entender SQL e design de dados",
+  "learning_objectives": [
+    "Entender o modelo relacional: tabelas, relacionamentos, normalização",
+    "Aplicar formas normais (1NF, 2NF, 3NF) para eliminar redundância e anomalias",
+    "Decidir quando normalizar e quando denormalizar baseado em trade-offs reais",
+    "Desenhar índices estratégicos para otimizar queries sem sacrificar escrita",
+    "Usar constraints (PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK) para garantir integridade em banco",
+    "Evitar anti-patterns comuns em design de schema",
+    "Projetar schema profissional para plataforma educacional com autenticação e progresso"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "Schema é contrato — define como dados relacionam e evoluem",
+        "Bom schema economiza meses de trabalho; ruim custa semanas corrigindo bugs",
+        "Normalização reduz anomalias; denormalização acelera leituras — trade-off consciente",
+        "Índices são invisíveis quando funcionam bem mas críticos quando faltam"
+      ]
+    },
+    {
+      "section_id": "relational_model",
+      "title": "Fundamentos de Modelo Relacional (12 minutos)",
+      "key_points": [
+        "Tabelas, linhas, colunas; relacionamentos via chaves estrangeiras",
+        "1:1 (um-para-um), 1:N (um-para-muitos), N:M (muitos-para-muitos)",
+        "Chaves primárias identificam unicamente; chaves estrangeiras vinculam tabelas",
+        "CASCADE, SET NULL, RESTRICT: decisões sobre deleção cascata com impacto real",
+        "Tabelas de junção permitem metadados em relacionamentos N:M"
+      ]
+    },
+    {
+      "section_id": "normalization",
+      "title": "Normalização — Teoria e Prática (15 minutos)",
+      "key_points": [
+        "Redundância causa anomalias: atualização, inserção, deleção",
+        "1NF: Valores atômicos, sem listas em células",
+        "2NF: Atributos não-chave dependem completamente da chave primária",
+        "3NF: Atributos não-chave não dependem uns dos outros",
+        "Denormalização é estratégica para read-heavy; tenha triggers/jobs para manter consistência",
+        "Perfil de aplicação decide: read-heavy denormaliza; write-heavy normaliza"
+      ]
+    },
+    {
+      "section_id": "indexes",
+      "title": "Índices — O Invisível Que Muda Tudo (12 minutos)",
+      "key_points": [
+        "Índice: estrutura B-tree que acelera buscas logaritmicamente",
+        "Single-column, composite, unique, full-text: tipos diferentes para padrões diferentes",
+        "Índices aceleram leitura (~1000x) mas ralentam escrita (5-10% por índice)",
+        "Ordem em composite index importa: coloque seletivas primeiro",
+        "Crie índices para: WHERE clauses frequentes, JOINs, ORDER BY, GROUP BY"
+      ]
+    },
+    {
+      "section_id": "constraints",
+      "title": "Constraints e Integridade (10 minutos)",
+      "key_points": [
+        "PRIMARY KEY: identifica unicamente; nunca NULL, nunca duplicado",
+        "FOREIGN KEY: força relacionamento; ON DELETE decide cascata ou restrição",
+        "UNIQUE: não duplica; permite múltiplos NULL (NULL ≠ NULL em SQL)",
+        "CHECK: valida valores; enum ou varchar — banco decide se força tipo",
+        "NOT NULL: força coluna ter valor; opcionais ficam NULL",
+        "Validar em banco reduz bugs: aplicação pode estar offline, banco não"
+      ]
+    },
+    {
+      "section_id": "antipatterns",
+      "title": "Anti-patterns Comuns (10 minutos)",
+      "key_points": [
+        "Usar string em vez de enum: typos, espaços extras, difícil validar",
+        "Armazenar agregações sem atualizar: COUNT, SUM desincronizados da realidade",
+        "Não validar em banco: confiar que aplicação sempre valida (nunca acontece)",
+        "Foreign keys sem ON DELETE: dados órfãos acumulam, queries falham",
+        "Denormalizar sem plano: redundância sem strategy causa pior dos dois mundos"
+      ]
+    },
+    {
+      "section_id": "summary",
+      "title": "Síntese — Boas Práticas (5 minutos)",
+      "key_points": [
+        "Normalize até 3NF para eliminar redundância e anomalias",
+        "Denormalize estrategicamente baseado em perfil read/write real",
+        "Índices corretos podem fazer query rodar 1000x mais rápido",
+        "Constraints em banco garantem integridade mesmo com múltiplos clientes",
+        "Teste schema simulando deleções, updates cascata, queries frequentes"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-4-1-1",
+      "title": "Um-para-Muitos: Lição e Questões",
+      "description": "Como modelar relacionamento 1:N onde uma lição tem muitas questões",
+      "code_or_diagram": "CREATE TABLE lessons (\n  id UUID PRIMARY KEY,\n  title VARCHAR(255) NOT NULL\n);\n\nCREATE TABLE exercise_questions (\n  id UUID PRIMARY KEY,\n  lesson_id UUID NOT NULL,\n  question_text TEXT NOT NULL,\n  CONSTRAINT fk_question_lesson FOREIGN KEY (lesson_id) \n    REFERENCES lessons(id) ON DELETE CASCADE\n);\n\n-- lesson_id não é UNIQUE — uma lição tem MUITAS questões\n-- ON DELETE CASCADE: deletar lição deleta suas questões\nSELECT l.title, COUNT(q.id) as question_count\nFROM lessons l\nLEFT JOIN exercise_questions q ON l.id = q.lesson_id\nGROUP BY l.id;"
+    },
+    {
+      "id": "ex-4-1-2",
+      "title": "Muitos-para-Muitos: Alunos e Cursos",
+      "description": "Tabela de junção permite metadados e garante integridade N:M",
+      "code_or_diagram": "CREATE TABLE students (id UUID PRIMARY KEY, name VARCHAR(255));\nCREATE TABLE courses (id UUID PRIMARY KEY, title VARCHAR(255));\n\nCREATE TABLE enrollments (\n  student_id UUID NOT NULL,\n  course_id UUID NOT NULL,\n  enrolled_at TIMESTAMP DEFAULT now(),\n  CONSTRAINT fk_enroll_student FOREIGN KEY (student_id) \n    REFERENCES students(id) ON DELETE CASCADE,\n  CONSTRAINT fk_enroll_course FOREIGN KEY (course_id) \n    REFERENCES courses(id) ON DELETE CASCADE,\n  CONSTRAINT unique_enrollment UNIQUE(student_id, course_id)\n);\n\n-- Metadados: enrolled_at, progress, grade tudo aqui\nSELECT s.name, c.title, e.enrolled_at\nFROM students s\nJOIN enrollments e ON s.id = e.student_id\nJOIN courses c ON e.course_id = c.id\nWHERE s.id = 'uuid';"
+    },
+    {
+      "id": "ex-4-1-3",
+      "title": "Normalização: Antes (Redundância) e Depois (3NF)",
+      "description": "Como denormalização causa anomalias e normalização as elimina",
+      "code_or_diagram": "-- ANTES: Redundância (NÃO NORMALIZADO)\nCREATE TABLE user_lessons_flat (\n  user_id UUID, user_email VARCHAR(255), user_name VARCHAR(255),\n  lesson_id UUID, lesson_title VARCHAR(255), module_id UUID, module_name VARCHAR(255),\n  progress_status VARCHAR(50)\n);\n-- Email armazenado 10x se usuário tem 10 lições\n-- Mudar nome = 10 updates\n-- Deletar última lição = deleta usuário\n\n-- DEPOIS: Normalizado (3NF)\nCREATE TABLE users (id UUID PRIMARY KEY, email VARCHAR(255) UNIQUE);\nCREATE TABLE modules (id UUID PRIMARY KEY, name VARCHAR(255));\nCREATE TABLE lessons (id UUID PRIMARY KEY, module_id UUID, title VARCHAR(255));\nCREATE TABLE user_lesson_progress (user_id UUID, lesson_id UUID, status VARCHAR(50));\n\n-- Sem redundância, sem anomalias, mas precisa de JOINs\nSELECT u.email, l.title, m.name, p.status\nFROM users u\nJOIN user_lesson_progress p ON u.id = p.user_id\nJOIN lessons l ON p.lesson_id = l.id\nJOIN modules m ON l.module_id = m.id\nWHERE u.id = 'uuid';"
+    },
+    {
+      "id": "ex-4-1-4",
+      "title": "Índices: Single vs Composite vs Quando Evitar",
+      "description": "Estratégia de índices corretos acelera 1000x; inúteis ralentam escrita",
+      "code_or_diagram": "-- Bom: Índice simples em coluna frequentemente consultada\nCREATE INDEX idx_users_email ON users(email);\nSELECT * FROM users WHERE email = 'user@example.com'; -- Rápido\n\n-- Melhor: Índice composto para query com múltiplas colunas\nCREATE INDEX idx_progress_user_status ON user_lesson_progress(user_id, status);\nSELECT * FROM user_lesson_progress \nWHERE user_id = 'X' AND status = 'completed'; -- Muito rápido\n\n-- Ruim: Índice desnecessário em coluna pouco seletiva\nCREATE INDEX idx_progress_status ON user_lesson_progress(status);\n-- Só 2 valores (completed, in_progress) — index scan é pior que table scan\n-- E ralenta inserts/updates sem benefício"
+    },
+    {
+      "id": "ex-4-1-5",
+      "title": "Constraints Garantem Integridade: Enum vs String",
+      "description": "Validar em banco é mais forte que validar em aplicação",
+      "code_or_diagram": "-- Ruim: String sem validação\nCREATE TABLE exercises (\n  id UUID PRIMARY KEY,\n  type VARCHAR(100), -- \"multiple_choice\", \"code\", \"typo: muliple_choice\"\n  difficulty VARCHAR(100) -- \"easy\", \"EASY\", \"easy \", sem padrão\n);\nSELECT * FROM exercises WHERE type = 'multiple choice'; -- 0 resultados (espaço!)\n\n-- Melhor: Enum ou CHECK em banco\nCREATE TABLE exercises (\n  id UUID PRIMARY KEY,\n  type VARCHAR(50) NOT NULL \n    CHECK (type IN ('multiple_choice', 'short_answer', 'code', 'essay')),\n  difficulty VARCHAR(50) NOT NULL \n    CHECK (difficulty IN ('beginner', 'intermediate', 'advanced'))\n);\nINSERT INTO exercises VALUES (id, 'muliple_choice', ...); -- ERROR: invalid\n\n-- Melhor ainda: PostgreSQL ENUM\nCREATE TYPE exercise_type AS ENUM ('multiple_choice', 'short_answer', 'code', 'essay');\nCREATE TABLE exercises (\n  id UUID PRIMARY KEY,\n  type exercise_type NOT NULL\n);"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-4-1-q1",
+      "type": "multiple_choice",
+      "question": "Qual é a diferença fundamental entre normalização e denormalização?",
+      "options": [
+        "Normalização é mais rápida para leitura; denormalização economiza espaço",
+        "Normalização elimina redundância e anomalias mas aumenta JOINs; denormalização acelera leituras mas introduz risco de inconsistência",
+        "Normalização é 2NF; denormalização é 3NF",
+        "Não há diferença real; são nomes diferentes para a mesma coisa"
+      ],
+      "correct_answer": "Normalização elimina redundância e anomalias mas aumenta JOINs; denormalização acelera leituras mas introduz risco de inconsistência",
+      "explanation": "Trade-off clássico: normalização = integridade de escrita; denormalização = velocidade de leitura. Escolha baseado em perfil: read-heavy denormaliza; write-heavy normaliza."
+    },
+    {
+      "id": "ex-4-1-q2",
+      "type": "short_answer",
+      "question": "Explique por que armazenar email do usuário em múltiplas linhas (em tabela flat desnormalizada) é um problema.",
+      "expected_answer": "É redundância. Se usuário muda email, precisa de UPDATE em múltiplas linhas. Se falhar uma, fica inconsistente. Se deletar última linha, usuário desaparece. Causa anomalias de atualização, inserção e deleção.",
+      "explanation": "Isso é Anomalia de Atualização (2NF). Dados que dependem de uma chave não devem aparecer múltiplas vezes. Solução: tabela separada users, uma linha por usuário."
+    },
+    {
+      "id": "ex-4-1-q3",
+      "type": "code_review",
+      "question": "Revise este schema: 'CREATE TABLE user_progress (user_id UUID, lesson_id UUID, total_lessons INT)' — qual é o problema arquitetural?",
+      "expected_answer": "Armazenar total_lessons é redundância desnormalizada. Cada mudança em lições exige UPDATE aqui. Sem trigger, fica desincronizado. Melhor: calcular via COUNT(lesson_id) ou manter via trigger.",
+      "explanation": "Anti-pattern comum: armazenar agregações sem plano de atualização. Se quiser denormalizar, implemente trigger ou batch job que sincroniza; senão, calcule em query."
+    },
+    {
+      "id": "ex-4-1-q4",
+      "type": "multiple_choice",
+      "question": "Quando criar índice em uma coluna?",
+      "options": [
+        "Sempre; índices só aceleram, nunca ralentam",
+        "Em colunas com muitas JOINs, WHERE frequentes, ORDER BY, GROUP BY",
+        "Em colunas com muitos valores (alta cardinalidade); não em booleanos ou status",
+        "Opções 2 e 3 estão corretas"
+      ],
+      "correct_answer": "Opções 2 e 3 estão corretas",
+      "explanation": "Índices custam 5-10% de penalidade em escrita. Criem onde ganho (1000x em leitura) supera custo. Em pouco seletivos (bool: 2 valores), table scan é melhor que index scan."
+    },
+    {
+      "id": "ex-4-1-q5",
+      "type": "debugging",
+      "question": "Você deletou um usuário mas suas progresso em lições ficou órfão. A query 'SELECT * FROM user_lesson_progress WHERE user_id = deleted_id' ainda retorna registros. Por quê?",
+      "expected_answer": "Foreign key provavelmente não tem ON DELETE CASCADE. Sem isso, deleção do usuário não cascata para progresso. Solução: ALTER TABLE user_lesson_progress ADD CONSTRAINT fk_progress_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;",
+      "explanation": "Sem ON DELETE, foreign key só RESTRIGE deleção se há dados referenciando. Se apenas valida inserção, deixa órfãos. CASCADE = deletar pai deleta filho automaticamente."
+    },
+    {
+      "id": "ex-4-1-q6",
+      "type": "multiple_choice",
+      "question": "Qual técnica garante que tipo de exercício é sempre válido ('multiple_choice' ou 'short_answer', nunca 'multiple_choice ' com espaço)?",
+      "options": [
+        "Validação na aplicação (sem banco, pode falhar)",
+        "VARCHAR com documentação (convenção, não garantia)",
+        "CHECK constraint ou PostgreSQL ENUM (validação em banco, nunca falha)",
+        "Índice em type (acelera, mas não valida)"
+      ],
+      "correct_answer": "CHECK constraint ou PostgreSQL ENUM (validação em banco, nunca falha)",
+      "explanation": "Validação em banco é mais forte: impossível inserir valor inválido mesmo se aplicação tem bug. ENUM é tipo-safe; CHECK é flexível para valores dinâmicos."
+    }
+  ],
+  "practical_project": {
+    "id": "practical-4-1",
+    "title": "Projeto: Schema de Plataforma Educacional",
+    "description": "Desenhe um schema relacional completo para plataforma educacional com usuários, módulos, lições, exercícios, progresso e tutoria de IA. Normalize até 3NF, coloque índices estratégicos, use constraints para integridade.",
+    "requirements": [
+      "Usuários com email único (chave candidata) e nome",
+      "Módulos com título e ordem",
+      "Lições dentro de módulos, com tipo (relação 1:N)",
+      "Exercícios de tipos múltipla escolha, resposta curta, código",
+      "Progresso do aluno por lição (status + percentual completado)",
+      "Respostas do aluno com correção (is_correct)",
+      "Dúvidas geradas por tutoria de IA a partir de respostas erradas",
+      "Garantir integridade: deletar usuário cascata deleta progresso, respostas, dúvidas"
+    ],
+    "hints": [
+      "Use UUID para chaves primárias distribuídas",
+      "Foreign keys devem ter ON DELETE CASCADE para dados dependentes",
+      "Normalize: não repita dados do usuário em múltiplas tabelas",
+      "Índices em: colunas de busca (email), foreign keys, status",
+      "Constraints: NOT NULL, UNIQUE, CHECK, FOREIGN KEY para validação em banco"
+    ],
+    "solution": "Veja Solução do Exercício ao final da lição Markdown (lesson-4-1-relational-db-schema.md)",
+    "grading_criteria": [
+      "Schema está normalizado até 3NF? (sem redundância, sem anomalias)",
+      "Foreign keys cobrem todos os relacionamentos? ON DELETE apropriado?",
+      "Índices em colunas críticas? (email, user_id, status, lesson_id)",
+      "Constraints valem o invariante? (email unique, status IN (...), não NULL)",
+      "Consegue simular: deletar usuário cascata para progresso, respostas, dúvidas?"
+    ]
+  }
+}

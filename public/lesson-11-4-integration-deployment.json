@@ -1,0 +1,184 @@
+{
+  "lesson_id": "lesson-11-4-integration-deployment",
+  "title": "Capstone 11.4 - Integration & Deployment (Docker, CI/CD, Vercel)",
+  "module_id": "module-11",
+  "module_title": "Capstone Project: Build Your Harness Tutor",
+  "description": "Coloque o Harness Tutor em producao: imagem Docker multi-stage com usuario nao-root, GitHub Actions com typecheck e testes, deploy da API em container e do dashboard na Vercel, com health checks e runbook de rollback.",
+  "duration_minutes": 120,
+  "word_count": 4448,
+  "target_audience": "Devs com CLI, API e dashboard funcionando em localhost, prontos para o ambiente de producao",
+  "learning_objectives": [
+    "Escrever Dockerfile multi-stage com cache de camadas, usuario nao-root e HEALTHCHECK sem dependencia extra.",
+    "Subir Postgres e Redis com docker compose usando condition: service_healthy em vez de ordem de declaracao.",
+    "Criar pipeline GitHub Actions com frozen-lockfile, prisma generate antes do typecheck e concurrency.",
+    "Implementar liveness sem dependencia e readiness com dependencia real.",
+    "Aplicar migration como job separado, antes do codigo, para evitar downtime.",
+    "Escrever runbook de rollback executavel por quem nunca viu o incidente."
+  ],
+  "content_sections": [
+    {
+      "section_id": "o-contrato-de-saude",
+      "title": "O contrato de saude: liveness e readiness",
+      "key_points": [
+        "Um /health que so retorna { status: 'ok' } prova apenas que o processo Node esta vivo, e um health check que nunca falha e pior que nenhum.",
+        "Liveness: o processo responde? Se nao, o orquestrador reinicia. Nao checa dependencia - senao queda de banco causa restart loop.",
+        "Readiness: pode receber trafego agora? Verifica banco e, opcionalmente, cache. Se nao, o balanceador tira a instancia de rotacao sem reiniciar.",
+        "Retornar 503 no readiness e o mecanismo que impede o balanceador de mandar trafego para instancia inutil.",
+        "A distincao vem da Licao 8.5 (disponibilidade) e aqui vira codigo com consequencia operacional."
+      ],
+      "order": 1
+    },
+    {
+      "section_id": "producao-e-diferente-de-localhost",
+      "title": "Producao e um ambiente diferente",
+      "key_points": [
+        "Em localhost voce tem Node instalado, .env na mao e acesso ao banco; em producao ha imagem de 180MB, container efemero que reinicia sozinho e variaveis que so existem se alguem cadastrou.",
+        "Sem host 0.0.0.0 o Fastify responde so dentro do container e o health check retorna connection refused - 30 minutos de debug na primeira vez.",
+        "Sem --start-period no HEALTHCHECK o container e marcado unhealthy durante o boot e reinicia em loop.",
+        "Sem usuario nao-root, um exploited runner tem root no host: a defesa cabe em uma linha do Dockerfile.",
+        "Variaveis de ambiente mudam no build da Vercel, nao em runtime: mudou depois do deploy exige --build."
+      ],
+      "order": 2
+    },
+    {
+      "section_id": "passo-a-passo-implementacao",
+      "title": "Passo a passo de implementacao (14 passos)",
+      "key_points": [
+        "Passos 1-3: Fastify com host 0.0.0.0, graceful shutdown com guarda de corrida e timeout de 10s, e schema Prisma com @@unique de progresso, indices compostos e tokens de uso em Session.",
+        "Passos 4-6: Dockerfile multi-stage com manifestos antes do codigo, --filter com tres pontos, usuario nao-root e HEALTHCHECK via node -e; .dockerignore cobrindo .git, node_modules e .env com !.env.example; e docker compose com condition: service_healthy e Redis sem persistencia.",
+        "Passos 7-9: workflow de CI com --frozen-lockfile, prisma generate antes do typecheck e concurrency com cancel-in-progress; job de integracao com Postgres real como service; e branch protection com required status check e if: always().",
+        "Passos 10-14: deploy da API como container com build local previo, deploy na Vercel sem prefixo NEXT_PUBLIC_ na chave, CORS com ALLOWED_ORIGINS, verificacao de producao em quatro perguntas com curl -N, e runbook de rollback."
+      ],
+      "order": 3
+    },
+    {
+      "section_id": "praticas-de-entrega",
+      "title": "Praticas de entrega que evitam downtime",
+      "key_points": [
+        "Multi-stage sempre: ferramental de build fora da imagem final reduz tamanho, superficie de ataque e CVEs a atualizar.",
+        "prisma migrate deploy em producao; migrate dev cria migration e pode pedir seed, e jamais deve rodar em deploy.",
+        "Ordem de deploy: migration backwards-compatible, depois codigo novo, e so entao remocao de colunas.",
+        "CORS configurado antes do deploy do dashboard, senao o primeiro teste do aluno falha com erro de policy sem relacao com bug.",
+        "curl -N desliga o buffer e permite ver o streaming chegando em chunks; sem ele voce conclui que o streaming quebrou quando o problema e o curl.",
+        "curl -i no readiness mostra o status HTTP: 503 e a resposta correta quando a instancia nao esta pronta."
+      ],
+      "order": 4
+    },
+    {
+      "section_id": "transicao-para-o-certificado",
+      "title": "Transicao: do deploy a prova de conclusao",
+      "key_points": [
+        "O pipeline ja e a fonte de verdade de que o projeto funciona: e dele que a submissao vai extrair a evidencia.",
+        "A ordem correta de deployment torna o commit SHA um identificador confiavel do que foi construido.",
+        "A proxima licao fecha o ciclo: submissao automatica, certificado assinado e verificavel, e badge publica.",
+        "O que comecou como worktree vazio na 11.1 agora tem imagem, pipeline e plano de recuperacao."
+      ],
+      "order": 5
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-11-4-1",
+      "title": "Liveness e readiness separados",
+      "description": "Liveness sem dependencia, readiness com banco e 503 quando nao pronto.",
+      "code_or_diagram": "export async function registerHealth(app: FastifyInstance, deps: { db: unknown }): Promise<void> {\n  // liveness: NAO toca dependencia externa\n  app.get(\"/health\", async () => ({ status: \"ok\", uptime: process.uptime() }));\n\n  // readiness: checa dependencia real\n  app.get(\"/ready\", async (_request, reply) => {\n    const checks: Record<string, \"ok\" | \"fail\"> = { database: \"ok\", cache: \"ok\" };\n    let ready = true;\n    try {\n      await (deps.db as { $queryRaw: (q: string) => Promise<unknown> }).$queryRaw(\"SELECT 1\");\n    } catch {\n      checks[\"database\"] = \"fail\";\n      ready = false;\n    }\n    if (!ready) return reply.code(503).send({ status: \"not_ready\", checks });\n    return reply.send({ status: \"ready\", checks });\n  });\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-11-4-2",
+      "title": "Graceful shutdown com guarda de corrida",
+      "description": "SIGTERM e SIGINT podem chegar juntos; o flag impede segundo fechamento e o timeout evita container preso em Terminating.",
+      "code_or_diagram": "export function registerShutdown(app: FastifyInstance, deps: { closeDb: () => Promise<void> }): void {\n  let closing = false;\n  const shutdown = async (signal: string) => {\n    if (closing) return;\n    closing = true;\n    app.log.info({ signal }, \"encerrando\");\n\n    const timer = setTimeout(() => { app.log.error(\"timeout no shutdown\"); process.exit(1); }, 10_000);\n    timer.unref();\n\n    try {\n      await app.close();\n      await deps.closeDb();\n      clearTimeout(timer);\n      process.exit(0);\n    } catch (error) {\n      app.log.error({ error }, \"falha no shutdown\");\n      process.exit(1);\n    }\n  };\n  process.on(\"SIGTERM\", () => void shutdown(\"SIGTERM\"));\n  process.on(\"SIGINT\", () => void shutdown(\"SIGINT\"));\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-11-4-3",
+      "title": "Schema Prisma com idempotencia e indices compostos",
+      "description": "Constraint unica evita progresso duplicado por retry; indice composto cobre as queries do dashboard.",
+      "code_or_diagram": "model Progress {\n  id        String   @id @default(cuid())\n  score     Int\n  attempts  Int      @default(1)\n  lessonId  String\n  studentId String\n  updatedAt DateTime @updatedAt\n\n  lesson  Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)\n  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)\n\n  @@unique([lessonId, studentId])\n  @@index([studentId])\n}\n\nmodel Session {\n  id        String   @id @default(cuid())\n  studentId String\n  lessonId  String\n  tokensIn  Int      @default(0)\n  tokensOut Int      @default(0)\n  createdAt DateTime @default(now())\n\n  @@index([studentId, createdAt])\n}",
+      "language": "prisma"
+    },
+    {
+      "id": "ex-11-4-4",
+      "title": "Dockerfile multi-stage da API",
+      "description": "Cache de camadas por manifesto, usuario nao-root e HEALTHCHECK usando o proprio Node.",
+      "code_or_diagram": "FROM node:22.11.0-slim AS deps\nCOPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./\nCOPY packages/core/package.json packages/core/\nCOPY apps/api/package.json apps/api/\nRUN --mount=type=cache,id=pnpm,target=/pnpm/store \\\n    pnpm install --frozen-lockfile --filter @harness/api... --filter @harness/core\n\nFROM deps AS build\nCOPY tsconfig.base.json ./\nCOPY packages/core packages/core\nCOPY apps/api apps/api\nRUN pnpm --filter @harness/core build && pnpm --filter @harness/api build\n\nFROM node:22.11.0-slim AS runner\nENV NODE_ENV=production\nRUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 --gid nodejs tutor\nWORKDIR /app\nCOPY --from=build --chown=tutor:tutor /app/node_modules ./node_modules\nCOPY --from=build --chown=tutor:tutor /app/apps/api/dist ./apps/api/dist\nUSER tutor\nEXPOSE 4000\nHEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \\\n  CMD node -e \"fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"\nCMD [\"node\", \"apps/api/dist/server.js\"]",
+      "language": "dockerfile"
+    },
+    {
+      "id": "ex-11-4-5",
+      "title": "Compose com dependencia verificada e CI com ordem correta",
+      "description": "condition: service_healthy evita corrida de startup; prisma generate antes do typecheck evita erro de tipos inexistente.",
+      "code_or_diagram": "services:\n  postgres:\n    image: postgres:16-alpine\n    healthcheck:\n      test: [\"CMD-SHELL\", \"pg_isready -U tutor -d tutor\"]\n      interval: 5s\n      timeout: 3s\n      retries: 10\n  redis:\n    image: redis:7-alpine\n    command: [\"redis-server\", \"--save\", \"\", \"--appendonly\", \"no\"]\n  api:\n    build: { context: ., dockerfile: apps/api/Dockerfile }\n    depends_on:\n      postgres: { condition: service_healthy }\n      redis: { condition: service_healthy }\n\n# .github/workflows/ci.yml (trecho)\n- name: Generate Prisma client\n  run: pnpm --filter @harness/api exec prisma generate\n- name: Typecheck\n  run: pnpm typecheck",
+      "language": "yaml"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-11-4-1",
+      "type": "debugging",
+      "question": "A API sobe em container e o health check retorna connection refused. Qual e a causa mais provavel?",
+      "correct_answer": "O Fastify foi iniciado sem host: \"0.0.0.0\", entao responde apenas em localhost dentro do container, e o health check tenta o IP do container. Verifique tambem se o container expoe a porta e se EXPOSE corresponde a PORT.",
+      "explanation": "O default do Node e bind em 127.0.0.1. Em container isso significa que o processo so aceita conexao de dentro da propria rede do container - o orquestrador, de fora, nunca alcanca."
+    },
+    {
+      "id": "q-11-4-2",
+      "type": "short_answer",
+      "question": "O Postgres caiu por 30 segundos e o orquestrador reiniciou a API quatro vezes. Qual a configuracao errada?",
+      "correct_answer": "O liveness check esta verificando o banco. Liveness deve responder apenas se o processo esta vivo; dependencia externa pertence ao readiness.",
+      "explanation": "Com banco no liveness, cada queda de banco produz restart loop. Pior: reiniciar a API nao conserta o banco, entao o problema real permanece e cada restart adiciona latencia de cold start."
+    },
+    {
+      "id": "q-11-4-3",
+      "type": "short_answer",
+      "question": "Por que o Dockerfile copia os package.json antes do codigo fonte?",
+      "correct_answer": "Para que a camada de pnpm install seja invalidada apenas quando as dependencias mudam. Copiar o codigo primeiro faria qualquer mudanca em um .ts reexecutar a instalacao inteira a cada build.",
+      "explanation": "E o principio de cache do Modulo 9.1 aplicado a camadas de imagem: o que muda com menos frequencia vem primeiro, e as camadas abaixo dele sao preservadas."
+    },
+    {
+      "id": "q-11-4-4",
+      "type": "prediction",
+      "question": "Voce fez o deploy com migration e codigo no mesmo job. O deploy passou, e dez minutos depois o dashboard comeca a mostrar erro 500 na API. O que aconteceu?",
+      "correct_answer": "A migration foi aplicada junto com o codigo, ou depois dele. A ordem correta e migration primeiro (backwards-compatible), depois codigo novo, e so entao remocao de colunas.",
+      "explanation": "A versao nova comeca a rodar contra um schema que ainda nao tem o que ela espera. Esse padrao e o caminho mais curto para o downtime que a Licao 9.4 descreve como incidente de deploy."
+    },
+    {
+      "id": "q-11-4-5",
+      "type": "debugging",
+      "question": "Voce cadastrou TUTOR_API_URL na Vercel depois do primeiro deploy e a URL continua vazia em runtime. Por que?",
+      "correct_answer": "Variaveis de ambiente sao embutidas no build, nao lidas em runtime. E necessario um novo build: vercel --prod --build.",
+      "explanation": "E o segundo erro mais comum de deploy em Next. A solucao e sempre a mesma: redeploy com rebuild, e por isso que o runbook deve listar essa verificacao."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-11-4",
+    "title": "Adicionar observabilidade de producao ao pipeline",
+    "description": "Implemente Sentry no backend e no frontend com release vinculada ao commit, health check de tres niveis (liveness, readiness e deep check com Claude) e badge de status no dashboard consultando o endpoint publico de saude.",
+    "expected_solution": "Registro unico de Structured Logging (Pino via Fastify) com requestId propagado, Sentry inicializado no servidor com tracesSampleRate menor em producao, e /health/deep que nunca demora mais que 3s retornando deep: true somente quando as tres dependencias respondem. O badge no dashboard faz polling com revalidate curto e mostra tres estados.",
+    "success_criteria": [
+      "/health/deep tem timeout total de 3s mesmo se o Claude travar",
+      "Liveness nunca toca dependencia externa",
+      "A release do Sentry corresponde exatamente ao commit que passou no CI",
+      "Sourcemaps sobem no CI, nao no deploy",
+      "O badge tem estado degradado distinto de indisponivel",
+      "Nenhum segredo aparece nos logs; chaves sao redigidas",
+      "docs/observability.md documenta o que cada endpoint prova"
+    ]
+  },
+  "resources": {
+    "official_docs": [
+      "Docker multi-stage builds, cache mounts (--mount=type=cache) e boas praticas de .dockerignore.",
+      "GitHub Actions: services com health check, concurrency, required status checks e branch protection.",
+      "Vercel: variaveis de ambiente por ambiente, escopo de NEXT_PUBLIC_ e a semantica de build-time em vez de runtime.",
+      "Kubernetes probes: liveness versus readiness, startPeriod e o efeito de restart loop quando liveness depende de servico externo."
+    ],
+    "tools": [
+      "Docker 24+ com BuildKit",
+      "docker compose v2",
+      "GitHub Actions",
+      "Prisma 6 (migrate deploy em producao)",
+      "Vercel CLI",
+      "Fastify 5 (Pino para logging estruturado)"
+    ]
+  }
+}

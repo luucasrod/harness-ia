@@ -1,0 +1,171 @@
+{
+  "lesson_id": "lesson-4-4-nosql-mongodb",
+  "title": "NoSQL (MongoDB)",
+  "description": "MongoDB para dados flexíveis, escaláveis horizontalmente: document model, indexação, denormalização estratégica, transações. Quando NoSQL bate SQL e quando é overkill.",
+  "duration_minutes": 45,
+  "module_id": "module-4",
+  "target_audience": "Developers precisando escala horizontal ou esquema flexível",
+  "learning_objectives": [
+    "Entender model documento: quando melhor que relacional (flexibilidade, escala)",
+    "CRUD em MongoDB com índices: single-field, compound, full-text",
+    "Denormalização inteligente: trade-off entre queries simples e atualização",
+    "Transações multi-documento e atomicidade em documento",
+    "Anti-patterns: subdocumento crescente, sem índices, transações quando não precisa"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução e Model Documento (10 minutos)",
+      "key_points": [
+        "Relacional: rígido, normalized, ACID; Documento: flexível, denormalized, eventualmente consistente",
+        "NoSQL quando: esquema flexível, escala horizontal, velocidade escrita importa",
+        "Não quando: transações multi-doc complexas, dados muito relacionados, relatórios"
+      ]
+    },
+    {
+      "section_id": "indexes_queries",
+      "title": "Índices e Queries (12 minutos)",
+      "key_points": [
+        "CRUD: insertOne, findOne, updateOne, deleteOne",
+        "Índices: single-field, compound, text, sparse",
+        "Query por índice é 100x mais rápido que full collection scan"
+      ]
+    },
+    {
+      "section_id": "transactions",
+      "title": "Transações e Atomicidade (12 minutos)",
+      "key_points": [
+        "Operação em um documento é atômica (sem race condition)",
+        "Múltiplos documentos: use transação (caro) ou denormalize em um doc",
+        "Operadores atômicos: $set, $inc, $currentDate acontecem juntos"
+      ]
+    },
+    {
+      "section_id": "denormalization",
+      "title": "Denormalização vs Normalização (12 minutos)",
+      "key_points": [
+        "Denormalize: dados lidos frequentemente junto; 1 query, sem joins",
+        "Normalize: dados que mudam frequentemente; evita atualizar multidocs",
+        "Regra: lê frequente + muda raro = denormalize; muda frequente = ref"
+      ]
+    },
+    {
+      "section_id": "antipatterns",
+      "title": "Anti-Patterns (8 minutos)",
+      "key_points": [
+        "Subdocumento crescente: array 1M de objetos = documento gigante",
+        "Sem índice: full collection scan em tabela grande é lento",
+        "Transação quando atomicidade de doc basta: overkill, caro"
+      ]
+    },
+    {
+      "section_id": "comparison",
+      "title": "Comparação SQL vs MongoDB (5 minutos)",
+      "key_points": [
+        "SQL: schema rígido, joins eficientes, ACID garantido",
+        "MongoDB: schema flexível, queries denormalizadas rápidas, eventualmente consistente",
+        "Escolha baseada em padrão read/write e requisitos de escalabilidade"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-4-4-1",
+      "title": "Documento vs Relacional",
+      "description": "Mesma estrutura em MongoDB (denormalized) vs SQL (normalized)",
+      "code_or_diagram": "// MONGODB (denormalized)\ndb.lessons.insertOne({\n  _id: ObjectId(),\n  title: \"Algoritmos\",\n  module: { id: ObjectId(), name: \"Estruturas\" },\n  questions: [\n    { id: ObjectId(), text: \"O que é recursão?\" },\n    { id: ObjectId(), text: \"Exemplos?\" }\n  ]\n});\n// 1 documento, 1 query traz tudo\n\n// SQL (normalized)\nINSERT INTO lessons VALUES (id, \"Algoritmos\");\nINSERT INTO modules VALUES (moduleId, \"Estruturas\");\nINSERT INTO questions VALUES (qId1, lessonId, \"O que é recursão?\");\nINSERT INTO questions VALUES (qId2, lessonId, \"Exemplos?\");\n-- 4 inserts, queries precisam de JOINs"
+    },
+    {
+      "id": "ex-4-4-2",
+      "title": "Atomicidade em Documento",
+      "description": "Operações múltiplas em um documento sem race condition",
+      "code_or_diagram": "// Atômico: tudo acontece ou nada\ndb.userProgress.updateOne(\n  { userId: \"user1\", lessonId: \"lesson1\" },\n  {\n    $set: { status: \"completed\" },\n    $inc: { progressPercentage: 100 },\n    $currentDate: { completedAt: true }\n  }\n);\n// Sem transação, mas garantido: ou todas mudanças ou nenhuma\n\n// Não atômico: múltiplos documentos\ndb.users.updateOne({ _id: \"user1\" }, { $inc: { completedLessons: 1 } });\ndb.lessons.updateOne({ _id: \"lesson1\" }, { $inc: { completions: 1 } });\n// Se falhar entre, inconsistência"
+    },
+    {
+      "id": "ex-4-4-3",
+      "title": "Denormalização: Quando Embeber vs Referenciar",
+      "description": "Trade-off entre queries rápidas e atualização simples",
+      "code_or_diagram": "// DENORMALIZADO: Lê rápido, atualiza caro\ndb.userProgress.insertOne({\n  userId: \"user1\",\n  lesson: { id, title, module, difficulty }, // Dados embebidos\n  answers: [{ questionId, isCorrect }, ...]\n});\n// Query: db.userProgress.findOne({ userId }); traz tudo\n// Atualizar lesson: updateMany multidocs\n\n// NORMALIZADO: Lê com lookup, atualiza rápido\ndb.userProgress.insertOne({ userId, lessonId }); // Apenas ref\ndb.lessons.insertOne({ _id, title, module, difficulty });\n// Query: agregação com $lookup (join)\n// Atualizar lesson: um documento"
+    },
+    {
+      "id": "ex-4-4-4",
+      "title": "Índices Essenciais",
+      "description": "Onde criar índices para queries frequentes",
+      "code_or_diagram": "// Índice em coluna de busca\ndb.users.createIndex({ email: 1 });\ndb.users.findOne({ email }); // Index scan, rápido\n\n// Índice composto\ndb.userProgress.createIndex({ userId: 1, status: 1 });\ndb.userProgress.find({ userId, status }); // Compound index\n\n// Full-text index\ndb.lessons.createIndex({ title: \"text\", content: \"text\" });\ndb.lessons.find({ $text: { $search: \"algoritmo\" } }); // Text search"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-4-4-q1",
+      "type": "multiple_choice",
+      "question": "Quando MongoDB é melhor que PostgreSQL?",
+      "options": [
+        "Sempre; NoSQL é tendência",
+        "Dados com esquema flexível, precisa escala horizontal, ou atualização é rara",
+        "Quando precisa transações multi-tabela garantidas",
+        "Quando dados são muito relacionados (muitos joins)"
+      ],
+      "correct_answer": "Dados com esquema flexível, precisa escala horizontal, ou atualização é rara",
+      "explanation": "MongoDB bate SQL em flexibilidade e escala horizontal (sharding). SQL ganha em transações e dados relacionados."
+    },
+    {
+      "id": "ex-4-4-q2",
+      "type": "short_answer",
+      "question": "Por que denormalizar em MongoDB? Qual o trade-off?",
+      "expected_answer": "Denormalizar: dados lidos frequentemente junto em 1 query, sem join. Trade-off: atualizar dados duplicados requer updateMany multidocs. Melhor se lê 1000x, muda 10x.",
+      "explanation": "Denormalização ganha em leitura; normalização ganha em escrita. Escolha baseado em padrão real da aplicação."
+    },
+    {
+      "id": "ex-4-4-q3",
+      "type": "code_review",
+      "question": "Revise: coleção userProgress com 1M de documentos, sem índice em userId. Query frequente busca por userId. Qual é problema?",
+      "expected_answer": "Sem índice, query faz full collection scan 1M docs toda vez. Adicione: db.userProgress.createIndex({ userId: 1 }). Index scan é 100x mais rápido.",
+      "explanation": "Índices são críticos em MongoDB como em SQL. Full collection scan mata performance conforme dados crescem."
+    },
+    {
+      "id": "ex-4-4-q4",
+      "type": "multiple_choice",
+      "question": "Qual é risco de subdocumento crescente sem limite?",
+      "options": [
+        "Risco de explosão de índices",
+        "Documento cresce indefinidamente; em 1M de itens, documento fica gigante, lento para carregar",
+        "MongoDB não permite arrays maiores que 16MB (tamanho documento)",
+        "Opções 2 e 3 estão corretas"
+      ],
+      "correct_answer": "Opções 2 e 3 estão corretas",
+      "explanation": "MongoDB tem limite de 16MB por documento. Array crescente (Ex: completions) pode ultrapassar. Solução: usar coleção separada para itens."
+    },
+    {
+      "id": "ex-4-4-q5",
+      "type": "debugging",
+      "question": "Dado documento 'userProgress: { userId, lessonId, status, answers: [...], progressPercentage }', atualizar progressPercentage é lento toda vez que adiciona resposta. Por quê?",
+      "expected_answer": "progressPercentage é denormalizado (calculado de answers). Toda insert em answers requer recalcular e atualizar progressPercentage. Melhor: calcular em query ou usar Mongoose middleware.",
+      "explanation": "Denormalização duplicada (answers + progressPercentage) causa sincronização. Ou calcule em query, ou mantenha com trigger/middleware."
+    }
+  ],
+  "practical_project": {
+    "id": "practical-4-4",
+    "title": "Projeto: Schema MongoDB para Plataforma Educacional",
+    "description": "Definir coleções, indices, denormalização vs referência, queries com agregação.",
+    "requirements": [
+      "Coleção Users com email único",
+      "Coleção Lessons com questions denormalizadas ou referência?",
+      "Coleção UserProgress: referência a lesson, não embebimento (para evitar duplicação)",
+      "Índices: email, userId, status",
+      "Query: usuário com progresso em módulo (agregação/lookup)"
+    ],
+    "hints": [
+      "Denormalize dados que leem frequentemente junto; normalize que muda frequente",
+      "Índices em WHERE, não em todas colunas",
+      "Agregação com $lookup é like SQL JOIN",
+      "Transações multi-doc só se transação ACID realmente necessária (caro)"
+    ],
+    "solution": "Veja solução ao final da lição Markdown",
+    "grading_criteria": [
+      "Índices cobrem queries frequentes?",
+      "Denormalização tem trade-off claro? (lê frequente, muda raro?)",
+      "Agregação com $lookup funciona?",
+      "Sem subdocumentos crescentes indefinidamente?"
+    ]
+  }
+}

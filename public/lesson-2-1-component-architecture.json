@@ -1,0 +1,205 @@
+{
+  "lesson_id": "lesson-2-1-component-architecture",
+  "title": "Component Architecture - React Como Sistema de Composição",
+  "description": "Arquitetura de componentes React com composição, compound components, padrões legados e performance pragmática aplicada a uma plataforma educacional com tutor de IA.",
+  "duration_minutes": 60,
+  "target_audience": "Developers com mentalidade de engineer (pré-req: Lição 1.1)",
+  "learning_objectives": [
+    "Projetar componentes como contratos de responsabilidade e não apenas como arquivos visuais",
+    "Aplicar composição para reduzir props opcionais e hierarquias rígidas",
+    "Entender container/presentational como fronteira entre dados e apresentação",
+    "Criar compound components com estado compartilhado via Context",
+    "Comparar HOCs, render props e hooks com trade-offs reais",
+    "Identificar re-renders relevantes sem aplicar memoização cegamente"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "Componentes são fronteiras arquiteturais",
+        "Um componente ruim sabe demais e muda por muitos motivos",
+        "O fio condutor é a plataforma educacional com tutor de IA"
+      ]
+    },
+    {
+      "section_id": "composition",
+      "title": "Composição vs. Herança (10 minutos)",
+      "key_points": [
+        "React favorece composição porque UI é combinação de partes",
+        "Props opcionais demais indicam componente tentando cobrir variações incompatíveis",
+        "Composição reduz o conhecimento do componente pai sobre casos futuros"
+      ]
+    },
+    {
+      "section_id": "container_presentational",
+      "title": "Container/Presentational (8 minutos)",
+      "key_points": [
+        "Containers coordenam dados, navegação e transformação",
+        "Presentational components recebem dados prontos e renderizam UI",
+        "Hooks reduziram a formalidade do padrão, mas não invalidaram a fronteira"
+      ]
+    },
+    {
+      "section_id": "compound_components",
+      "title": "Compound Components (15 minutos)",
+      "key_points": [
+        "Úteis quando subcomponentes compartilham estado implícito",
+        "Context permite API expressiva sem prop drilling",
+        "Devem falhar cedo quando usados fora do provider"
+      ]
+    },
+    {
+      "section_id": "patterns_evolution",
+      "title": "HOCs, Render Props e Hooks (8 minutos)",
+      "key_points": [
+        "HOCs ainda aparecem em integrações e codebases legadas",
+        "Render props oferecem controle explícito de renderização",
+        "Hooks são o padrão moderno para reutilizar lógica stateful"
+      ]
+    },
+    {
+      "section_id": "performance",
+      "title": "Performance e Re-renders (10 minutos)",
+      "key_points": [
+        "Render não é bug; render caro e frequente pode ser",
+        "useMemo e useCallback precisam de motivo mensurável",
+        "React.memo só ajuda quando props permanecem referencialmente estáveis"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-monolithic-card",
+      "title": "ExerciseCard Acoplado",
+      "description": "Card que conhece todos os tipos de exercício e acumula props opcionais.",
+      "code_or_diagram": "type ExerciseCardProps = { title: string; type: 'quiz' | 'code' | 'essay'; score?: number; codeLanguage?: string; essayPrompt?: string; onStart: () => void; };"
+    },
+    {
+      "id": "ex-composed-card",
+      "title": "ExerciseCard por Composição",
+      "description": "Card estrutural com Header e Actions independentes.",
+      "code_or_diagram": "function ExerciseCard({ children }: { children: React.ReactNode }) { return <article className='exercise-card'>{children}</article>; }"
+    },
+    {
+      "id": "ex-container-view",
+      "title": "QuizCardContainer e QuizCardView",
+      "description": "Separação entre carregamento de dados e renderização pura.",
+      "code_or_diagram": "function QuizCardContainer({ quizId }: { quizId: string }) { const quiz = useQuiz(quizId); return <QuizCardView title={quiz.data.title} totalQuestions={quiz.data.questions.length} />; }"
+    },
+    {
+      "id": "ex-tabs-compound",
+      "title": "Tabs como Compound Component",
+      "description": "Tabs.Provider, Tabs.List, Tabs.Trigger e Tabs.Panel compartilhando activeTab.",
+      "code_or_diagram": "const TabsContext = React.createContext<TabsContextValue | null>(null); function TabTrigger({ id, children }) { const { activeTab, setActiveTab } = useTabsContext(); return <button aria-selected={activeTab === id} onClick={() => setActiveTab(id)}>{children}</button>; }"
+    },
+    {
+      "id": "ex-hoc-render-hook",
+      "title": "HOC vs Render Prop vs Hook",
+      "description": "Três formas de reutilizar lógica de acesso à lição.",
+      "code_or_diagram": "function useLessonGate(lessonId: string) { const user = useCurrentUser(); const access = useLessonAccess(lessonId); return { allowed: Boolean(user && access), user }; }"
+    },
+    {
+      "id": "ex-memo-callback",
+      "title": "Memoização com Motivo",
+      "description": "React.memo combinado com useCallback apenas quando há benefício real.",
+      "code_or_diagram": "const ExerciseRow = React.memo(function ExerciseRow({ exercise, onSelect }) { return <button onClick={() => onSelect(exercise.id)}>{exercise.title}</button>; });"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "quiz-2-1-1",
+      "type": "multiple_choice",
+      "question": "Por que composição é preferida a herança em React?",
+      "options": [
+        "Porque herança não existe em JavaScript.",
+        "Porque UI muda por combinação de partes, e composição reduz hierarquias rígidas.",
+        "Porque composição sempre tem melhor performance.",
+        "Porque hooks exigem composição."
+      ],
+      "correct_answer": "Porque UI muda por combinação de partes, e composição reduz hierarquias rígidas.",
+      "explanation": "Interfaces reais variam por combinação. Composição permite trocar partes sem criar árvores de classes rígidas."
+    },
+    {
+      "id": "quiz-2-1-2",
+      "type": "short_answer",
+      "question": "Quando container/presentational ainda é útil?",
+      "expected_answer": "Quando queremos separar busca e transformação de dados da renderização pura, tornando a UI mais fácil de testar, documentar e reutilizar.",
+      "explanation": "Mesmo com hooks, a fronteira entre lógica de dados e visualização continua relevante."
+    },
+    {
+      "id": "quiz-2-1-3",
+      "type": "code_review",
+      "question": "Um CourseCard recebe 22 props, incluindo estados de admin, quiz, essay e IA. Qual é o problema arquitetural principal?",
+      "expected_answer": "O componente provavelmente tem responsabilidades demais e está tentando representar variações incompatíveis. Deve ser quebrado por composição ou subcomponentes especializados.",
+      "explanation": "Props opcionais demais costumam revelar acoplamento e baixa coesão."
+    },
+    {
+      "id": "quiz-2-1-4",
+      "type": "prediction",
+      "question": "Um pai cria uma nova função inline a cada render e passa para um filho com React.memo. O filho pode re-renderizar?",
+      "expected_answer": "Sim. A função recebe nova identidade em cada render, então a comparação rasa de props detecta mudança.",
+      "explanation": "useCallback pode ajudar quando o filho memoizado depende de estabilidade referencial."
+    },
+    {
+      "id": "quiz-2-1-5",
+      "type": "multiple_choice",
+      "question": "Compound components são mais indicados para:",
+      "options": [
+        "Qualquer botão simples.",
+        "Componentes com subpartes coordenadas por estado compartilhado.",
+        "Substituir todos os hooks.",
+        "Evitar Context API sempre."
+      ],
+      "correct_answer": "Componentes com subpartes coordenadas por estado compartilhado.",
+      "explanation": "Tabs, Dialog, Select e Accordion são bons exemplos porque possuem subpartes relacionadas."
+    }
+  ],
+  "practical_exercise": {
+    "id": "practice-2-1-compound-workspace",
+    "title": "Refatore ExerciseWorkspace para Compound Component",
+    "starting_code": "type ExerciseWorkspaceProps = { activeTab: 'instructions' | 'editor' | 'result'; onTabChange: (tab: 'instructions' | 'editor' | 'result') => void; instructions: string; code: string; result?: string; onRun: () => void; }; export function ExerciseWorkspace(props: ExerciseWorkspaceProps) { return <section>{/* tabs e painéis acoplados */}</section>; }",
+    "problems_to_fix": [
+      "Estado e renderização de painéis estão acoplados",
+      "O componente conhece todos os painéis possíveis",
+      "Props crescem a cada variação",
+      "Acessibilidade dos tabs está incompleta"
+    ],
+    "solution_outline": "Criar ExerciseWorkspace.Provider com activeTab interno, subcomponentes Tabs, Trigger, Panel e Actions, validação de uso via hook de contexto e atributos ARIA nos triggers.",
+    "acceptance_criteria": [
+      "API final usa ExerciseWorkspace.Panel para conteúdo arbitrário",
+      "Triggers indicam aria-selected",
+      "Hook interno lança erro se usado fora do provider",
+      "Nenhum painel é hardcoded no componente principal"
+    ]
+  },
+  "summary_key_takeaways": [
+    "Componentes são contratos arquiteturais",
+    "Composição evita hierarquias rígidas e props opcionais excessivas",
+    "Container/presentational ainda ajuda a separar dados de UI",
+    "Compound components criam APIs expressivas para subpartes coordenadas",
+    "Memoização deve responder a um problema real, não a ansiedade"
+  ],
+  "next_lesson": {
+    "id": "lesson-2-2-hooks-profundo",
+    "title": "Hooks Profundo - useReducer, Context, Custom Hooks",
+    "preview": "Vamos aprofundar estado local complexo, custom hooks, Context e armadilhas de useEffect usando o tutor de IA como caso central."
+  },
+  "resources": [
+    {
+      "title": "React Docs - Passing Props to a Component",
+      "type": "article",
+      "link": "https://react.dev/learn/passing-props-to-a-component"
+    },
+    {
+      "title": "React Docs - Sharing State Between Components",
+      "type": "article",
+      "link": "https://react.dev/learn/sharing-state-between-components"
+    },
+    {
+      "title": "React Docs - memo",
+      "type": "article",
+      "link": "https://react.dev/reference/react/memo"
+    }
+  ]
+}

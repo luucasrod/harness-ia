@@ -1,0 +1,193 @@
+{
+  "lesson_id": "lesson-11-5-certificate-submission",
+  "title": "Capstone 11.5 - Certificate System & Final Submission (HMAC, PDF, badge)",
+  "module_id": "module-11",
+  "module_title": "Capstone Project: Build Your Harness Tutor",
+  "description": "Feche o ciclo do capstone: submissao validada contra evidencia objetiva, certificado assinado com HMAC-SHA256, PDF gerado no servidor, badge SVG publica e verificacao que qualquer pessoa consegue rodar.",
+  "duration_minutes": 180,
+  "word_count": 8787,
+  "target_audience": "Devs com CLI, API, dashboard e deploy prontos, fechando o ciclo de conclusao do capstone",
+  "learning_objectives": [
+    "Validar a submissao contra evidencia verificada por probe, nunca contra declaracao do aluno.",
+    "Bloquear a submissao de conveniencia com schema de 8 criterios exatos e unicos.",
+    "Assinar o certificado com HMAC-SHA256 sobre payload canonico e verificar recalculando a assinatura.",
+    "Gerar PDF de certificado no servidor com pdfkit, sem browser.",
+    "Emitir badge SVG publica, cacheavel, acessivel e com escape de saida.",
+    "Implementar idempotencia de submissao com chave (email, commitSha) unica no banco."
+  ],
+  "content_sections": [
+    {
+      "section_id": "evidencia-nao-declaracao",
+      "title": "Evidencia, nao declaracao",
+      "key_points": [
+        "A regra que define a qualidade do certificado: o sistema verifica evidencia que o aluno pode produzir, nunca a frase 'estou pronto'.",
+        "Oito criterios objetivos: pnpm verify, cobertura de core, os 4 subcomandos da CLI, /ready em producao, dashboard publicado, TTFT medido, chave ausente do bundle e imagem multi-stage com usuario nao-root.",
+        "Cada criterio e verificado por probe: runProbes faz a requisicao, mede o TTFT ate o primeiro chunk, varre os chunks do bundle e le o usuario do container.",
+        "Um probe sem timeout trava o comando inteiro; o withTimeout com Promise.race devolve false com motivo e o aluno ve o diagnostico.",
+        "Quatro verificacoes rodam no servidor e quatro no computador do aluno: nenhuma e infalivel, e o sistema assume isso em vez de fingir o contrario.",
+        "Um certificado que o proprio aluno pode emitir nao vale nada. Um sem verificacao e so um PDF bonito."
+      ],
+      "order": 1
+    },
+    {
+      "section_id": "assinatura-verificavel",
+      "title": "Assinatura verificavel como nucleo do sistema",
+      "key_points": [
+        "HMAC-SHA256 sobre o payload, com a chave secreta apenas no servidor e um endpoint publico /verify/:code que recalcula a assinatura.",
+        "HMAC e assinatura simetrica: verificacao publica pela rede, mas nao offline. Para verificacao independente do servidor, o caminho e Ed25519.",
+        "A serializacao canonica e obrigatoria: JSON.stringify nao garante ordem estavel de chaves, e certificado pode deixar de verificar depois de um deploy.",
+        "timingSafeEqual em vez de comparacao com ===, que retorna na primeira diferenca e vaza informacao por tempo.",
+        "Codigo Crockford base32 de 26 caracteres sem I/L/O/U, porque o certificado sera impresso, digitado de volta e usado como nome de arquivo.",
+        "O endpoint recalcula a assinatura em vez de confiar em campo do banco: banco editado nao engana quem recalcula."
+      ],
+      "order": 2
+    },
+    {
+      "section_id": "passo-a-passo-implementacao",
+      "title": "Passo a passo de implementacao (15 passos)",
+      "key_points": [
+        "Passos 1-3: SubmissionSchema no dominio com regex de SHA de 40 caracteres, restricao de repo publico, exige exatamente 8 criterios unicos, threshold com report.failed === 0; canonicalize, signClaims, verifySignature e generateCode em Crockford base32; e teste de assinatura cobrindo reordenacao de chaves, geracao de codigo e adulteracao de score.",
+        "Passo 4: model Certificate no Prisma com code e idempotencyKey unicos, payload em Json (e nao colunas) e revokedAt ja no schema, antes da rota consumir.",
+        "Passos 5-9: rota /submissions com idempotencia e 422 com criterios que falharam, /verify/:code que valida o formato do codigo e recalcula a assinatura, PDF com pdfkit em A4 landscape, rota do PDF com content-disposition e payload parseado, e badge SVG com role, title, cache-control e escape de saida.",
+        "Passos 10-12: comando submit com runProbes que faz as requisicoes de verdade, mede TTFT ate o primeiro chunk, varre o bundle e le o usuario do container, com timeout e --skip-network; step de CI gerando harness-tutor-report.json como artefato de 90 dias; e pagina /verify/[code] com robots index false.",
+        "Passos 13-15: teste de integracao do ciclo completo com checagem dos 4 primeiros bytes do PDF, dois testes que cobrem a conveniencia que o length(8) bloqueia, relatorio final com metricas reais e decisoes que pagaram, e submissao seguida de verificacao externa a maquina."
+      ],
+      "order": 3
+    },
+    {
+      "section_id": "armadilhas-de-assinatura",
+      "title": "Armadilhas de assinatura e de artefato publico",
+      "key_points": [
+        "Trocar canonicalize por JSON.stringify e a regressao mais sutil: passa em teste de roundtrip e quebra todos os certificados ja emitidos depois do deploy.",
+        "timingSafeEqual lanca com buffers de tamanhos diferentes, entao a checagem de tamanho precisa vir antes da chamada.",
+        "idempotencyKey por (studentEmail, commitSha) evita certificado duplicado quando o usuario aperta Enter duas vezes.",
+        "O .length(8) com refine de unicidade e o que impede a submissao de conveniencia: sem ele, dois criterios autodeclarados como passados produzem score 2/2 num certificado perfeito.",
+        "Badge precisa de escape de label e message: um nome com & quebra o XML e o SVG nao renderiza.",
+        "O code entra no nome do arquivo do PDF, o que exige um alfabeto sem ambiguos no gerador, e nao um cuidado na hora de exibir.",
+        "robots index false na pagina de verificacao evita que dados de aluno aparecam em busca por nome."
+      ],
+      "order": 4
+    },
+    {
+      "section_id": "fechamento-do-capstone",
+      "title": "Fechamento: o que o capstone realmente treinou",
+      "key_points": [
+        "Um worktree vazio virou monorepo de quatro pacotes, CLI de quatro comandos, dashboard com streaming, API em container e certificado verificavel.",
+        "O capstone nao era sobre construir um tutor de IA, era sobre atravessar as onze licoes anteriores sem atalho.",
+        "Cada licao anterior aparece aqui: fronteira de dominio, contrato de CLI, streaming, cache, testes, deploy e verificabilidade.",
+        "O relatorio final com as decisoes que pagaram e a prova de que o trabalho foi engenharia, nao execucao de passos."
+      ],
+      "order": 5
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-11-5-1",
+      "title": "Schema de submissao com evidencia",
+      "description": "SHA completo, repo publico, criterios tipados e threshold com exigencia de zero falhas.",
+      "code_or_diagram": "export const CriterionSchema = z.object({\n  id: z.enum([\"monorepo\", \"domain-tests\", \"cli\", \"api-live\", \"dashboard-live\", \"streaming\", \"no-secret-leak\", \"docker\"]),\n  label: z.string(),\n  passed: z.boolean(),\n  evidence: z.string().max(2000),\n  measured: z.record(z.string(), z.number()).optional(),\n});\n\nexport const SubmissionSchema = z.object({\n  studentName: z.string().min(3).max(120),\n  studentEmail: z.email(),\n  repoUrl: z.url().refine((u) => u.startsWith(\"https://github.com/\"), { message: \"repoUrl deve ser um repositorio publico do GitHub\" }),\n  commitSha: z.string().regex(/^[0-9a-f]{40}$/),\n  report: z.object({ harnessTutorVersion: z.string(), passed: z.number().int().nonnegative(), failed: z.number().int().nonnegative(), durationMs: z.number().int().nonnegative() }),\n  // Exatamente 8 e sem repeticao. Com min(1).max(20) o aluno poderia mandar so\n  // os 2 que passou e receber \"2/2\" num certificado aparentemente perfeito.\n  criteria: z.array(CriterionSchema).length(8).refine(\n    (list) => new Set(list.map((c) => c.id)).size === list.length,\n    \"cada criterio pode aparecer uma unica vez\",\n  ),\n  submittedAt: z.string().datetime(),\n});\n\nexport const PASS_THRESHOLD = 6;",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-11-5-2",
+      "title": "Serializacao canonica e assinatura HMAC",
+      "description": "Bytes estaveis, comparacao com tempo constante e codigo base32 sem ambiguos.",
+      "code_or_diagram": "export function canonicalize(claims: CertificateClaims): string {\n  return [\n    `code:${claims.code}`,\n    `studentName:${claims.studentName}`,\n    `studentEmail:${claims.studentEmail}`,\n    `repoUrl:${claims.repoUrl}`,\n    `commitSha:${claims.commitSha}`,\n    `score:${claims.score}`,\n    `total:${claims.total}`,\n    `issuedAt:${claims.issuedAt}`,\n  ].join(\"\\n\");\n}\n\nexport function signClaims(claims: CertificateClaims, secret: string): string {\n  return createHmac(\"sha256\", secret).update(canonicalize(claims)).digest(\"hex\");\n}\n\nexport function verifySignature(claims: CertificateClaims, secret: string, signature: string): boolean {\n  const a = Buffer.from(signClaims(claims, secret), \"utf8\");\n  const b = Buffer.from(signature, \"utf8\");\n  if (a.length !== b.length) return false; // timingSafeEqual lanca em tamanhos diferentes\n  return timingSafeEqual(a, b);\n}\n\n// Crockford base32: 32 chars, sem I/L/O/U. Como 256 % 32 === 0, nao ha vies de\n// modulo. 16 bytes saem em 26 caracteres de 5 bits = 130 bits de entropia.\nconst ALPHABET = \"0123456789ABCDEFGHJKMNPQRSTVWXYZ\";\nexport function generateCode(): string {\n  const bytes = randomBytes(16);\n  let bits = 0, value = 0, code = \"\";\n  for (const byte of bytes) {\n    value = (value << 8) | byte;\n    bits += 8;\n    while (bits >= 5) { code += ALPHABET[(value >>> (bits - 5)) & 31]; bits -= 5; }\n  }\n  if (bits > 0) code += ALPHABET[(value << (5 - bits)) & 31];\n  return code;\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-11-5-3",
+      "title": "Submissao com idempotencia",
+      "description": "Chave (email, commitSha) evita certificado duplicado e devolve o mesmo codigo em reenvio.",
+      "code_or_diagram": "const idempotencyKey = `${submission.studentEmail}:${submission.commitSha}`;\n\nconst existing = await deps.prisma.certificate.findUnique({ where: { idempotencyKey } });\nif (existing) {\n  return reply.send({ code: existing.code, status: \"already_issued\", score: existing.score });\n}\n\nconst grade = gradeSubmission(submission);\nif (!grade.eligible) {\n  return reply.code(422).send({ error: \"Criterios nao atendidos\", score: grade.score, required: PASS_THRESHOLD, failedCriteria: grade.failedCriteria });\n}\n\nconst claims: CertificateClaims = { code: generateCode(), studentName: submission.studentName, studentEmail: submission.studentEmail, repoUrl: submission.repoUrl, commitSha: submission.commitSha, score: grade.score, total: grade.total, issuedAt: new Date().toISOString() };\nconst signature = signClaims(claims, SIGNING_SECRET);\n\nawait deps.prisma.certificate.create({ data: { idempotencyKey, code: claims.code, signature, score: claims.score, total: claims.total, payload: claims } });\nreturn reply.code(201).send({ code: claims.code, status: \"issued\", score: claims.score, signature });",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-11-5-4",
+      "title": "Verificacao que recalcula a assinatura",
+      "description": "O endpoint publico ignora o banco como fonte de verdade e refaz o HMAC sobre o payload.",
+      "code_or_diagram": "export async function registerVerify(app: FastifyInstance, deps: { prisma: PrismaClient }): Promise<void> {\n  app.get(\"/verify/:code\", async (request, reply) => {\n    const { code } = request.params as { code: string };\n\n    // Formato validado ANTES do banco: evita query por qualquer string da URL.\n    if (!/^[0-9A-HJKMNP-TV-Z]{26}$/.test(code.toUpperCase())) {\n      return reply.code(400).send({ valid: false, reason: \"Formato de codigo invalido\" });\n    }\n\n    const record = await deps.prisma.certificate.findUnique({ where: { code: code.toUpperCase() } });\n    if (!record) return reply.code(404).send({ valid: false, reason: \"Certificado nao encontrado\" });\n\n    const parsed = CertificateClaimsSchema.safeParse(record.payload);\n    if (!parsed.success) return reply.code(500).send({ valid: false, reason: \"Payload corrompido\" });\n\n    const valid = verifySignature(parsed.data, SIGNING_SECRET, record.signature);\n\n    // Revogacao vive no registro, nao no payload assinado: incluir revokedAt no\n    // payload invalidaria a assinatura original.\n    if (record.revokedAt) {\n      return reply.send({ valid: false, reason: \"Certificado revogado\", revokedAt: record.revokedAt });\n    }\n\n    return reply.send({\n      valid,\n      studentName: parsed.data.studentName,\n      repoUrl: parsed.data.repoUrl,\n      commitSha: parsed.data.commitSha,\n      score: `${parsed.data.score}/${parsed.data.total}`,\n      issuedAt: parsed.data.issuedAt,\n      ...(valid ? {} : { reason: \"Assinatura invalida\" }),\n    });\n  });\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-11-5-5",
+      "title": "PDF do certificado e badge SVG",
+      "description": "pdfkit em Node puro para o PDF; badge SVG com escape de saida, tres estados e role/title para acessibilidade.",
+      "code_or_diagram": "const xml = (value: string): string =>\n  value.replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\").replace(/\"/g, \"&quot;\");\n\nexport async function registerBadge(app: FastifyInstance, deps: { prisma: PrismaClient }): Promise<void> {\n  app.get(\"/badge/:code.svg\", async (request, reply) => {\n    const record = await deps.prisma.certificate.findUnique({ where: { code } });\n\n    // Tres estados, nao dois: valido, revogado e inexistente.\n    const valid = record !== null && record.revokedAt === null;\n    const label = valid ? \"Harness IA Capstone\" : record ? \"certificado revogado\" : \"certificado nao encontrado\";\n    const message = valid ? `${record!.score}/${record!.total} criterios` : \"invalid\";\n\n    const safeLabel = xml(label), safeMessage = xml(message);\n    const w = Math.ceil(label.length * 7 + message.length * 6.5 + 24);\n    const svg = `<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"${w}\" height=\"20\" role=\"img\" aria-label=\"${safeLabel}: ${safeMessage}\">\n  <title>${safeLabel}: ${safeMessage}</title>\n  ...\n</svg>`;\n    return reply.header(\"content-type\", \"image/svg+xml\")\n      .header(\"cache-control\", \"public, max-age=3600\")\n      .send(svg);\n  });\n}",
+      "language": "typescript"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-11-5-1",
+      "type": "debugging",
+      "question": "Um certificado legitimo comeca a falhar na verificacao um dia depois de um deploy. Qual a causa mais provavel?",
+      "correct_answer": "A serializacao canonica mudou: canonicalize foi trocado por JSON.stringify, que nao garante ordem estavel de chaves. Os bytes mudaram, a assinatura mudou, e nenhum certificado emitido antes do deploy verifica mais.",
+      "explanation": "E a regressao mais sutil do sistema porque passa em teste de roundtrip (assina e verifica no mesmo processo) e so aparece em certificados antigos. E o motivo do teste de reordenacao de chaves com Object.keys existir."
+    },
+    {
+      "id": "q-11-5-2",
+      "type": "short_answer",
+      "question": "Por que verifySignature usa timingSafeEqual em vez de comparar strings com ===?",
+      "correct_answer": "Porque === retorna assim que encontra a primeira diferenca, vazando informacao por tempo sobre qual byte divergiu. timingSafeEqual percorre sempre o mesmo numero de comparacoes. A checagem de tamanho vem antes porque a funcao lanca com buffers de tamanhos diferentes.",
+      "explanation": "Ataque de temporizacao sobre assinatura e classico na literatura de criptografia aplicada. Com um codigo publico de 26 caracteres, a superficie e real."
+    },
+    {
+      "id": "q-11-5-3",
+      "type": "multiple_choice",
+      "question": "Qual o proposito da idempotencyKey composta por studentEmail e commitSha?",
+      "options": [
+        "Evitar certificado duplicado quando submit roda duas vezes, devolvendo o mesmo codigo com status already_issued.",
+        "Acelerar a busca do certificado por indice unico no banco.",
+        "Impedir que o mesmo aluno submeta dois capstone diferentes em datas distintas.",
+        "Assinar o payload com o commit para que a assinatura dependa do codigo-fonte."
+      ],
+      "correct_answer": "Evitar certificado duplicado quando submit roda duas vezes, devolvendo o mesmo codigo com status already_issued.",
+      "explanation": "O usuario apertar Enter duas vezes e o cenario mais comum. Sem a chave, cada reenvio cria um certificado novo e o suporte recebe meu certificado duplicou."
+    },
+    {
+      "id": "q-11-5-4",
+      "type": "short_answer",
+      "question": "Por que o endpoint /verify recalcula a assinatura em vez de ler um campo valid do banco?",
+      "correct_answer": "Porque recalcular torna a verificacao independente do conteudo do banco. Se alguem editar a linha e mudar score de 8 para 10, a assinatura deixa de bater. O banco ainda e consultado para achar o payload pelo code, mas ele e armazenamento, nao fonte de verdade.",
+      "explanation": "Confiar num campo valid gravado significa confiar em quem tem acesso de escrita no banco, que e exatamente quem o sistema tenta nao confiar cegamente."
+    },
+    {
+      "id": "q-11-5-5",
+      "type": "short_answer",
+      "question": "Por que nao usar puppeteer para gerar o PDF do certificado?",
+      "correct_answer": "Porque puppeteer baixa Chromium, adicionando cerca de 300MB a imagem e uma superficie de ataque enorme, para gerar um PDF de uma pagina. pdfkit e Node puro e faz o mesmo trabalho.",
+      "explanation": "E o trade-off de dependencia da Licao 9.1 aplicado a uma feature de borda: 300MB de imagem e de superficie de CVE para um PDF estatico."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-11-5",
+    "title": "Adicionar revogacao de certificado sem reassinar o payload",
+    "description": "A API recebe um pedido autenticado de revogacao com justificativa, marca o certificado como revogado, e /verify passa a retornar valid:false com o motivo. revokedAt fica na coluna, fora do payload assinado: a assinatura de emissao continua valendo, e o que e revogado e o direito de exibir, nao a prova de que o trabalho foi feito.",
+    "expected_solution": "POST /certificates/:code/revoke autenticado e com papel autorizado, gravando revokedAt, revocationReason e revokedBy no registro sem tocar em payload nem em signature. O que precisa de assinatura nova e o evento de revogacao, gravado a parte sobre { code, at, reason, by }, para que a justificativa seja verificavel e nao apenas confiavel no banco. /verify valida as duas coisas em sequencia: assinatura de emissao (o trabalho foi feito?) e ausencia de revogacao (o direito de exibir continua valendo?). Badge ganha o terceiro estado, que ja existe no Passo 9. docs/revocation.md documenta o procedimento e quem autoriza.",
+    "success_criteria": [
+      "A revogacao e irreversivel e o registro original permanece com a assinatura de emissao intacta",
+      "O payload de emissao nao e reescrito: revokedAt fica na coluna, e o teste prova que a assinatura antiga continua valendo",
+      "A justificativa da revogacao e verificavel por assinatura propria, e nao apenas lida do banco",
+      "A rota exige autenticacao e so papel autorizado revoga",
+      "revokeCertificate e idempotente: chamar duas vezes nao muda nada e nao duplica o evento",
+      "/verify distingue revogado, invalido e nao encontrado em tres respostas distintas",
+      "Nenhum teste depende de rede real; o segredo de assinatura e injetado"
+    ]
+  },
+  "resources": {
+    "official_docs": [
+      "Node.js crypto: createHmac, timingSafeEqual, randomBytes e a razao para comparacao de tempo constante.",
+      "pdfkit: API baseada em stream, accumulatei de chunks e resolucao do Buffer no evento end.",
+      "Zod 4: discriminatedUnion, refine em url e regex para SHA completo.",
+      "Fastify: app.inject para teste de integracao sem subir socket, e reply.code(422) com lista de criterios que falharam."
+    ],
+    "tools": [
+      "node:crypto (HMAC-SHA256, timingSafeEqual)",
+      "pdfkit",
+      "Zod 4",
+      "Prisma 6 (idempotencyKey com unique)",
+      "Fastify 5 (app.inject)"
+    ]
+  }
+}

@@ -1,0 +1,211 @@
+{
+  "lesson_id": "lesson-8-5-availability",
+  "title": "Availability - De 99% a 99.999%",
+  "module_id": "module-8",
+  "module_title": "System Design & Scalability",
+  "description": "Aprenda a medir e garantir alta disponibilidade. Entenda redundância, failover automático, disaster recovery e trade-offs de RTO/RPO vs custo.",
+  "duration_minutes": 45,
+  "target_audience": "Developers 2-5 anos, arquitetos iniciantes",
+  "learning_objectives": [
+    "Medir uptime corretamente (além de 'API responde')",
+    "Implementar redundância (multi-DC, multi-region, active-passive vs active-active)",
+    "Configurar health checks e failover automático",
+    "Desenhar disaster recovery (backups, geo-redundancy, point-in-time)",
+    "Entender trade-offs RTO vs RPO vs custo",
+    "Estabelecer SLA apropriado por fase de produto"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "Uptime é moeda: 99% = 3.7 dias/ano, 99.99% = 52 min/ano, 99.999% = 5 min/ano",
+        "Cada 9 adicional custa exponencialmente mais (não é linear)",
+        "Netflix target: 99.999% (5 nines), Netflix reality: ~99.99%",
+        "Startup pode começar 99%, escala para 99.99%+"
+      ]
+    },
+    {
+      "section_id": "measuring_uptime",
+      "title": "Medindo Uptime (12 minutos)",
+      "key_points": [
+        "Opção 1: API retorna 200 (superficial)",
+        "Opção 2: Funciona corretamente (resposta rápida, baixa taxa erro)",
+        "Opção 3: Usuário consegue completar ação (realista, complexo)",
+        "Calculando nines: each % = multiple 525,600 / 10",
+        "Google SLA conservador: promete 99.95%, realidade é melhor",
+        "Marketing SLA vs Real SLA: não são mesmos números"
+      ]
+    },
+    {
+      "section_id": "redundancy",
+      "title": "Redundância - Múltiplas Cópias (13 minutos)",
+      "key_points": [
+        "Single DC: 1 falha derruba tudo",
+        "Multi-DC (region): 1 DC falha, outro continua",
+        "Multi-region: diferente regiões, máxima resiliência",
+        "Active-Passive: active recebe tráfego, passive é standby",
+        "Active-Active: ambos recebem tráfego, mais eficiente mas complexo (consistency)",
+        "Netflix: active-active em 3 regiões, tráfego sempre distribuído"
+      ]
+    },
+    {
+      "section_id": "failover",
+      "title": "Failover - Detectar e Switch (13 minutos)",
+      "key_points": [
+        "Health checks: a cada 5s verifica API, database, lag replicação",
+        "Detecção de falha: timeout > 2s ou erro 500x = falha",
+        "Falhas consecutivas: 3x falha = remove de rotação",
+        "Failover automático: replica vira master, tráfego redistribui",
+        "Tempo de failover: 20-60s (aplicação precisa ser resilient)",
+        "RDS multi-AZ: failover automático, DNS transparente"
+      ]
+    },
+    {
+      "section_id": "disaster_recovery",
+      "title": "Disaster Recovery - Pior Caso (12 minutos)",
+      "key_points": [
+        "Cenários: datacenter queima, ransomware, accidental delete, app bug",
+        "Backup 3-2-1: 3 cópias, 2 mídias, 1 offsite",
+        "Geo-redundant backup: dados em múltiplas regiões",
+        "Air-gapped backup: offline, inacessível de rede (protege ransomware)",
+        "RTO (Recovery Time): 0 min (active-active) até 24h (backup restore)",
+        "RPO (Recovery Point): 0 data loss (sync) até 24h (daily backup)"
+      ]
+    },
+    {
+      "section_id": "synthesis",
+      "title": "Síntese - Uptime É Investimento (6 minutos)",
+      "key_points": [
+        "Medir corretamente: não só API responde",
+        "Redundância + health checks + failover = 99.9%",
+        "Disaster recovery = 99.99%+",
+        "Fase 1 (MVP): 99%, Fase 2: 99.9%, Fase 3: 99.99%"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-uptime-nines",
+      "title": "Linguagem de Nines: Traduzindo Porcentagem",
+      "description": "O que cada percentual significa em downtime real",
+      "code_or_diagram": "// 1 ANO = 525,600 MINUTOS\n\n99% (2 nines)\n  Downtime: 525,600 × 0.01 = 5,256 minutos\n  = 87.6 horas = 3.7 DIAS\n  Use case: Startup, não-crítico\n\n99.9% (3 nines)\n  Downtime: 525,600 × 0.001 = 525.6 minutos\n  = 8.76 HORAS\n  Use case: SaaS pago, aceitável\n\n99.99% (4 nines)\n  Downtime: 525,600 × 0.0001 = 52.56 minutos\n  = 1.76 HORAS\n  Use case: Netflix, AWS target\n\n99.999% (5 nines)\n  Downtime: 525,600 × 0.00001 = 5.256 minutos\n  Use case: Google core services, impossível sem rigor extremo\n\n99.9999% (6 nines)\n  Downtime: 52.56 SEGUNDOS por ano\n  Praticamente impossível"
+    },
+    {
+      "id": "ex-active-passive-vs-active-active",
+      "title": "Redundância: Active-Passive vs Active-Active",
+      "description": "Tradeoff entre simplicidade e eficiência",
+      "code_or_diagram": "// ACTIVE-PASSIVE\n\nUS East (Active):\n  - Recebe tráfego\n  - Escreve dados\n  - → replicação\n\nUS West (Passive):\n  - Standby, pronto\n  - Recebe replicação\n  - NÃO recebe tráfego\n\nFalha US East:\n  1. Detecta (health check falha)\n  2. Muda DNS: tráfego → US West\n  3. US West vira Active\n  4. Tempo: 1-5 minutos\n\nVantagem: Simples, strong consistency\nDesvantagem: Capacidade de US West 'desperdiçada' (não usa)\n\n// ACTIVE-ACTIVE\n\nUS East:\n  - Recebe tráfego\n  - Escreve dados\n\nUS West:\n  - Recebe tráfego\n  - Escreve dados\n\nFalha US East:\n  1. Tráfego já estava balanceado\n  2. US West continua com sua metade\n  3. Tempo: ~0 (transparente)\n\nVantagem: Máximo throughput, RTO = 0\nDesvantagem: Consistência distribuída é hard, replicação complexa"
+    },
+    {
+      "id": "ex-health-checks",
+      "title": "Health Checks: Detectando Falhas Rápido",
+      "description": "Como saber quando sistema está ruim",
+      "code_or_diagram": "// A cada 5 segundos, load balancer checa:\n\nAPI Server 1:\n  GET /health → timeout > 2s? Falha\n  Resposta 500+? Falha\n  Resposta 200, latência < 100ms? OK\n\nDatabase (Primary):\n  SELECT 1 FROM dual → timeout? Falha\n  Replication lag > 10s? Degraded (alguns removem de rotação)\n  Response < 100ms? OK\n\nCache (Redis):\n  PING → timeout? Falha\n  Response < 1ms? OK\n\n// FALHA DETECTION\nServer 1: OK, OK, OK, FAIL, FAIL, FAIL (3 falhas consecutivas)\n  Ação: Remove de rotação\n  Tráfego redireciona para Server 2, 3\n\nServer 1 volta: OK, OK, OK, OK (4 sucessos)\n  Ação: Recoloca na rotação\n  Tráfego balanceado de novo\n\n// RESULTADO\nDetecção de falha: 15-20 segundos (3 health checks × 5s)\nTempo total: +1-2 minutos (DNS propagation, client retry)\nUsuário vê: breve latência, depois recovery automático"
+    },
+    {
+      "id": "ex-backup-3-2-1",
+      "title": "Backup 3-2-1: Estratégia Completa",
+      "description": "Como organizar backups para disaster recovery",
+      "code_or_diagram": "// REGRA: 3 CÓPIAS, 2 MÍDIAS, 1 OFFSITE\n\nCópia 1: Production Database (US East)\n  - Mídia: Block storage (EBS)\n  - Localização: US-East-1a\n  - RTO: N/A (is production)\n  - RPO: Real-time\n\nCópia 2: Hot Replica (US East)\n  - Mídia: Block storage (EBS)\n  - Localização: US-East-1b (different AZ)\n  - RTO: ~60 segundos (failover automático)\n  - RPO: ~5 segundos (async replication lag)\n  - Purpose: failover rápido, mesma região\n\nCópia 3: Cold Backup (EU)\n  - Mídia: Object storage (S3)\n  - Localização: EU-West-1 (different region)\n  - RTO: ~2-4 horas (restore from S3)\n  - RPO: ~24 horas (daily snapshot)\n  - Purpose: disaster recovery, datacenter failure\n\n// MÍDIAS DIFERENTES ✓\n  - Database instance (EBS)\n  - Replica (EBS)\n  - S3 backup (object storage)\n\n// OFFSITE ✓\n  - Production: US-East\n  - Replica: US-East (different AZ)\n  - S3: EU (different region)\n\n// SCENARIOS\nServer crash → Failover to replica (1 min)\nRegion outage → Restore from S3 (2-4 hours)\nRansomware → Restore from timestamped S3 backup (pre-encryption)"
+    },
+    {
+      "id": "ex-rto-vs-rpo",
+      "title": "RTO vs RPO: Qual é Seu Tradeoff?",
+      "description": "Recuperação rápida vs zero data loss",
+      "code_or_diagram": "// RTO = Recovery Time Objective (quando fica online?)\n// RPO = Recovery Point Objective (quanto de dados perde?)\n\n// OPÇÃO 1: ACTIVE-ACTIVE\nRTO: 0 (já está online em outro datacenter)\nRPO: ~0 (síncrono, sem perda)\nCusto: 2-3x infraestrutura\nUso: Netflix, Google (crítico)\n\n// OPÇÃO 2: ACTIVE-PASSIVE COM FAILOVER AUTO\nRTO: 1-2 minutos (detecta + failover)\nRPO: ~5-10 segundos (async lag)\nCusto: 1.5x infraestrutura (replica)\nUso: AWS RDS (recommended)\n\n// OPÇÃO 3: MANUAL FAILOVER\nRTO: 30-60 minutos (engineer vê alerta, decide, manual switch)\nRPO: ~5-10 segundos (async lag)\nCusto: 1.5x infraestrutura\nUso: Não recomendado (muito lento)\n\n// OPÇÃO 4: BACKUP RESTORE\nRTO: 2-24 horas (restaurar de S3 é lento)\nRPO: 24 horas (daily backup)\nCusto: 0.3x (só backup storage)\nUso: Non-critical data, archival\n\n// NETFLIX STRATEGY\nIntra-region: Síncrono (RTO=0, RPO=0)\nInter-region: Assíncrono (RTO=1-2min, RPO=5s)\n  -> Consegue failover e também eventual consistency"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-8-5-1",
+      "type": "multiple_choice",
+      "question": "Qual é o SLA apropriado para MVP de plataforma educacional?",
+      "options": [
+        "99.999% (5 nines, Netflix-scale impossível)",
+        "99.9% (3 nines, 8.76h downtime/ano aceitável)",
+        "99% (2 nines, startup básico)",
+        "Depende; 99.9% é sweet spot custo vs confiabilidade"
+      ],
+      "correct_answer": "Depende; 99.9% é sweet spot custo vs confiabilidade",
+      "explanation": "99% é aceitável mas frágil. 99.99% é caro (multi-region). 99.9% (8.76h/ano) é bom balanço: precisa multi-DC failover, mas não extreme complexity. Crescer para 99.99% depois quando scaled."
+    },
+    {
+      "id": "ex-8-5-2",
+      "type": "short_answer",
+      "question": "Se datacenter US-East queima, quanto tempo demora restaurar de S3 backup? Por quê?",
+      "expected_answer": "2-4 horas. Razão: S3 tem dados completos mas é object storage (não banco pronto). Precisa: (1) spin novo database, (2) restore dados de S3, (3) verificar integridade, (4) switchar DNS. Não é rápido, é lento.",
+      "explanation": "S3 é cold storage (armazenagem, não performance). Restaurar é operação lenta. Por isso precisa replicação quente (1-2 min failover) para casos comuns, S3 só para pior caso (datacenter inteiro falha)."
+    },
+    {
+      "id": "ex-8-5-3",
+      "type": "multiple_choice",
+      "question": "Active-Active vs Active-Passive. Qual tem menor RTO?",
+      "options": [
+        "Active-Passive (mais simples, recupera rápido)",
+        "Active-Active (RTO ~0, já está online em outro lugar)",
+        "Ambas têm RTO similar (~5 minutos)",
+        "Depende de health check latency"
+      ],
+      "correct_answer": "Active-Active (RTO ~0, já está online em outro lugar)",
+      "explanation": "Active-Active: tráfego já distribuído. 1 DC falha, usuários dele já estão em outro (transparente). RTO = 0 porque não precisa failover (já está lá). Active-Passive: detecta, failover, DNS propaga = 1-5 minutos."
+    },
+    {
+      "id": "ex-8-5-4",
+      "type": "code_review",
+      "question": "Sistema tem RPO de 24h (daily S3 backup). Ransomware cifra database. Consegue restaurar sem perda total?",
+      "expected_answer": "Consegue restaurar ao estado de 24h antes de ataque (perde 24h de dados). Mas se backup também foi cifrado (possível se ransomware teve acesso a S3), perde tudo. Solução: air-gapped backup (offline, sem acesso de rede).",
+      "explanation": "RPO 24h significa: pode perder até 24h de dados. Se backup em S3 foi cifrado, perde tudo. Air-gapped (offline ou diferentes credentials) protege: mesmo que ransomware compromete production, não consegue cifrar backup offline."
+    },
+    {
+      "id": "ex-8-5-5",
+      "type": "prediction",
+      "question": "Você implementa backup 3-2-1: prod, replica (same region), S3 backup (other region). Que ainda falta para 99.99% uptime?",
+      "options": [
+        "Nada; 3-2-1 cobre 99.99%",
+        "Health checks e failover automático (precisa detectar e reagir rápido)",
+        "Mais backups (need 5-2-1 para 99.99%)",
+        "Multi-region active-active (single region não aguenta 99.99%)"
+      ],
+      "correct_answer": "Health checks e failover automático (precisa detectar e reagir rápido)",
+      "explanation": "3-2-1 é infrastructure. Mas RTO (tempo de failover) é crítico. Sem health checks e failover automático, leva minutos detectar e reagir manualmente = falha SLA. Com automático: failover em 60s = 99.9% ok, mas 99.99% precisa multi-region (active-active pra RTO=0)."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-8-5",
+    "title": "Design: Plano de Disponibilidade e Disaster Recovery",
+    "description": "Desenhe estratégia de uptime, redundância e backup para plataforma educacional",
+    "context": "Plataforma de 1M usuários ativos. Crítico: não perder dados de pagamento. Aceitável: 1h downtime/ano.",
+    "tasks": [
+      {
+        "task_id": "task-1",
+        "title": "SLA e Estratégia",
+        "description": "1h downtime/ano = qual % de uptime? Qual estratégia recomenda?",
+        "hints": ["1h = 60 min, 1 ano = 525,600 min", "Cálcula: (525,600 - 60) / 525,600 = ?", "Que requer: single region? multi-region? active-active?"],
+        "rubric": "Calcular % correto (~99.99%). Recomendar estratégia apropriada (multi-DC active-passive ou active-active)"
+      },
+      {
+        "task_id": "task-2",
+        "title": "Redundância Design",
+        "description": "Desenhe: primary, replica, backup regions. Qual é RTO/RPO de cada?",
+        "hints": ["Primary: latência 0", "Replica (same region): latência ~60s failover", "Backup (other region): latência ~2-4h restore"],
+        "rubric": "Diagrama claro: 3+ datacenters com RTO/RPO labels"
+      },
+      {
+        "task_id": "task-3",
+        "title": "Backup 3-2-1",
+        "description": "Onde colocar 3 cópias? Quais mídias? Qual é offsite?",
+        "hints": ["Cópia 1: production", "Cópia 2: replica", "Cópia 3: long-term", "Mídias: EBS, S3?", "Offsite: outro region"],
+        "rubric": "Detalhar 3 cópias, 2+ mídias, 1+ offsite localização"
+      },
+      {
+        "task_id": "task-4",
+        "title": "Disaster Scenarios",
+        "description": "Datacenter A falha. Depois, Datacenter B falha (cascata rara). Recuperação?",
+        "hints": ["Failover A→B: OK", "Failover B: agora só tem C", "Restaurar de backup: precisa?"],
+        "rubric": "Mostrar handling cada cenário, RTO estimado"
+      }
+    ],
+    "expected_output": "Documento com: (1) SLA target + cálculo, (2) Arquitetura redundância, (3) Backup 3-2-1 com localização, (4) Disaster scenarios + recovery plan"
+  }
+}

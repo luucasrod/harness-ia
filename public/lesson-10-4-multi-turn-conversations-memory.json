@@ -1,0 +1,224 @@
+{
+  "lesson_id": "lesson-10-4-multi-turn-conversations-memory",
+  "title": "Multi-turn Conversations & Memory - Estado, Relevancia e Continuidade",
+  "module_id": "module-10",
+  "module_title": "Claude AI Integration",
+  "description": "Aprenda a manter conversas longas com Claude sem explodir tokens: historico, resumo, memoria de aprendizagem, relevance filtering e persistencia segura.",
+  "duration_minutes": 95,
+  "word_count": 6572,
+  "target_audience": "Developers intermediarios criando features de IA em plataforma educacional",
+  "learning_objectives": [
+    "Persistir conversas por aula, usuario e objetivo de aprendizagem.",
+    "Distinguir historico recente, resumo de conversa e memoria duradoura.",
+    "Selecionar mensagens relevantes antes de chamar Claude.",
+    "Implementar resumo incremental para reduzir tokens.",
+    "Guardar memoria pedagogica sem armazenar dados sensiveis desnecessarios.",
+    "Projetar UX de continuidade entre sessoes."
+  ],
+  "content_sections": [
+    {
+      "section_id": "por-que-multi-turn-e-dificil",
+      "title": "Por que multi-turn e dificil",
+      "key_points": [
+        "Mandar toda conversa sempre e simples, caro e eventualmente ruim.",
+        "Memoria nao e transcricao; e um conjunto de fatos uteis, consentidos e revisaveis.",
+        "Relevancia deve considerar aula atual, exercicio atual e objetivo do aluno.",
+        "Resumo incremental precisa preservar decisoes, duvidas abertas e erros recorrentes.",
+        "O aluno deve poder limpar ou revisar memoria quando apropriado."
+      ],
+      "order": 1
+    },
+    {
+      "section_id": "estado-de-conversa-versus-memoria-duradoura",
+      "title": "Estado de conversa versus memoria duradoura",
+      "key_points": [
+        "Mandar toda conversa sempre e simples, caro e eventualmente ruim.",
+        "Memoria nao e transcricao; e um conjunto de fatos uteis, consentidos e revisaveis.",
+        "Relevancia deve considerar aula atual, exercicio atual e objetivo do aluno.",
+        "Resumo incremental precisa preservar decisoes, duvidas abertas e erros recorrentes.",
+        "O aluno deve poder limpar ou revisar memoria quando apropriado."
+      ],
+      "order": 2
+    },
+    {
+      "section_id": "janela-de-contexto-e-compactacao",
+      "title": "Janela de contexto e compactacao",
+      "key_points": [
+        "Mandar toda conversa sempre e simples, caro e eventualmente ruim.",
+        "Memoria nao e transcricao; e um conjunto de fatos uteis, consentidos e revisaveis.",
+        "Relevancia deve considerar aula atual, exercicio atual e objetivo do aluno.",
+        "Resumo incremental precisa preservar decisoes, duvidas abertas e erros recorrentes.",
+        "O aluno deve poder limpar ou revisar memoria quando apropriado."
+      ],
+      "order": 3
+    },
+    {
+      "section_id": "relevance-filtering",
+      "title": "Relevance filtering",
+      "key_points": [
+        "Mandar toda conversa sempre e simples, caro e eventualmente ruim.",
+        "Memoria nao e transcricao; e um conjunto de fatos uteis, consentidos e revisaveis.",
+        "Relevancia deve considerar aula atual, exercicio atual e objetivo do aluno.",
+        "Resumo incremental precisa preservar decisoes, duvidas abertas e erros recorrentes.",
+        "O aluno deve poder limpar ou revisar memoria quando apropriado."
+      ],
+      "order": 4
+    },
+    {
+      "section_id": "resumo-incremental",
+      "title": "Resumo incremental",
+      "key_points": [
+        "Mandar toda conversa sempre e simples, caro e eventualmente ruim.",
+        "Memoria nao e transcricao; e um conjunto de fatos uteis, consentidos e revisaveis.",
+        "Relevancia deve considerar aula atual, exercicio atual e objetivo do aluno.",
+        "Resumo incremental precisa preservar decisoes, duvidas abertas e erros recorrentes.",
+        "O aluno deve poder limpar ou revisar memoria quando apropriado."
+      ],
+      "order": 5
+    },
+    {
+      "section_id": "memoria-pedagogica-do-aluno",
+      "title": "Memoria pedagogica do aluno",
+      "key_points": [
+        "Mandar toda conversa sempre e simples, caro e eventualmente ruim.",
+        "Memoria nao e transcricao; e um conjunto de fatos uteis, consentidos e revisaveis.",
+        "Relevancia deve considerar aula atual, exercicio atual e objetivo do aluno.",
+        "Resumo incremental precisa preservar decisoes, duvidas abertas e erros recorrentes.",
+        "O aluno deve poder limpar ou revisar memoria quando apropriado."
+      ],
+      "order": 6
+    },
+    {
+      "section_id": "arquitetura-de-chat-persistente",
+      "title": "Arquitetura de chat persistente",
+      "key_points": [
+        "Mandar toda conversa sempre e simples, caro e eventualmente ruim.",
+        "Memoria nao e transcricao; e um conjunto de fatos uteis, consentidos e revisaveis.",
+        "Relevancia deve considerar aula atual, exercicio atual e objetivo do aluno.",
+        "Resumo incremental precisa preservar decisoes, duvidas abertas e erros recorrentes.",
+        "O aluno deve poder limpar ou revisar memoria quando apropriado."
+      ],
+      "order": 7
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-10-4-1",
+      "title": "Modelo de dados para conversas",
+      "description": "Separa mensagens brutas, resumo e memoria pedagogica.",
+      "code_or_diagram": "type Conversation = {\n  id: string;\n  userId: string;\n  lessonId: string;\n  summary: string | null;\n  createdAt: Date;\n  updatedAt: Date;\n};\n\ntype ConversationMessage = {\n  conversationId: string;\n  role: \"user\" | \"assistant\";\n  content: string;\n  tokenEstimate: number;\n  createdAt: Date;\n};",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-4-2",
+      "title": "Selecao de contexto recente",
+      "description": "Inclui mensagens recentes ate um budget de tokens.",
+      "code_or_diagram": "export function selectRecentMessages(messages: ConversationMessage[], budget = 5000) {\n  const selected: ConversationMessage[] = [];\n  let total = 0;\n\n  for (const msg of [...messages].reverse()) {\n    if (total + msg.tokenEstimate > budget) break;\n    selected.push(msg);\n    total += msg.tokenEstimate;\n  }\n\n  return selected.reverse();\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-4-3",
+      "title": "Resumo incremental",
+      "description": "Compacta trechos antigos sem perder estado pedagogico.",
+      "code_or_diagram": "export async function summarizeConversation(input: {\n  oldSummary: string | null;\n  messagesToCompact: ConversationMessage[];\n}) {\n  const content = input.messagesToCompact.map((m) => `${m.role}: ${m.content}`).join(\"\\n\");\n  const response = await anthropic.messages.create({\n    model: CLAUDE_MODELS.fast,\n    max_tokens: 700,\n    temperature: 0,\n    system: \"Summarize tutoring conversation state. Preserve misconceptions, decisions, open questions, and promised next steps.\",\n    messages: [{ role: \"user\", content: `<old_summary>${input.oldSummary ?? \"\"}</old_summary><new_messages>${content}</new_messages>` }],\n  });\n  return textFrom(response);\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-4-4",
+      "title": "Memoria pedagogica revisavel",
+      "description": "Armazena sinais uteis sem guardar informacao sensivel.",
+      "code_or_diagram": "export async function updateLearnerMemory(userId: string, signal: {\n  concept: string;\n  status: \"struggling\" | \"improving\" | \"mastered\";\n  evidence: string;\n}) {\n  await db.learnerMemory.upsert({\n    where: { userId_concept: { userId, concept: signal.concept } },\n    create: { userId, ...signal },\n    update: { status: signal.status, evidence: signal.evidence, updatedAt: new Date() },\n  });\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-4-5",
+      "title": "Montagem final de mensagens multi-turn",
+      "description": "Combina system prompt, resumo, memoria e mensagens recentes.",
+      "code_or_diagram": "export function buildClaudeMessages(input: {\n  summary?: string | null;\n  memory: string[];\n  recent: ConversationMessage[];\n  question: string;\n}) {\n  const context = `<conversation_summary>${input.summary ?? \"None\"}</conversation_summary>\n<learner_memory>${input.memory.join(\"\\n\") || \"None\"}</learner_memory>`;\n\n  return [\n    { role: \"user\" as const, content: context },\n    ...input.recent.map((m) => ({ role: m.role, content: m.content })),\n    { role: \"user\" as const, content: input.question },\n  ];\n}",
+      "language": "typescript"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-10-4-1",
+      "type": "short_answer",
+      "question": "Por que nao enviar todo o historico sempre?",
+      "correct_answer": "Porque aumenta custo, latencia, risco de confusao e pode estourar a janela de contexto.",
+      "explanation": "Porque aumenta custo, latencia, risco de confusao e pode estourar a janela de contexto."
+    },
+    {
+      "id": "q-10-4-2",
+      "type": "multiple_choice",
+      "question": "Qual diferenca entre resumo e memoria?",
+      "options": [
+        "Resumo representa a conversa; memoria representa fatos pedagogicos duradouros sobre o aluno.",
+        "Ignorar o problema e aumentar max_tokens",
+        "Enviar a API key para o browser",
+        "Remover logs para reduzir custo"
+      ],
+      "correct_answer": "Resumo representa a conversa; memoria representa fatos pedagogicos duradouros sobre o aluno.",
+      "explanation": "Resumo representa a conversa; memoria representa fatos pedagogicos duradouros sobre o aluno."
+    },
+    {
+      "id": "q-10-4-3",
+      "type": "debugging",
+      "question": "O que relevance filtering deve priorizar?",
+      "correct_answer": "Aula atual, exercicio atual, duvidas abertas e mensagens que mudam a resposta.",
+      "explanation": "Aula atual, exercicio atual, duvidas abertas e mensagens que mudam a resposta."
+    },
+    {
+      "id": "q-10-4-4",
+      "type": "short_answer",
+      "question": "Quando compactar mensagens?",
+      "correct_answer": "Quando o historico antigo ultrapassa budget ou deixa de ser necessario em detalhe.",
+      "explanation": "Quando o historico antigo ultrapassa budget ou deixa de ser necessario em detalhe."
+    },
+    {
+      "id": "q-10-4-5",
+      "type": "multiple_choice",
+      "question": "Qual risco de memoria permanente?",
+      "options": [
+        "Guardar dados sensiveis, errados ou sem consentimento; por isso precisa revisao e limpeza.",
+        "Ignorar o problema e aumentar max_tokens",
+        "Enviar a API key para o browser",
+        "Remover logs para reduzir custo"
+      ],
+      "correct_answer": "Guardar dados sensiveis, errados ou sem consentimento; por isso precisa revisao e limpeza.",
+      "explanation": "Guardar dados sensiveis, errados ou sem consentimento; por isso precisa revisao e limpeza."
+    },
+    {
+      "id": "q-10-4-6",
+      "type": "debugging",
+      "question": "O que um bom resumo preserva?",
+      "correct_answer": "Misconceptions, decisoes, tentativas, proximos passos e contexto essencial.",
+      "explanation": "Misconceptions, decisoes, tentativas, proximos passos e contexto essencial."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-10-4",
+    "title": "Chat tutor com resumo e memoria",
+    "description": "Implemente persistencia de conversa que seleciona mensagens recentes, inclui resumo e atualiza memoria pedagogica quando o aluno melhora.",
+    "expected_solution": "O gabarito contem tabelas Conversation, Message e LearnerMemory, seletor por budget, summarizer com Claude rapido, builder de mensagens, endpoint de chat e teste que prova que conversas longas ficam abaixo do limite configurado.",
+    "success_criteria": [
+      "Server-side only para chamadas Claude",
+      "Entrada validada",
+      "Prompt ou contrato versionado",
+      "Uso, custo, latencia e status registrados",
+      "Fallback ou tratamento de erro implementado",
+      "Testes cobrindo caminho feliz e falhas"
+    ]
+  },
+  "resources": {
+    "official_docs": [
+      "Anthropic Claude Platform Docs: API overview, Messages API, Authentication, Models overview, Pricing, Streaming messages, Rate limits, Errors, Prompting best practices.",
+      "Use current model and pricing IDs as configuration, not constants embedded across application code."
+    ],
+    "tools": [
+      "@anthropic-ai/sdk",
+      "zod",
+      "p-limit or p-queue",
+      "OpenTelemetry/logging",
+      "Next.js API routes"
+    ]
+  }
+}

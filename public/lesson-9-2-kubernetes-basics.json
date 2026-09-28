@@ -1,0 +1,124 @@
+{
+  "id": "9-2",
+  "moduleId": "9",
+  "module": "Module 9: DevOps & Containerization",
+  "lessonNumber": "9.2",
+  "title": "Kubernetes Basics - Orquestração em Produção",
+  "duration": "60 min",
+  "wordCount": 2912,
+  "objectives": [
+    "Entender arquitetura Kubernetes (control plane, nodes, resources)",
+    "Escrever Deployment YAML (replicação, health checks, resources)",
+    "Entender Services, Pods, e networking",
+    "Implementar auto-healing e rolling updates",
+    "Deploy hands-on: Minikube local com app real"
+  ],
+  "sections": [
+    {"id": "intro", "title": "Introdução"},
+    {"id": "architecture", "title": "Arquitetura Kubernetes"},
+    {"id": "yaml-manifest", "title": "YAML - Descrevendo o Que Você Quer"},
+    {"id": "self-healing", "title": "Self-Healing e Scaling"},
+    {"id": "troubleshooting", "title": "Troubleshooting e Best Practices"}
+  ],
+  "keyTakeaways": [
+    "K8s gerencia containers em escala: múltiplos nós, auto-scaling, self-healing",
+    "Control plane toma decisões (scheduler, controllers, API)",
+    "Manifests YAML descrevem estado desejado: K8s mantém esse estado",
+    "Probes garantem saúde: livenessProbe mata pods mortos, readinessProbe segura tráfego",
+    "Rolling updates = zero-downtime deploy"
+  ],
+  "exercises": {
+    "main": {
+      "id": "exercise-minikube-deploy",
+      "type": "hands-on",
+      "title": "Deploy App em Minikube (K8s Local)",
+      "description": "Provisionar Kubernetes local, fazer deploy de app Docker, escalar, e fazer rolling update",
+      "estimatedTime": "45 min",
+      "steps": [
+        {"number": 1, "title": "Setup Minikube", "description": "Instalar e iniciar cluster local"},
+        {"number": 2, "title": "Criar Namespace", "description": "kubectl create namespace tutor-ia"},
+        {"number": 3, "title": "Deployment YAML", "description": "Criar manifests com replicação e health checks"},
+        {"number": 4, "title": "Service YAML", "description": "Expor pods via LoadBalancer"},
+        {"number": 5, "title": "Deploy", "description": "kubectl apply -f k8s/"},
+        {"number": 6, "title": "Escalar", "description": "kubectl scale deployment --replicas=5"},
+        {"number": 7, "title": "Rolling Update", "description": "kubectl set image deployment (sem downtime)"},
+        {"number": 8, "title": "Simular Falha", "description": "kubectl delete pod (ver auto-heal)"}
+      ],
+      "successCriteria": [
+        "Minikube rodando (minikube status = running)",
+        "3 pods em estado \"Running\"",
+        "curl health retorna 200",
+        "Scale pra 5, depois pra 3 (números mudam)",
+        "Update de versão sem downtime",
+        "Simular falha, ver pod recriado"
+      ],
+      "hints": [
+        "Minikube simula cluster K8s em 1 máquina",
+        "imagePullPolicy: Never = use local image",
+        "Resources (requests/limits) são obrigatórios em produção",
+        "Health checks salvam sua vida em produção",
+        "Rollout status monitora deploy em tempo real"
+      ]
+    }
+  },
+  "quiz": [
+    {
+      "id": "q1",
+      "number": 1,
+      "type": "choice",
+      "difficulty": "fundamental",
+      "question": "Qual é a unidade mínima deployável em Kubernetes?",
+      "options": [
+        {"text": "Container", "correct": false},
+        {"text": "Pod", "correct": true},
+        {"text": "Node", "correct": false},
+        {"text": "Service", "correct": false}
+      ],
+      "explanation": "Pod é a menor unidade. Pode ter múltiplos containers, mas geralmente 1. Pods são efêmeros (podem ser criados/deletados)."
+    },
+    {
+      "id": "q2",
+      "number": 2,
+      "type": "short_answer",
+      "difficulty": "intermediate",
+      "question": "Você configura `replicas: 3` no seu Deployment. Um pod morre. O que Kubernetes faz?",
+      "expectedAnswer": "Detecta que só 2 pods estão rodando (quer 3), cria novo pod automaticamente. Self-healing."
+    },
+    {
+      "id": "q3",
+      "number": 3,
+      "type": "code_review",
+      "difficulty": "intermediate",
+      "question": "Qual problema há com essa configuração?\n\n```yaml\nlivenessProbe:\n  httpGet:\n    path: /health\n    port: 8000\n  initialDelaySeconds: 1\n  periodSeconds: 1\n```",
+      "expectedAnswer": "initialDelaySeconds=1 é muito curto (app pode estar ainda inicializando). periodSeconds=1 gera muitas requisições. Melhor: initialDelaySeconds=10, periodSeconds=10."
+    },
+    {
+      "id": "q4",
+      "number": 4,
+      "type": "prediction",
+      "difficulty": "intermediate",
+      "question": "Você faz deploy de versão 1.0.1 com `kubectl set image`. Acontece erro. Como revertê-lo?",
+      "options": [
+        {"text": "`kubectl delete deployment` e recriar", "correct": false},
+        {"text": "`kubectl rollout undo`", "correct": true},
+        {"text": "Editar YAML manualmente", "correct": false},
+        {"text": "Não dá, precisa destruir cluster", "correct": false}
+      ],
+      "explanation": "`kubectl rollout undo` reverte pra versão anterior. Rollout history rastreia todas as versões."
+    },
+    {
+      "id": "q5",
+      "number": 5,
+      "type": "debugging",
+      "difficulty": "intermediate",
+      "question": "Pod está em status 'ImagePullBackOff'. O que significa?",
+      "options": [
+        {"text": "Kubernetes não consegue puxar a image Docker", "correct": true},
+        {"text": "Pod foi deletado", "correct": false},
+        {"text": "Pod está com erro de CPU", "correct": false},
+        {"text": "Service não está configurado", "correct": false}
+      ],
+      "explanation": "ImagePullBackOff = image não encontrada ou acesso negado. Verificar registry, credenciais, nome da image."
+    }
+  ]
+}

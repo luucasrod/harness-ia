@@ -1,0 +1,150 @@
+{
+  "lesson_id": "lesson-5-2-websockets",
+  "title": "WebSockets - Real-time em Escala",
+  "description": "WebSocket é a diferença entre notificações que chegam em 500ms (polling) e 10ms (push). Aprenda padrões, escala distribuída com Redis, e reconexão resiliente.",
+  "module_id": "module-5",
+  "duration_minutes": 40,
+  "learning_objectives": [
+    "Entender HTTP vs WebSocket: quando polling é aceitável vs quando você precisa de bidirecional",
+    "Implementar padrões de real-time: eventos simples, pub/sub, state sync",
+    "Escalar horizontalmente com Redis como message broker entre servidores",
+    "Implementar reconexão com backoff exponencial e sincronização",
+    "Usar Socket.IO para broadcast, salas e eventos estruturados"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (6 minutos)",
+      "key_points": [
+        "HTTP é request-response: cliente pede, servidor responde — servidor não pode iniciar",
+        "Polling = pergunta a cada segundo 'atualizou?' — caro, lento (centenas de ms)",
+        "WebSocket = conexão TCP persistente bidirecional — servidor pode enviar a qualquer hora",
+        "Escala, consistência, falhas: WebSocket traz desafios arquiteturais novos"
+      ]
+    },
+    {
+      "section_id": "http_vs_websocket",
+      "title": "HTTP vs WebSocket (10 minutos)",
+      "key_points": [
+        "HTTP: request-response, stateless, cacheable, muitas requisições = latência alta",
+        "WebSocket: bidirecional, estateful, latência baixa (push), mas escala complexa",
+        "Trade-off: latência vs escala vs complexidade — cada um tem seu lugar",
+        "WebSocket vence para notificações urgentes; HTTP vence para APIs REST"
+      ]
+    },
+    {
+      "section_id": "patterns",
+      "title": "Padrões Real-time (14 minutos)",
+      "key_points": [
+        "Eventos Simples: cliente escuta, servidor publica — simples mas broadcast manual",
+        "Pub/Sub: clientes se inscrevem em canais, 1 publicação para N inscritos — elegante",
+        "State Sync: servidor envia estado inteiro ao conectar e após mudanças — garantia de consistência",
+        "Socket.IO abstrai WebSocket bruto com pub/sub, rooms, e reconexão automática"
+      ]
+    },
+    {
+      "section_id": "scaling",
+      "title": "Escala Horizontal (12 minutos)",
+      "key_points": [
+        "Múltiplos servidores: cada um tem clientes WebSocket locais, sem comunicação entre eles",
+        "Redis Pub/Sub resolve: evento em servidor A → publicado em Redis → todos os servidores entregam aos clientes",
+        "Arquitetura: clientes + servidores + Redis + banco persistente",
+        "Sem Redis, broadcast só funciona para clientes do mesmo servidor"
+      ]
+    },
+    {
+      "section_id": "failures",
+      "title": "Falhas e Reconexão (10 minutos)",
+      "key_points": [
+        "Redes falham: WiFi cai, 4G sai de cobertura, servidor reinicia",
+        "Sem reconexão, cliente fica offline; com reconexão, tenta auto-conectar",
+        "Backoff exponencial: espera 1s, 2s, 4s, 8s... evita bombardear servidor",
+        "Sincronização pós-reconexão: valida estado do cliente vs servidor"
+      ]
+    },
+    {
+      "section_id": "broadcast",
+      "title": "Broadcast e Rooms (8 minutos)",
+      "key_points": [
+        "Broadcast para todos: io.emit() vai para cada cliente conectado",
+        "Salas (rooms): cliente se junta a channel/class/group, broadcast vai só para lá",
+        "Broadcast exceto remetente: socket.broadcast.emit() — útil para 'user typing'",
+        "Socket.IO implementa isso nativamente"
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-5-2-1",
+      "type": "multiple_choice",
+      "question": "Por que polling HTTP é problemático para notificações em tempo real?",
+      "options": [
+        "HTTP não suporta JSON",
+        "Cada poll = uma requisição HTTP desnecessária se nada mudou; muitas requisições = latência alta",
+        "Navegadores modernos não suportam polling",
+        "Polling é mais seguro que WebSocket"
+      ],
+      "correct_answer": "Cada poll = uma requisição HTTP desnecessária se nada mudou; muitas requisições = latência alta",
+      "explanation": "Se você faz poll a cada 1 segundo, são 86.400 requisições por dia mesmo que nada mude. Tráfego e latência são altos. WebSocket elimina isso: servidor envia só quando há mudança."
+    },
+    {
+      "id": "ex-5-2-2",
+      "type": "prediction",
+      "question": "Você tem 3 servidores Node.js, cada um rodando WebSocket. Cliente A conecta no servidor 1, Cliente B no servidor 2. Se Cliente A publica evento 'lesson-completed' sem Redis, o que acontece?",
+      "options": [
+        "Evento é distribuído para ambos por default",
+        "Servidor 1 recebe evento, apenas Cliente A o vê; Cliente B não vê porque está em servidor 2",
+        "Ambos veem porque WebSocket é peer-to-peer",
+        "Banco de dados automaticamente sincroniza"
+      ],
+      "correct_answer": "Servidor 1 recebe evento, apenas Cliente A o vê; Cliente B não vê porque está em servidor 2",
+      "explanation": "Sem Redis, cada servidor é isolado. Eventos ficam locais. Redis Pub/Sub resolve isso: evento em servidor 1 é publicado em Redis, todos os servidores se inscrevem e entregam aos clientes locais."
+    },
+    {
+      "id": "ex-5-2-3",
+      "type": "code_review",
+      "question": "Revise este client: 'socket = new WebSocket(url); socket.onmessage = handle;' Qual é o risco?",
+      "expected_answer": "Não há reconexão. Se socket cai (servidor reinicia, rede falha), cliente fica offline silenciosamente. Usuário não sabe que desconectou.",
+      "explanation": "WebSocket deve reconectar automaticamente com backoff exponencial. Sem isso, usuários ficam offline sem feedback. Solução: classe ResillientWebSocket que tenta reconectar com delays crescentes (1s, 2s, 4s...)."
+    },
+    {
+      "id": "ex-5-2-4",
+      "type": "short_answer",
+      "question": "Qual é a diferença entre Socket.IO emit ('message') e broadcast ('message')?",
+      "expected_answer": "emit() envia para todos os clientes. broadcast.emit() envia para todos EXCETO o remetente. Usado quando você quer que todos vejam a ação mas não o fazedor.",
+      "explanation": "Exemplo: quando usuário escreve 'typing...', todos veem EXCETO o que está digitando. Outros casos: emit() para notificação global de alerta."
+    },
+    {
+      "id": "ex-5-2-5",
+      "type": "debugging",
+      "question": "WebSocket desconecta a cada 30 segundos. Logs: 'PING timeout'. Como diagnosticaria?",
+      "options": [
+        "WebSocket não suporta long-lived connections",
+        "Proxy/firewall entre client e servidor fecha conexões idle — precisa PING/PONG para manter viva",
+        "Cliente está fechando propositalmente",
+        "Banco de dados está sobrecarregado"
+      ],
+      "correct_answer": "Proxy/firewall entre client e servidor fecha conexões idle — precisa PING/PONG para manter viva",
+      "explanation": "Proxies HTTP assumem que conexões idle são mortas. WebSocket implementa PING/PONG keepalive para evitar isso. Socket.IO ativa por default. Se desconecta a cada tempo fixo, aumentar intervalo do ping/pong."
+    }
+  ],
+  "practical_exercise": {
+    "id": "practical-5-2",
+    "title": "Sistema de Notificações Real-time com Escalabilidade",
+    "description": "Construir sistema de notificações para plataforma educacional: quando aluno completa aula, pais/mentores veem em tempo real.",
+    "challenge": "Implementar Socket.IO com Redis adapter para suportar múltiplos servidores, reconexão resiliente do cliente e sincronização de estado.",
+    "hints": [
+      "Socket.IO na porta 3001, Redis na 6379",
+      "Criar sala 'parent:userId' para cada responsável",
+      "Quando aluno completa aula: io.to(`parent:${parentId}`).emit()",
+      "Cliente reconecta com backoff exponencial",
+      "Ao conectar, cliente pede sync de notificações não lidas"
+    ],
+    "success_criteria": [
+      "Notificação chega em <100ms",
+      "Múltiplos clientes veem mesma notificação",
+      "Cliente reconecta automaticamente se desconecta",
+      "Ao reconectar, sincroniza notificações perdidas"
+    ]
+  }
+}

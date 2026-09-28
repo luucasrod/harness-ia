@@ -1,0 +1,191 @@
+{
+  "lesson_id": "lesson-4-3-orms-prisma",
+  "title": "ORMs (Prisma)",
+  "description": "Prisma como ORM moderno, type-safe: schema, CRUD, relacionamentos, migrations. Entender abstração para usá-la bem — evitar N+1, saber quando SQL raw é melhor.",
+  "duration_minutes": 45,
+  "module_id": "module-4",
+  "target_audience": "Developers usando TypeScript/Node",
+  "learning_objectives": [
+    "Definir modelo de dados com Prisma schema: relacionamentos 1:1, 1:N, N:M",
+    "Implementar CRUD seguro com Prisma Client",
+    "Evitar N+1 queries: include com where, select apenas necessário",
+    "Migrations: evoluir schema sem perder dados, rollback seguro",
+    "Saber quando ORM é overkill; combinar Prisma + SQL raw para o melhor dos dois"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "ORM: abstração entre código e SQL — trade-off entre segurança e transparência",
+        "Prisma é type-safe (TypeScript), migrations automáticas, queries seguras",
+        "Não é SQL generator mágico — precisa entender o que faz embaixo"
+      ]
+    },
+    {
+      "section_id": "schema",
+      "title": "Prisma Schema (12 minutos)",
+      "key_points": [
+        "Modelo declarativo: User, Lesson, LessonProgress com tipos e relações explícitas",
+        "Tipos: String, Int, DateTime, Decimal (moeda), Json",
+        "Relações: User → LessonProgress (1:N), StudentCourse (N:M)",
+        "Constraints: @unique, @@unique (composto), @@index, onDelete: Cascade"
+      ]
+    },
+    {
+      "section_id": "crud",
+      "title": "CRUD com Prisma Client (12 minutos)",
+      "key_points": [
+        "Create: create(), createMany(); nested para relações",
+        "Read: findUnique, findMany, include/select para relações",
+        "Update: update(), updateMany(); upsert para insert-or-update",
+        "Delete: delete(), deleteMany(); onDelete: Cascade automático"
+      ]
+    },
+    {
+      "section_id": "relationships",
+      "title": "Relacionamentos e Evitar N+1 (12 minutos)",
+      "key_points": [
+        "1:N (User → LessonProgress): include em uma query",
+        "N:M (Student ← StudentCourse → Course): tabela de junção",
+        "Include com where: filtrar relação antes de buscar",
+        "Select: buscar apenas colunas necessárias, não toda linha"
+      ]
+    },
+    {
+      "section_id": "migrations",
+      "title": "Migrations (10 minutos)",
+      "key_points": [
+        "prisma migrate dev: cria snapshot SQL + aplica em dev",
+        "prisma migrate deploy: aplica em produção (sem rollback, cuidado)",
+        "Rollback: deletar arquivo migration (antes de deploy) ou manual em DB",
+        "Schema.prisma é fonte da verdade; migrations são histórico"
+      ]
+    },
+    {
+      "section_id": "antipatterns",
+      "title": "Anti-Patterns e Quando Evitar ORM (8 minutos)",
+      "key_points": [
+        "N+1 via include sem filtro: traz todas relações, é caro",
+        "Sem índices: schema.prisma precisa @@index em colunas frequentes",
+        "Queries complexas em ORM: SQL raw é mais transparente",
+        "$queryRaw: ponte para SQL quando ORM não basta"
+      ]
+    },
+    {
+      "section_id": "summary",
+      "title": "Síntese (3 minutos)",
+      "key_points": [
+        "Prisma: ótimo para CRUD, relações type-safe, migrations",
+        "SQL raw ($queryRaw): para agregações, bulk, relatórios",
+        "Melhor: combinar — Prisma para modelo, raw para crítico"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-4-3-1",
+      "title": "Prisma Schema: Modelo Educacional",
+      "description": "Definir User, Lesson, LessonProgress, ExerciseAnswer com relacionamentos",
+      "code_or_diagram": "model User {\n  id String @id @default(cuid())\n  email String @unique\n  name String?\n  createdAt DateTime @default(now())\n  \n  lessons LessonProgress[]\n  answers ExerciseAnswer[]\n}\n\nmodel Lesson {\n  id String @id @default(cuid())\n  title String\n  moduleId String\n  module Module @relation(fields: [moduleId], references: [id])\n  \n  userProgress LessonProgress[]\n  questions ExerciseQuestion[]\n}\n\nmodel LessonProgress {\n  id String @id @default(cuid())\n  userId String\n  lessonId String\n  status String\n  progressPercentage Int\n  \n  user User @relation(fields: [userId], references: [id], onDelete: Cascade)\n  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)\n  \n  @@unique([userId, lessonId])\n  @@index([userId])\n  @@index([status])\n}"
+    },
+    {
+      "id": "ex-4-3-2",
+      "title": "CRUD Seguro: Certo vs Errado",
+      "description": "Create, read, update com Prisma evita SQL injection e typos",
+      "code_or_diagram": "// ERRADO: Construir SQL como string (SQL injection!)\nconst user = await db.query(\n  \"SELECT * FROM users WHERE email = '\" + email + \"'\"\n);\n\n// CERTO: Prisma type-safe\nconst user = await prisma.user.findUnique({\n  where: { email }\n}); // Sem SQL injection, type-safe"
+    },
+    {
+      "id": "ex-4-3-3",
+      "title": "N+1 via Include: Ruim vs Bom",
+      "description": "Como include sem filtro causa N+1; melhor abordagem",
+      "code_or_diagram": "// RUIM: include traz TODAS lições (50 por user)\nconst users = await prisma.user.findMany({\n  take: 100,\n  include: { lessons: true }\n}); // 100 users * 50 lessons = 5000 linhas, lento\n\n// BOM: include com where e select\nconst users = await prisma.user.findMany({\n  take: 100,\n  include: {\n    lessons: {\n      where: { status: 'completed' }, // Filtrar\n      select: { id: true, status: true } // Só necessário\n    }\n  }\n}); // Apenas lições completadas, apenas IDs + status"
+    },
+    {
+      "id": "ex-4-3-4",
+      "title": "Migrations: Adicionar Campo",
+      "description": "Evoluir schema sem perder dados",
+      "code_or_diagram": "// 1. Editar schema.prisma\nmodel LessonProgress {\n  // ... campos antigos\n  completedAt DateTime? // Novo campo\n}\n\n// 2. Criar migration\n// $ npx prisma migrate dev --name add_completed_at\n\n// 3. Prisma gera SQL\n// ALTER TABLE LessonProgress ADD COLUMN completedAt TIMESTAMP;\n\n// 4. Migration aplicada automaticamente"
+    },
+    {
+      "id": "ex-4-3-5",
+      "title": "SQL Raw: Quando ORM Não Basta",
+      "description": "Agregação complexa é mais clara em SQL puro",
+      "code_or_diagram": "// Agregação complexa em Prisma (verboso)\nconst result = await prisma.user.groupBy({\n  by: ['id'],\n  _count: { lessons: true }\n});\n\n// Melhor: SQL raw (mais claro)\nconst result = await prisma.$queryRaw`\n  SELECT u.id, COUNT(p.id) as lessons_completed\n  FROM users u\n  LEFT JOIN lesson_progress p ON u.id = p.user_id AND p.status = 'completed'\n  GROUP BY u.id\n  HAVING COUNT(p.id) > 5\n`;"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-4-3-q1",
+      "type": "multiple_choice",
+      "question": "Qual é vantagem principal de Prisma sobre SQL string?",
+      "options": [
+        "SQL string é mais rápido",
+        "Prisma é type-safe (TypeScript) e evita SQL injection automaticamente",
+        "Prisma não precisa de índices",
+        "Prisma gera queries mais eficientes que SQL hand-written"
+      ],
+      "correct_answer": "Prisma é type-safe (TypeScript) e evita SQL injection automaticamente",
+      "explanation": "SQL string requer parametrização manual e é propenso a erros. Prisma força type-safe, parametrização implícita, evita injection."
+    },
+    {
+      "id": "ex-4-3-q2",
+      "type": "short_answer",
+      "question": "Por que 'include: { lessons: true }' em findMany com 100 users é ruim?",
+      "expected_answer": "Se cada user tem 50 lições, fetch traz 100 users * 50 lições = 5000 linhas. Melhor: include com where (filtrar) e select (apenas colunas necessárias).",
+      "explanation": "Include sem restrição traz TODAS relações. Isso é N+1 disfarçado. Use where para filtrar relação, select para colunas apenas."
+    },
+    {
+      "id": "ex-4-3-q3",
+      "type": "code_review",
+      "question": "Revise: 'model LessonProgress { userId String; user User @relation(...) }' — falta algo?",
+      "expected_answer": "Falta onDelete: Cascade. Se deletar usuário, LessonProgress fica órfão. Adicione: @relation(fields: [userId], references: [id], onDelete: Cascade)",
+      "explanation": "Foreign key sem onDelete deixa dados órfãos. Cascade = deletar usuário cascata deleta progressos automaticamente em banco."
+    },
+    {
+      "id": "ex-4-3-q4",
+      "type": "multiple_choice",
+      "question": "Qual comando aplica migration em produção?",
+      "options": [
+        "npx prisma migrate dev",
+        "npx prisma migrate deploy",
+        "npx prisma generate",
+        "npx prisma db push"
+      ],
+      "correct_answer": "npx prisma migrate deploy",
+      "explanation": "migrate dev é para desenvolvimento (cria + aplica + gera seed). migrate deploy é para produção (aplica migrations já criadas, sem rollback fácil)."
+    },
+    {
+      "id": "ex-4-3-q5",
+      "type": "debugging",
+      "question": "Query 'const user = await prisma.user.findUnique({ where: { email }, include: { lessons: true } })' retorna user com 50 lições mas só precisa de completadas. O que otimizar?",
+      "expected_answer": "Adicione where e select ao include: include: { lessons: { where: { status: 'completed' }, select: { id: true, status: true } } }. Reduz linhas trazidas de 50 para X completadas.",
+      "explanation": "Include sem filtro traz tudo. Where filtra relação no banco. Select traz apenas colunas necessárias. Combinado economiza I/O."
+    }
+  ],
+  "practical_project": {
+    "id": "practical-4-3",
+    "title": "Projeto: Implemente Modelo Educacional com Prisma",
+    "description": "Schema, CRUD, migrations, evitar N+1, usar SQL raw para agregação.",
+    "requirements": [
+      "Prisma schema com User, Lesson, LessonProgress, ExerciseAnswer, AiTutorQuery",
+      "Migrations: start do zero, depois adicionar coluna (completedAt)",
+      "CRUD: serviço que marca lição como completa",
+      "Otimização: include com where e select para evitar trazer todas relações",
+      "Raw query: contar respostas corretas por usuário (agregação)"
+    ],
+    "hints": [
+      "Use uuid() ou cuid() para IDs distribuídos",
+      "onDelete: Cascade em foreign keys de dados dependentes",
+      "Migrations são snapshots SQL — revise gerado antes de deploy",
+      "$queryRaw para queries que ORM não expressa bem"
+    ],
+    "solution": "Veja Solução ao final da lição Markdown",
+    "grading_criteria": [
+      "Schema está completo? Todas relações (1:1, 1:N, N:M)?",
+      "Migrations funcionam? (Dev + deploy sem erros)",
+      "CRUD evita N+1? (include com where/select)",
+      "SQL raw usa parametrização segura? ($queryRaw, sem concatenação)"
+    ]
+  }
+}

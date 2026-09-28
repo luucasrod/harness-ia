@@ -1,0 +1,138 @@
+{
+  "lesson_id": "lesson-5-4-cdn-assets",
+  "title": "CDN & Assets - Distribuição Global",
+  "description": "Reduza latência de 1000ms para 50ms distribuindo assets perto dos usuários. Aprenda CDN, cache headers, versionamento e invalidação.",
+  "module_id": "module-5",
+  "duration_minutes": 45,
+  "learning_objectives": [
+    "Entender arquitetura CDN: edge servers, origins, cache levels",
+    "Usar cache headers corretamente: max-age, public/private, immutable, Vary",
+    "Implementar versionamento: URL hashing, invalidação, ETag",
+    "Estratégias por tipo: estático (1 ano) vs dinâmico (revalidar) vs video"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (6 minutos)",
+      "key_points": [
+        "Usuário na Austrália: request de Brasil = 500-1000ms latência, 20s download",
+        "CDN em Sydney: 50ms latência, 5s download — 4x mais rápido",
+        "CDN reduz custo de banda internacional e custo de computação"
+      ]
+    },
+    {
+      "section_id": "fundamentals",
+      "title": "CDN Fundamentals (12 minutos)",
+      "key_points": [
+        "Edge server perto do usuário → origin em datacenter central",
+        "Cache levels: browser → CDN → origin",
+        "Cache headers controlam cada nível: max-age, public/private, immutable",
+        "Vary: Authorization = CDN cache considera user identity"
+      ]
+    },
+    {
+      "section_id": "versioning",
+      "title": "Versionamento e Invalidação (10 minutos)",
+      "key_points": [
+        "Conteúdo cacheado fica desatualizado — como invalidar?",
+        "URL versionamento: versão no URL = novo cache = sempre fresco",
+        "Hash de conteúdo: /app.abc123.js → /app.def456.js (hash muda se conteúdo muda)",
+        "CDN purging: invalidar cache manualmente quando crítico"
+      ]
+    },
+    {
+      "section_id": "strategies",
+      "title": "Estratégias por Tipo (10 minutos)",
+      "key_points": [
+        "Estático (JS, CSS, imagens): cache 1 ano, versão no URL",
+        "Conteúdo (aulas, exercícios): cache 1 dia, revalidar com ETag",
+        "Dinâmico (progresso, feedback): cache 1 min, private, Vary por usuário",
+        "Video: chunks imutáveis, cache 1 ano, streaming protocol (HLS/DASH)"
+      ]
+    },
+    {
+      "section_id": "implementation",
+      "title": "Implementação Completa (12 minutos)",
+      "key_points": [
+        "Setup headers por rota: estático vs dinâmico",
+        "Publicar lição = salvar + invalidar CDN + versionar",
+        "ETag para revalidação eficiente (304 Not Modified)",
+        "Monitorar cache hit rate para otimizar"
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-5-4-1",
+      "type": "multiple_choice",
+      "question": "Qual header faz browser nunca pedir de novo para o servidor?",
+      "options": [
+        "'Cache-Control: no-cache'",
+        "'Cache-Control: public, max-age=31536000, immutable'",
+        "'Expires: tomorrow'",
+        "'Cache-Control: private'"
+      ],
+      "correct_answer": "'Cache-Control: public, max-age=31536000, immutable'",
+      "explanation": "max-age=31536000 (1 ano) + immutable diz ao browser 'esse arquivo nunca vai mudar, cache por 1 ano sem revalidar'. Perfeito para assets versionados."
+    },
+    {
+      "id": "ex-5-4-2",
+      "type": "prediction",
+      "question": "Arquivo JS é servido como '/app.js' (sem versão) com 'Cache-Control: max-age=3600' (1 hora). Você atualiza o código. Quando usuários veem a versão nova?",
+      "options": [
+        "Imediatamente, CDN invalida automaticamente",
+        "Após 1 hora (quando cache expira)",
+        "Nunca, estão cacheados",
+        "Depois de purge manual"
+      ],
+      "correct_answer": "Após 1 hora (quando cache expira)",
+      "explanation": "Sem versão no URL, cache expira em 1 hora. Usuários veem versão antiga por até 1 hora. Solução: usar '/app.abc123.js' (versão no URL), cache 1 ano."
+    },
+    {
+      "id": "ex-5-4-3",
+      "type": "code_review",
+      "question": "Revise: 'GET /lessons/1 → Cache-Control: public, max-age=86400' Problema?",
+      "expected_answer": "Editor atualiza aula, usuários veem versão antiga por até 1 dia. Melhor: versionar URL ou usar max-age curto (300s) + CDN purging.",
+      "explanation": "Conteúdo dinâmico não deve ter cache muito longo. Ou cache curto + revalidar, ou versionar URL se imutável."
+    },
+    {
+      "id": "ex-5-4-4",
+      "type": "short_answer",
+      "question": "O que é ETag e para que serve?",
+      "expected_answer": "ETag é hash do conteúdo. Se ETag não mudou desde último request, servidor responde 304 (Not Modified) sem enviar conteúdo novamente. Economia de banda.",
+      "explanation": "Exemplo: GET /lesson/1 com If-None-Match: md5abc → server compara ETags, se iguais responde 304 (não re-envia 50KB de JSON)."
+    },
+    {
+      "id": "ex-5-4-5",
+      "type": "debugging",
+      "question": "CDN hit rate é 20% (muito baixo). Que padrão de cache headers poderia estar causando isso?",
+      "options": [
+        "'Cache-Control: public, max-age=31536000' — cache muito longo",
+        "'Cache-Control: no-store' ou 'private' — CDN não cachea, só browser",
+        "'Vary: Authorization' — CDN cria cache separado por user (muita fragmentação)",
+        "Tudo acima"
+      ],
+      "correct_answer": "'Cache-Control: no-store' ou 'private' — CDN não cachea, só browser",
+      "explanation": "no-store = nada cachea. private = só browser, não CDN. CDN hit rate mede cache no edge, não browser. Se headers dizem private, CDN não cachea e hit rate cai."
+    }
+  ],
+  "practical_exercise": {
+    "id": "practical-5-4",
+    "title": "Otimizar Cache de Assets da Plataforma Educacional",
+    "description": "Setup headers para estático (JS, CSS), conteúdo (aulas), e dinâmico (progresso). Implementar versionamento e invalidação.",
+    "hints": [
+      "Estático: /assets/:hash/app.js → max-age=31536000, immutable",
+      "Conteúdo: /lessons/:id → max-age=3600 + ETag + invalidar ao editar",
+      "Dinâmico: /api/progress → max-age=60, private, Vary: Authorization",
+      "Publish lesson = salvar + CDN purge + versionar",
+      "Monitorar cache hit rate"
+    ],
+    "success_criteria": [
+      "Estático: 95%+ hit rate, 1 ano cache",
+      "Conteúdo: 80%+ hit rate, 1 hora cache",
+      "Dinâmico: hit rate baixo (esperado), revalidação com ETag",
+      "Atualizar aula invalida cache",
+      "Browser não re-download se ETag igual"
+    ]
+  }
+}

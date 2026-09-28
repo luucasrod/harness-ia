@@ -1,0 +1,210 @@
+{
+  "lesson_id": "lesson-8-4-consistency",
+  "title": "Consistency - CAP Theorem e Modelos Práticos",
+  "module_id": "module-8",
+  "module_title": "System Design & Scalability",
+  "description": "Aprenda CAP Theorem, ACID vs BASE, modelos de consistency e estratégias de sincronização. Entenda quando sacrificar qual propriedade.",
+  "duration_minutes": 45,
+  "target_audience": "Developers 2-5 anos, arquitetos iniciantes",
+  "learning_objectives": [
+    "Entender CAP Theorem e por que não pode ter tudo",
+    "Diferenciar ACID (strong consistency) vs BASE (eventual consistency)",
+    "Escolher modelo de consistency apropriado por feature",
+    "Implementar estratégias de sincronização (quorum, vector clocks)",
+    "Resolver conflitos em sistemas eventual consistent",
+    "Balancear tradeoff entre consistency e performance"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "CAP Theorem: não pode ter Consistency, Availability e Partition Tolerance simultaneamente",
+        "Escolha 2: CA (monolito), CP (quorum), AP (eventual consistent)",
+        "Eric Brewer 2000: quebrou assumptions de consistency forte em sistemas distribuídos",
+        "Paradoxo: você quer tudo, mas não pode ter"
+      ]
+    },
+    {
+      "section_id": "cap_theorem",
+      "title": "CAP Theorem - A Escolha Impossível (12 minutos)",
+      "key_points": [
+        "Consistency: todos nós veem mesmos dados",
+        "Availability: sistema sempre responde",
+        "Partition Tolerance: funciona mesmo com rede cortada (obrigatório)",
+        "Rede cortada entre datacenters: CP ou AP? (sacrifica C ou A)",
+        "CA: banco monolítico (sem rede = crash total)",
+        "CP: replicação com quorum (rede cortada = alguns retornam erro)",
+        "AP: eventual consistent (sempre responde, dados convergem)"
+      ]
+    },
+    {
+      "section_id": "acid_vs_base",
+      "title": "ACID vs BASE (13 minutos)",
+      "key_points": [
+        "ACID: Atomicity, Consistency, Isolation, Durability (strong, lento)",
+        "BASE: Basically Available, Soft State, Eventual (weak, rápido)",
+        "ACID para: transações financeiras, auth, inventory",
+        "BASE para: feeds, likes, view counts, recommendations",
+        "Instagram like: BASE (rápido, eventual), não ACID",
+        "Tradeoff: latência vs garantia de correctness"
+      ]
+    },
+    {
+      "section_id": "consistency_models",
+      "title": "Consistency Models - Espectro (13 minutos)",
+      "key_points": [
+        "Strong Consistency: sempre vê última escrita (monolítico)",
+        "Eventual Consistency: converge, mas temporariamente desatualizado",
+        "Causal Consistency: se vê efeito, vê causa primeiro",
+        "Read-After-Write: sua leitura vê sua escrita",
+        "Monotonic Consistency: leituras não retrocedem",
+        "Modelo certo depende de feature criticality"
+      ]
+    },
+    {
+      "section_id": "synchronization_strategies",
+      "title": "Estratégias de Sincronização (12 minutos)",
+      "key_points": [
+        "Quorum Reads/Writes: escreve/lê em maioria, retorna sucesso",
+        "Vector Clocks: detecta operações concorrentes vs causais",
+        "Conflict Resolution: Last-Write-Wins, Merge, Revert-to-Committed",
+        "Quorum: consistency forte com alguns replicas down",
+        "Vector Clocks: identifica conflitos, app resolve"
+      ]
+    },
+    {
+      "section_id": "synthesis",
+      "title": "Síntese - Design Práctico (6 minutos)",
+      "key_points": [
+        "Checklist: dados críticos? latência crítico? pode perder?",
+        "Fase 1: monolito ACID", "Fase 2: híbrido (auth ACID, feed eventual)",
+        "Fase 3: eventual default, consistency forte onde crítico"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-cap-network-partition",
+      "title": "Rede Cortada: Escolha CP ou AP",
+      "description": "O que acontece quando rede falha entre datacenters",
+      "code_or_diagram": "// Cenário: São Paulo e Rio desconectados\n\n// NORMAL (rede funcionando)\nSão Paulo escreve: X = 10\nSync para Rio (5ms)\nRio retorna: OK\nTodos veem X = 10\n\n// REDE CORTADA (escolha CP - Consistency)\nSão Paulo quer escrever: X = 15\nPrecisa sync com Rio para quorum (2/3 replicas)\nMas rede está cortada\nSão Paulo retorna: ERROR (sacrifica Availability)\n\nBenefício: nunca há inconsistência\nDesvantagem: usuário em SP viu erro\n\n// REDE CORTADA (escolha AP - Availability)\nSão Paulo escreve: X = 15 localmente\nRetorna: SUCCESS imediatamente\nRio ainda vê X = 10 (desincronizado)\n\nBenefício: usuário em SP viu sucesso\nDesvantagem: dados inconsistentes até rede voltar\n\n// REDE VOLTA\nSP e Rio sincronizam\nConflito: SP tem X=15, Rio tem X=10\nResolve: Last-Write-Wins ou aplicação decide\nEventualmente convergem"
+    },
+    {
+      "id": "ex-acid-vs-base-latency",
+      "title": "ACID vs BASE: Tradeoff de Latência",
+      "description": "Instagram like: por que usar BASE não ACID",
+      "code_or_diagram": "// ÁCID Approach (Consistency forte)\nYou: \"Like photo 123\"\n1. Check usuário existe (query)\n2. LOCK photo row (database)\n3. Increment like count: SELECT likes FROM photos WHERE id=123\n4. UPDATE photos SET likes = likes + 1 WHERE id = 123\n5. Replicate para 2+ datacenters (wait for ack)\n6. UNLOCK photo row\n7. Return \"success\"\n\nLatência: 100-500ms (500ms de replicação + locks)\nVanágem: como_count sempre correto\n\n// BASE Approach (Eventually consistent)\nYou: \"Like photo 123\"\n1. Increment like count localmente\n2. Return \"success\" imediatamente (2ms)\n3. Async: background job replicates para outros datacenters\n\nLatência: 2ms (rápido!)\nDesvantagem: like count pode estar desatualizado 5s (ninguém reclama)\nBenefício: 100x mais rápido, melhor UX"
+    },
+    {
+      "id": "ex-consistency-models-spectrum",
+      "title": "Espectro de Consistency Models",
+      "description": "Diferentes garantias, diferentes aplicações",
+      "code_or_diagram": "// STRONG CONSISTENCY (stricto)\nEscrita: X = 10\nLeitura: SEMPRE retorna 10\nAplicação: Transações financeiras\n\n// READ-AFTER-WRITE CONSISTENCY\nVocê escreve: X = 10\nVocê lê: SEMPRE vê 10\nOutros podem ver valor velho\nAplicação: Social media (seu próprio post aparece imediatamente pra você)\n\n// MONOTONIC CONSISTENCY\nLeitura 1: X = 5\nLeitura 2: X = 7 (não pode ser menor que 5)\nLeitura 3: X = 9 (progressão, não retrocesso)\nAplicação: Counters, scores\n\n// CAUSAL CONSISTENCY\nOperação 1: User escreve comentário\nOperação 2: User gosta do comentário\nGarantia: se você vê like, você vê comentário\nAplicação: Threads de discussão\n\n// EVENTUAL CONSISTENCY (fraco)\nEscrita: X = 10\nLeitura imediata: pode ser 9 (desatualizado)\nLeitura depois: eventualmente vê 10\nAplicação: Feeds, view counts, recommendations"
+    },
+    {
+      "id": "ex-quorum-consistency",
+      "title": "Quorum: Consistency Forte com Falhas",
+      "description": "Escrever/ler em maioria garante ver última escrita",
+      "code_or_diagram": "// Setup: 3 replicas (A, B, C), quorum = 2\n\n// ESCRITA com Quorum\nEscreve: X = 10\nEscreve em A: OK\nEscreve em B: OK\nRetorna: SUCCESS (2/3 replicas)\nC: será sincronizado depois (async)\n\n// LEITURA com Quorum\nLê de A: retorna 10\nLê de B: retorna 10\nRetorna: 10 (visto em 2/3)\nGarantia: você vê última escrita (alguém em quorum tem)\n\n// CENÁRIO: C fica para trás\nA: X = 10\nB: X = 10\nC: X = 9 (atrasado)\n\nLeitura de quorum:\n  Lê de A: 10\n  Lê de C: 9\n  Retorna: 10 (maioria)\n  Garante: não retorna valor velho\n\n// VANTAGEM\nConsistency forte mesmo com failures\n\n// DESVANTAGEM\nLatência: precisa esperar 2 respostas (mais lento)\nIndisponibilidade: se maioria cai, não consegue write/read"
+    },
+    {
+      "id": "ex-conflict-resolution",
+      "title": "Resolução de Conflitos em Eventual Consistency",
+      "description": "O que fazer quando dados divergem",
+      "code_or_diagram": "// Cenário: rede particionada\nServidor A escreve: X = 5 (timestamp 10:00:00)\nServidor B escreve: X = 7 (timestamp 10:00:01, não vê A)\n\nQuando rede volta, conflito:\nX pode ser 5 ou 7, nunca ambos\n\n// Estratégia 1: LAST-WRITE-WINS\nOlha timestamp\nX = 7 ganha (10:00:01 > 10:00:00)\nResultado: X = 7\nProblema: que escreve depois \"ganha\", injusto\n\n// Estratégia 2: MERGE\nRetorna ambos: X ∈ {5, 7}\nAplicação decide: qual é correto?\nProblema: complexo, aplicação precisa entender\n\n// Estratégia 3: REVERT-TO-COMMITTED\nNão aceita writes se não conseguir quorum\nMais consistency, menos availability\n\n// Exemplo Real: DynamoDB\nDynamoDB usa Last-Write-Wins por padrão\nMas permite application-level resolution\nAplicação pode definir função: merge(5, 7) = ?\n\nExemplo: Shopping cart (ambos items)\nmerge({item_A}, {item_B}) = {item_A, item_B}\n\nOutro: Counter\nmerge(5, 7) = max(5, 7) = 7"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-8-4-1",
+      "type": "multiple_choice",
+      "question": "Você escolhe AP (eventual consistency) pra tudo. Qual problema encontra em produção?",
+      "options": [
+        "Nenhum; eventual consistency é sempre seguro",
+        "Dados temporariamente inconsistentes; aplicação precisa entender e lidar",
+        "Inconsistência permanente; alguns dados nunca convergem",
+        "Performance piora (eventual consistent é mais lento)"
+      ],
+      "correct_answer": "Dados temporariamente inconsistentes; aplicação precisa entender e lidar",
+      "explanation": "BASE/eventual é rápido mas fraco. Se aluno vê 'aula disponível' mas está booked por outro, clica 'inscrever', recebe erro. Aplicação precisa retry logic, handling de race conditions. Para dados críticos (inventory, payment), precisa de consistência mais forte."
+    },
+    {
+      "id": "ex-8-4-2",
+      "type": "short_answer",
+      "question": "Um serviço financeiro precisa garantir: se cobrança ocorreu, crédito vai para conta (nunca perder dinheiro). ACID ou BASE? Por quê?",
+      "expected_answer": "ACID. Dinheiro é crítico. Cobrança sem crédito é roubo. Se não conseguir sincronizar replicação, retorna erro (sacrifica availability). Melhor: cobrança falha, cliente retenta, do que perder dinheiro.",
+      "explanation": "Transações financeiras exigem ACID. Eventual consistency é inaceitável (pode perder dinheiro). Mesmo que falha, é preferível a inconsistência. Use quorum, não eventual."
+    },
+    {
+      "id": "ex-8-4-3",
+      "type": "multiple_choice",
+      "question": "Qual é o modelo de consistency de 'Instagram like'?",
+      "options": [
+        "Strong consistency (ACID, sempre correto)",
+        "Read-after-write (seu like apareça pra você imediatamente, outros veem depois)",
+        "Monotonic (contagem nunca decresce)",
+        "Causal (se vê like, viu foto primeiro)"
+      ],
+      "correct_answer": "Read-after-write (seu like apareça pra você imediatamente, outros veem depois)",
+      "explanation": "Você clica like, vê imediatamente (melhor UX). Outros podem ver seu like 1-2 segundos depois (não crítico). Like counter pode estar desatualizado. Read-after-write é sweet spot: seu ação apareça pra você (important), mas eventual para others (acceptable)."
+    },
+    {
+      "id": "ex-8-4-4",
+      "type": "code_review",
+      "question": "Sistema usa Last-Write-Wins pra resolver conflitos de overbooking (aula disponível vs booked). Problema?",
+      "expected_answer": "Sim. Last-Write-Wins ignora contexto. Se servidor B escreve 'booked' depois de A escrever 'available', resultado é 'booked' (OK). Mas se aluno A viu 'available', clicou inscrever (escrita), depois recebe erro (B booked depois), aplicação deve retornar erro claro (não 'seu click fracassou por nada').",
+      "explanation": "Last-Write-Wins é simples mas burro. Precisa aplicação entender: 'seu ação falhou porque alguém foi mais rápido'. Melhor: usar quorum (não eventual) pra overbooking (crítico), ou aplicação implementa retry/queueing."
+    },
+    {
+      "id": "ex-8-4-5",
+      "type": "prediction",
+      "question": "Você escolhe 'Causal Consistency' pra social feed. Qual é o benefício vs eventual?",
+      "options": [
+        "Feed fica mais rápido (causal é mais eficiente)",
+        "Se vê resposta, garantido vê comentário original (melhor threading)",
+        "Não há benefício; eventual é tão bom quanto",
+        "Usuário nunca vê dados desatualizados (strong consistency)"
+      ],
+      "correct_answer": "Se vê resposta, garantido vê comentário original (melhor threading)",
+      "explanation": "Causal consistency garante: se você vê reply, você já viu comentário original. Logo, thread sempre faz sentido (nunca vê reply sem contexto). Eventual consistency pode mostrar reply sem comentário (confuso). Causal = better UX pra threads, mas mais overhead que eventual."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-8-4",
+    "title": "Design: Escolher Consistency Models por Feature",
+    "description": "Plataforma educacional tem múltiplas features. Escolha modelo de consistency apropriado para cada.",
+    "context": "Plataforma com: pagamento, feed social, inventory de aulas, progresso de aluno",
+    "tasks": [
+      {
+        "task_id": "task-1",
+        "title": "Pagamento - Qual Consistency?",
+        "description": "Cobrar aluno quando completa aula. ACID ou eventual?",
+        "hints": ["Pode perder dinheiro?", "Pode cobrar 2x mesma aula?", "Qual é o custo de inconsistência?"],
+        "rubric": "Justificar ACID. Explicar por quê eventual não funciona (risco de perda ou duplicação)"
+      },
+      {
+        "task_id": "task-2",
+        "title": "Inventory - Overbooking?",
+        "description": "Aula tem 30 vagas. 30 alunos tentam inscrever simultaneamente. Como evitar overbooking?",
+        "hints": ["Eventual consistency suficiente?", "Quorum reads/writes ajuda?", "Transação distribuída?"],
+        "rubric": "Mostrar estratégia: quorum ou locking, não eventual"
+      },
+      {
+        "task_id": "task-3",
+        "title": "Feed Social - Eventual OK?",
+        "description": "Mostrar comentários e likes. Eventual consistency aceitável? Qual modelo?",
+        "hints": ["Pode mostrar like sem comentário?", "Contador de likes pode estar errado?"],
+        "rubric": "Argumentar eventual ou read-after-write. Explicar por quê inconsistência é acceptable"
+      },
+      {
+        "task_id": "task-4",
+        "title": "Caso Complexo",
+        "description": "Aluno paga inscrição. Quando pagamento confirma, aula subtrai 1 vaga. Feed mostra 'aluno X inscrito'. Qual consistency garantir em cada etapa?",
+        "hints": ["Pagamento: ACID", "Inventory: precisa sync com pagamento?", "Feed: eventual ok?"],
+        "rubric": "Mostrar que pagamento+inventory precisam coordenar (saga/2pc), feed pode ser eventual"
+      }
+    ],
+    "expected_output": "Documento com: (1) Cada feature + modelo de consistency escolhido, (2) Justificativa de cada escolha, (3) Tradeoff aceito (latência vs correctness)"
+  }
+}

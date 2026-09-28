@@ -1,0 +1,200 @@
+{
+  "lesson_id": "lesson-2-2-hooks-profundo",
+  "title": "Hooks Profundo - useReducer, Context e Custom Hooks",
+  "description": "Uso avançado de hooks para modelar estado complexo, compartilhar contexto com critério, evitar armadilhas de useEffect e otimizar apenas quando há benefício real.",
+  "duration_minutes": 60,
+  "target_audience": "Developers com mentalidade de engineer (pré-req: Lição 1.1)",
+  "learning_objectives": [
+    "Escolher entre useState e useReducer com base na complexidade das transições",
+    "Modelar estados impossíveis usando unions discriminadas em TypeScript",
+    "Extrair lógica stateful para custom hooks com contratos claros",
+    "Usar Context API para estado global moderado sem Redux",
+    "Evitar bugs comuns de useEffect: dependências, cleanup e race conditions",
+    "Aplicar useMemo e useCallback apenas quando houver justificativa"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "Hooks são ferramentas arquiteturais, não apenas APIs",
+        "O tutor de IA será usado como caso de estado complexo",
+        "O objetivo é escolher a menor estrutura correta"
+      ]
+    },
+    {
+      "section_id": "state_vs_reducer",
+      "title": "useState vs useReducer (10 minutos)",
+      "key_points": [
+        "useState brilha para estado simples e independente",
+        "useReducer brilha quando transições são eventos de domínio",
+        "Unions discriminadas reduzem estados impossíveis"
+      ]
+    },
+    {
+      "section_id": "custom_hooks",
+      "title": "Custom Hooks como Fronteira (10 minutos)",
+      "key_points": [
+        "Custom hooks encapsulam lógica stateful reutilizável",
+        "Bons hooks têm nome de caso de uso e retorno previsível",
+        "Componentes ficam focados em renderização e intenção"
+      ]
+    },
+    {
+      "section_id": "context",
+      "title": "Context sem Redux (8 minutos)",
+      "key_points": [
+        "Context funciona bem para estado global de baixa ou média frequência",
+        "Dividir contextos por responsabilidade reduz re-renders",
+        "Hooks consumidores devem validar provider ausente"
+      ]
+    },
+    {
+      "section_id": "effects",
+      "title": "useEffect Pitfalls (12 minutos)",
+      "key_points": [
+        "useEffect sincroniza com sistemas externos",
+        "Dependências ausentes causam dados obsoletos",
+        "AbortController evita race conditions em requests"
+      ]
+    },
+    {
+      "section_id": "memoization",
+      "title": "useMemo e useCallback (8 minutos)",
+      "key_points": [
+        "Memoização tem custo cognitivo",
+        "Use quando há cálculo caro ou estabilidade referencial necessária",
+        "Não use memoização para mascarar design ruim"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-use-state-simple",
+      "title": "useState para Campo Simples",
+      "description": "Pergunta do tutor mantida como estado independente.",
+      "code_or_diagram": "const [question, setQuestion] = React.useState('');"
+    },
+    {
+      "id": "ex-multiple-state-risk",
+      "title": "Vários useState com Estados Impossíveis",
+      "description": "answer, isLoading e error podem entrar em combinações inconsistentes.",
+      "code_or_diagram": "const [answer, setAnswer] = useState(null); const [isLoading, setIsLoading] = useState(false); const [error, setError] = useState(null);"
+    },
+    {
+      "id": "ex-tutor-reducer",
+      "title": "Reducer do Tutor de IA",
+      "description": "Transições ASK_STARTED, ASK_SUCCEEDED, ASK_FAILED e RESET.",
+      "code_or_diagram": "type TutorState = { status: 'idle'; answer: null; error: null } | { status: 'loading'; answer: null; error: null } | { status: 'success'; answer: string; error: null } | { status: 'error'; answer: null; error: string };"
+    },
+    {
+      "id": "ex-use-ai-tutor",
+      "title": "Custom Hook useAiTutor",
+      "description": "Hook que encapsula reducer, request e contrato ask.",
+      "code_or_diagram": "export function useAiTutor(lessonId: string) { const [state, dispatch] = React.useReducer(tutorReducer, initialState); const ask = React.useCallback(async (question: string) => { /* request */ }, [lessonId]); return { state, ask }; }"
+    },
+    {
+      "id": "ex-auth-context",
+      "title": "AuthContext com Hook Consumidor",
+      "description": "Context para usuário autenticado com erro claro quando provider falta.",
+      "code_or_diagram": "export function useAuth() { const context = React.useContext(AuthContext); if (!context) throw new Error('useAuth deve ser usado dentro de AuthProvider'); return context; }"
+    },
+    {
+      "id": "ex-effect-abort",
+      "title": "Cleanup com AbortController",
+      "description": "Evita que request antigo sobrescreva estado novo.",
+      "code_or_diagram": "React.useEffect(() => { const controller = new AbortController(); fetch(url, { signal: controller.signal }); return () => controller.abort(); }, [url]);"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "quiz-2-2-1",
+      "type": "multiple_choice",
+      "question": "Quando useReducer é melhor que vários useState?",
+      "options": [
+        "Sempre.",
+        "Quando estados mudam por eventos relacionados e há combinações inválidas a evitar.",
+        "Apenas quando há Redux.",
+        "Quando o componente não renderiza JSX."
+      ],
+      "correct_answer": "Quando estados mudam por eventos relacionados e há combinações inválidas a evitar.",
+      "explanation": "Reducers tornam transições explícitas e ajudam a representar o domínio."
+    },
+    {
+      "id": "quiz-2-2-2",
+      "type": "short_answer",
+      "question": "Por que custom hooks são fronteiras arquiteturais?",
+      "expected_answer": "Porque encapsulam lógica stateful, efeitos e decisões de dados atrás de um contrato reutilizável, deixando componentes focados na UI.",
+      "explanation": "Um hook como useAiTutor expressa um caso de uso, não apenas uma função utilitária."
+    },
+    {
+      "id": "quiz-2-2-3",
+      "type": "debugging",
+      "question": "Um useEffect busca dados por lessonId, mas o array de dependências está vazio. Qual bug aparece?",
+      "expected_answer": "Quando lessonId mudar, o efeito não executará novamente e o componente continuará exibindo dados da lição anterior.",
+      "explanation": "Dependências ausentes criam closures obsoletas e sincronização incorreta."
+    },
+    {
+      "id": "quiz-2-2-4",
+      "type": "prediction",
+      "question": "Uma resposta antiga de API pode sobrescrever uma resposta nova? Em qual cenário?",
+      "expected_answer": "Sim. Se o usuário muda o lessonId rapidamente e a request antiga resolve depois da nova, o setState antigo pode sobrescrever o estado atual.",
+      "explanation": "AbortController ou checagem de versão evita esse tipo de race condition."
+    },
+    {
+      "id": "quiz-2-2-5",
+      "type": "code_review",
+      "question": "Um Context contém questionDraft, user, theme e notifications, e muda a cada tecla. Qual risco?",
+      "expected_answer": "Consumidores não relacionados podem re-renderizar a cada digitação. O contexto mistura responsabilidades e frequências de mudança diferentes.",
+      "explanation": "Dividir contextos por domínio e frequência de atualização reduz trabalho desnecessário."
+    }
+  ],
+  "practical_exercise": {
+    "id": "practice-2-2-use-auth-session",
+    "title": "Implemente useAuthSession com Refresh Token",
+    "starting_code": "export function useAuthSession() { const [user, setUser] = React.useState(null); async function refreshSession() { const response = await fetch('/api/auth/refresh'); setUser(await response.json()); } return { user, refreshSession }; }",
+    "problems_to_fix": [
+      "Estado não diferencia checking, refreshing, authenticated, anonymous e error",
+      "Falha de refresh pode deixar usuário antigo autenticado",
+      "Não há cleanup de request em desmontagem",
+      "Não há provider/hook consumidor com contrato explícito"
+    ],
+    "solution_outline": "Usar useReducer com union discriminada, refreshSession com AbortController, AuthProvider com value estável e useAuth que valida presença do provider.",
+    "acceptance_criteria": [
+      "Estados impossíveis são eliminados pelo tipo",
+      "Refresh com erro limpa sessão autenticada antiga",
+      "Requests são abortadas no cleanup",
+      "useAuth lança erro claro fora do provider"
+    ]
+  },
+  "summary_key_takeaways": [
+    "useState é ótimo para estado simples",
+    "useReducer modela eventos e transições complexas",
+    "Custom hooks dão nome e fronteira para lógica stateful",
+    "Context é útil, mas deve ser dividido com critério",
+    "useEffect exige dependências corretas e cleanup",
+    "Memoização só vale quando resolve custo real"
+  ],
+  "next_lesson": {
+    "id": "lesson-2-3-estado-global-redux-zustand",
+    "title": "Estado Global - Redux/Zustand",
+    "preview": "Vamos comparar Context, Redux Toolkit e Zustand para decidir onde o estado global realmente pertence."
+  },
+  "resources": [
+    {
+      "title": "React Docs - useReducer",
+      "type": "article",
+      "link": "https://react.dev/reference/react/useReducer"
+    },
+    {
+      "title": "React Docs - useEffect",
+      "type": "article",
+      "link": "https://react.dev/reference/react/useEffect"
+    },
+    {
+      "title": "React Docs - Reusing Logic with Custom Hooks",
+      "type": "article",
+      "link": "https://react.dev/learn/reusing-logic-with-custom-hooks"
+    }
+  ]
+}

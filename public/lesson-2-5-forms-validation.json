@@ -1,0 +1,88 @@
+{
+  "lesson_id": "lesson-2-5-forms-validation",
+  "title": "Forms, Validation & Input",
+  "description": "React Hook Form vs Formik, client+server validation com Zod, file uploads, drag-drop, multi-step forms, UX de erros.",
+  "duration_minutes": 45,
+  "learning_objectives": [
+    "Escolher React Hook Form ou Formik",
+    "Validação dupla: client (UX) + server (segurança)",
+    "Zod para schemas type-safe",
+    "Uploads e drag-drop",
+    "Multi-step forms com validação"
+  ],
+  "content_sections": [
+    {"section_id": "intro", "title": "Introdução", "key_points": ["Forms parecem simples", "Validação client+server", "UX de erro é importante"]},
+    {"section_id": "rhf_vs_formik", "title": "React Hook Form vs Formik", "key_points": ["Formik: verbose", "RHF: minimal, optimizado", "RHF + Zod: type-safe"]},
+    {"section_id": "validation", "title": "Client + Server Validation", "key_points": ["Client: feedback rápido", "Server: segurança", "Zod pra ambos"]},
+    {"section_id": "files", "title": "Files & Uploads", "key_points": ["Validar tamanho, tipo", "Drag-drop UX", "Upload com progress"]}
+  ],
+  "examples": [
+    {
+      "id": "ex-2-5-1",
+      "title": "React Hook Form + Zod",
+      "description": "Minimal, type-safe",
+      "code_or_diagram": "const schema = z.object({ email: z.string().email() });\nconst { register, handleSubmit } = useForm({ resolver: zodResolver(schema) });\n<form onSubmit={handleSubmit(onSubmit)}>\n  <input {...register('email')} />\n</form>"
+    },
+    {
+      "id": "ex-2-5-2",
+      "title": "Server Action com validação",
+      "description": "Segurança no servidor",
+      "code_or_diagram": "'use server';\nconst schema = z.object({ email: z.string().email() });\nexport async function submitForm(data: unknown) {\n  const parsed = schema.safeParse(data);\n  if (!parsed.success) return { error: parsed.error };\n  // Save to db\n}"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-2-5-q1",
+      "type": "multiple_choice",
+      "question": "Quando usar React Hook Form vs Formik?",
+      "options": [
+        "Sempre Formik.",
+        "RHF pra maioria (simpler), Formik pra complexo.",
+        "Nunca RHF.",
+        "Sem diferença."
+      ],
+      "correct_answer": "RHF pra maioria (simpler), Formik pra complexo.",
+      "explanation": "RHF é lighter e otimizado. Formik se você precisa de muito customization."
+    },
+    {
+      "id": "ex-2-5-q2",
+      "type": "short_answer",
+      "question": "Por que sempre validar no servidor além do cliente?",
+      "expected_answer": "Cliente pode ser bypassed (disable JavaScript, modify form). Server é a verdade: valida tipo, range, segurança.",
+      "explanation": "Client validation é UX (feedback rápido). Server é segurança."
+    }
+  ],
+  "practical_exercise": {
+    "id": "exercise-2-5-form",
+    "title": "Criar ExerciseSubmissionForm com validação dupla",
+    "description": "Form com Zod client validation, upload de arquivo, server validation.",
+    "starting_code": "function ExerciseSubmissionForm() { return <form>...</form>; }",
+    "problems_to_fix": ["Sem validação", "Sem upload", "Sem server security"],
+    "solution_outline": "1. useForm + zodResolver\n2. Zod schema com file validation\n3. Server Action com mesma validação\n4. Error handling",
+    "deliverables": ["Form com RHF", "Zod schema", "Server Action"]
+  },
+  "summary_key_takeaways": [
+    "React Hook Form: simples, otimizado",
+    "Zod: type-safe validation schemas",
+    "Client validation: UX rápido",
+    "Server validation: segurança essencial",
+    "Drag-drop e file uploads: melhor UX"
+  ],
+  "next_lesson": {
+    "id": "lesson-2-6-performance-optimization",
+    "title": "Performance & Optimization",
+    "preview": "Formulários funcionando. Última lição: performance - React DevTools Profiler, memoização, image optimization, bundle analysis, Web Vitals, monitoring."
+  },
+  "resources": [
+    {
+      "title": "React Hook Form Docs",
+      "type": "article",
+      "link": "https://react-hook-form.com"
+    },
+    {
+      "title": "Zod Validation",
+      "type": "article",
+      "link": "https://zod.dev"
+    }
+  ]
+}

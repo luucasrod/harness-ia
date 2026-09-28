@@ -1,0 +1,210 @@
+{
+  "lesson_id": "lesson-8-3-microservices",
+  "title": "Microservices - Arquitetura Distribuída com Propósito",
+  "module_id": "module-8",
+  "module_title": "System Design & Scalability",
+  "description": "Aprenda quando e como usar microservices. Entenda service boundaries, comunicação síncrona vs assíncrona, resilência distribuída e consistência eventual.",
+  "duration_minutes": 45,
+  "target_audience": "Developers 2-5 anos, arquitetos iniciantes",
+  "learning_objectives": [
+    "Diferenciar quando monolito vs microservices fazem sentido",
+    "Desenhar service boundaries usando Domain-Driven Design",
+    "Implementar comunicação síncrona vs assíncrona apropriadamente",
+    "Proteger contra cascata de falhas (timeouts, circuit breakers, retry)",
+    "Garantir consistência eventual em transações distribuídas",
+    "Avaliar trade-offs de complexidade operacional"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "Monolito funciona até não funcionar: muda lenta, quebras afetam tudo, escala não seletiva",
+        "Microservices resolvem alguns problemas, criam outros (complexidade operacional)",
+        "Microservices não é 'sempre certo'; é tradeoff entre simplicidade e independência",
+        "Netflix migrou de monolito para 600+ serviços; Uber tem 1000+"
+      ]
+    },
+    {
+      "section_id": "monolith_vs_microservices",
+      "title": "Monolito vs Microservices (12 minutos)",
+      "key_points": [
+        "Monolito: 1 código, 1 database, 1 deploy; simples mas frágil",
+        "Microservices: múltiplos serviços independentes; complexo mas resiliente",
+        "Monolito vantagem: in-process rápido, ACID fácil, deploy simples",
+        "Microservices vantagem: independência, escala seletiva, falhas isoladas",
+        "Microservices desvantagem: network latency, consistência distribuída, DevOps overhead",
+        "Amazon/Netflix: começaram monolito, escalaram para microservices quando necessário"
+      ]
+    },
+    {
+      "section_id": "service_boundaries",
+      "title": "Desenhando Service Boundaries (13 minutos)",
+      "key_points": [
+        "Domain-Driven Design: divide por domínio de negócio, não por layer técnico",
+        "Cada serviço responsável por um negócio completo (Auth, Learning, Payment)",
+        "Tech stack por serviço: não precisa mesma linguagem (Node, Python, Java, Go)",
+        "Comunicação síncrona: simples, latência, risco de cascata",
+        "Comunicação assíncrona (event-driven): complexa, rápida, resiliente",
+        "Uber exemplo: 1000 serviços, cada um com responsabilidade clara"
+      ]
+    },
+    {
+      "section_id": "distributed_failures",
+      "title": "Falhas Distribuídas - Resilência (13 minutos)",
+      "key_points": [
+        "Cascata de falhas: 1 serviço lento faz tudo ficar lento",
+        "Timeouts: desistir rápido se serviço não responde",
+        "Circuit Breaker: abre se múltiplas falhas, falha rápido sem chamar serviço",
+        "Retry com backoff exponencial: transiente se recupera com retry",
+        "Netflix Chaos Engineering: injetar falhas propositalmente para testar resiliência",
+        "Padrão: timeout + circuit breaker + retry = sistema resiliente"
+      ]
+    },
+    {
+      "section_id": "distributed_consistency",
+      "title": "Consistência Distribuída (12 minutos)",
+      "key_points": [
+        "ACID não existe em microservices (múltiplos databases)",
+        "Saga distribuída: quebra transação em operações com compensações",
+        "Eventual consistency: dados inconsistentes por segundos, depois convergem",
+        "Exemplo: pagamento falha → rollback da inscrição via compensação",
+        "Airbnb: reserva envolve Inventory, Accounting, Notification; saga garante consistência",
+        "Trade-off: consistency vs availability"
+      ]
+    },
+    {
+      "section_id": "synthesis",
+      "title": "Síntese - Quando Microservices? (6 minutos)",
+      "key_points": [
+        "Use microservices: múltiplas equipes, escalas diferentes, tech stacks diferentes, resiliência crítica",
+        "Não use: monolito pequeno, 1-2 pessoas, latência crítica, sem DevOps/observabilidade",
+        "Realidade: startups monolito → PMF → microservices (quando escala força)"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-monolith-evolution",
+      "title": "Evolução: Amazon Monolito → AWS Microservices",
+      "description": "Como Amazon foi forçada a microservices pelo crescimento",
+      "code_or_diagram": "// 2002: Monolito único\n// Jeff Bezos: memorando obrigando desacoplamento\n// \"Todos os serviços precisam conversar via interfaces bem-definidas\"\n// Resultado histórico: AWS (extensão da arquitetura interna)\n\n// Hoje: API-first, microservices por padrão\n// Qualquer serviço interno pode virar EC2 (vendido aos clientes)\n\n// Lição: Arquitetura interna → produto externo (AWS é interno do Amazon)\n// Isso só é possível com serviços independentes"
+    },
+    {
+      "id": "ex-domain-driven-design",
+      "title": "Domain-Driven Design vs Layer-Based",
+      "description": "Como dividir serviços: por negócio vs por tecnologia",
+      "code_or_diagram": "// ❌ ERRADO: Dividir por layer (técnico)\nAuth Layer Service (cuida tudo de auth)\nPayment Layer Service (cuida tudo de pagamento)\nDatabase Layer Service\n\nProblema: Payment precisa Auth (dependência)\nAuth não tem contexto de Payment (acoplamento implicito)\n\n// ✅ CERTO: Dividir por domínio (negócio)\nAuth Service: responsável por identidade\n  - Login\n  - JWT generation\n  - Permission checks\n\nEnrollment Service: responsável por inscrição\n  - Criar inscrição\n  - Cobrar aluno\n  - Cancelar inscrição\n  - Internamente usa Auth (mas é detalhe interno)\n\nNotification Service: responsável por avisar\n  - Email\n  - SMS\n  - Push\n\nCada serviço tem negócio completo, sem dependências circulares"
+    },
+    {
+      "id": "ex-sync-vs-async",
+      "title": "Comunicação Síncrona vs Assíncrona",
+      "description": "Quando cada padrão brilha e quando quebra",
+      "code_or_diagram": "// SÍNCRONA: Chamada HTTP/gRPC, espera resposta\nEnrollment Service → Auth Service: 'Verificar usuário'\n(espera...)\nAuth: 'OK'\nEnrollment continua\n\nVantagem: Simples, resposta imediata\nDesvantagem: Se Auth está lenta, Enrollment fica lenta (cascata)\n\n// ASSÍNCRONA: Publicar evento, listener consome depois\nPayment Service: \"PagamentoCompleto\" → message queue\n(não espera)\nRetorna ao usuário: \"Sucesso\"\n\nNotification Service (listening):\n  Recebe \"PagamentoCompleto\" (segundos depois)\n  Envia email\n\nVantagem: Desacoplado, rápido, se Notification lenta não afeta Payment\nDesvantagem: Complexidade (garantia de delivery, ordering, retry)"
+    },
+    {
+      "id": "ex-circuit-breaker",
+      "title": "Circuit Breaker Pattern: Protegendo Cascata",
+      "description": "Como impedir que 1 serviço lento quebre tudo",
+      "code_or_diagram": "// SEM Circuit Breaker\nEnrollment → Auth (timeout 5s)\nAuth está sobrecarregado (responde em 10s)\nEnrollment aguarda 5s → timeout → retry\nRetry → timeout → retry (3x)\nTotal: 15s aguardando\nUsuário vê: lentidão geral\n\n// COM Circuit Breaker\nEnrollment → Auth: CLOSED (normal)\n5 requisições falham em sequência\nCircuit muda para OPEN\n\nProxima requisição para Auth:\n  Não chama Auth (já está OPEN)\n  Falha IMEDIATAMENTE (sem timeout)\n  Retorna error\n  Usuário vê: rápido erro (better UX)\n\nDepois de 30s, Circuit → HALF-OPEN\n  Tenta 1 requisição de teste\n  Se sucesso: volta CLOSED (Auth recuperou)\n  Se falha: volta OPEN (Auth ainda ruins)\n\nBenefício: Protege do cascata, impede resource starvation"
+    },
+    {
+      "id": "ex-saga-distributed-transaction",
+      "title": "Saga Distribuída: Transação Sem ACID",
+      "description": "Como garantir consistência em microservices",
+      "code_or_diagram": "// Transação: User pagamento e recebe acesso\n\nSequência:\n1. Trip Service: cria reserva (status=PENDING)\n2. Inventory Service: marca imóvel BOOKED\n3. Accounting: charges cartão de crédito\n4. Notification: envia confirmação\n\nSe paso 3 falha (cartão rejeitado):\n\nCompensação (rollback):\n  - Voltar paso 2: marca imóvel como AVAILABLE\n  - Voltar paso 1: status=CANCELLED\n  - Retorna erro ao usuário\n\nResultado: Consistência eventual\n  - Pode levar segundos para converger\n  - Mas no fim, sistema está consistente\n  - Usuário nunca paga sem receber acesso\n  - Imóvel nunca fica falsamente booked"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-8-3-1",
+      "type": "multiple_choice",
+      "question": "Você tem monolito de 10k linhas, 2 developers. Quando considerar microservices?",
+      "options": [
+        "Agora mesmo; microservices é best practice",
+        "Nunca; monolito é mais simples e suficiente",
+        "Quando: múltiplos times, escalas diferentes, ou operação exige resiliência alta",
+        "Quando necessidade de deployar módulos independentemente"
+      ],
+      "correct_answer": "Quando: múltiplos times, escalas diferentes, ou operação exige resiliência alta",
+      "explanation": "Com 2 devs, monolito é perfeito. Microservices traz overhead (DevOps, observabilidade, debugging) que não se justifica. Quando cresce para múltiplos times ou diferentes padrões de escalas, aí microservices faz sentido."
+    },
+    {
+      "id": "ex-8-3-2",
+      "type": "short_answer",
+      "question": "Você está desenhando microservices. Seria melhor dividir por 'Auth Service' e 'Database Layer Service', ou por domínios de negócio? Explique.",
+      "expected_answer": "Por domínios de negócio (ex: Auth Service, Enrollment Service, Payment Service). Divisão por layer cria acoplamento (Payment precisa Auth, criando dependência). Divisão por domínio deixa cada serviço independente. Auth é interno de Enrollment, não uma dependência externa.",
+      "explanation": "Domain-Driven Design (DDD) evita acoplamento. Cada serviço tem negócio completo (responsabilidade única). Divisão por layer técnico cria dependências circulares e acoplamento implicito."
+    },
+    {
+      "id": "ex-8-3-3",
+      "type": "multiple_choice",
+      "question": "Sua Notification Service fica lenta (5s resposta). Sem proteção, isso afeta qual camada?",
+      "options": [
+        "Só afeta notificações; outras features funcionam normal",
+        "Payment fica lento se espera Notification sincronamente",
+        "Depende; se é chamada síncrona, cascata de falhas afeta tudo",
+        "Não há risco; timeout local em cada serviço impede cascata"
+      ],
+      "correct_answer": "Depende; se é chamada síncrona, cascata de falhas afeta tudo",
+      "explanation": "Se Enrollment → Notification é síncrona (espera), e Notification demora 5s, Enrollment demora 5s, API fica lenta. Circuit Breaker / Timeout impede cascata falando 'rápido não' em vez de aguardar. Assincronamente, Enrollment publica evento e retorna imediatamente."
+    },
+    {
+      "id": "ex-8-3-4",
+      "type": "code_review",
+      "question": "Você vê este padrão: Payment Service chama Notification Service síncronamente, aguarda resposta. Problema?",
+      "expected_answer": "Sim. Se Notification falha ou fica lenta, pagamento fica lento/falha. Melhor: Payment publica evento 'PagamentoCompleto', Notification listening consome depois. Payment retorna sucesso imediatamente (quem pagou não quer esperar notification ser enviada).",
+      "explanation": "Acoplamento síncrono é risco. Notificação é best-effort (não crítico se falha ou demora). Assincronamente, Payment não é afetado por Notification (resiliência). Se Notification falha, user recebeu confirmação de pagamento (o crítico)."
+    },
+    {
+      "id": "ex-8-3-5",
+      "type": "prediction",
+      "question": "Você implementou Saga com compensações. Usuario completa pagamento, depois Notification falha permanentemente (serviço fora do ar). Qual problema surge?",
+      "options": [
+        "Nenhum; compensação automaticamente reverteu o pagamento",
+        "Não há rollback de Notification (não pode 'desfazer' email enviado); pero usuario recebeu pagamento OK",
+        "Sistema fica inconsistente forever (sem retry, Notification nunca envia)",
+        "Ambas as opções 2 e 3"
+      ],
+      "correct_answer": "Ambas as opções 2 e 3",
+      "explanation": "Saga é garantia de consistência, não de completion. Se Notification falha: (1) não há compensação por email (já foi enviado, pode desistir), (2) precisa retry/monitoring para eventual envio. Sem retry, Notification fica perdida. Logo: monitore sagas e tente manualmente se necessário."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-8-3",
+    "title": "Design: Migração Monolito → Microservices",
+    "description": "Você tem monolito Python com 50k linhas (Auth, Learning, Payment, Notifications). Desenhe como separar em microservices.",
+    "context": "Monolito funciona, mas: (1) 3 equipes desenvolvendo, (2) Payment e Learning escalas diferentes, (3) um bug em Auth não pode derruba Payment",
+    "tasks": [
+      {
+        "task_id": "task-1",
+        "title": "Service Boundaries",
+        "description": "Desenhe 4 serviços (Auth, Learning, Payment, Notifications). O que cada é responsável?",
+        "hints": ["Cada serviço = um domínio de negócio completo", "Auth: login, JWT, permissions", "Payment: charge, refund, subscription"],
+        "rubric": "Definir claramente responsabilidade de cada serviço. Sem dependências circulares"
+      },
+      {
+        "task_id": "task-2",
+        "title": "Comunicação",
+        "description": "Learning completa uma aula. Payment precisa saber (para evitar charge). Síncrono ou assíncrono? Desenhe fluxo.",
+        "hints": ["Learning publica evento?", "Payment listening?", "Se Learning cai, Payment ainda consegue cobrar?"],
+        "rubric": "Justificar pattern (async é melhor aqui). Desenhar fluxo de eventos"
+      },
+      {
+        "task_id": "task-3",
+        "title": "Resilência",
+        "description": "Notification Service fica lenta. Como proteger outras features? Desenhe circuit breaker + fallback.",
+        "hints": ["Timeout em Notification", "Circuit breaker quando falhas em sequência", "Fallback: o que fazer se Notification cai?"],
+        "rubric": "Mostrar pattern de circuit breaker. Explicar fallback strategy"
+      },
+      {
+        "task_id": "task-4",
+        "title": "Diagrama de Arquitetura",
+        "description": "Desenhe completo: 4 serviços + message queue + load balancer + databases",
+        "hints": ["Auth: PostgreSQL", "Learning: MongoDB", "Payment: MySQL", "Quem publica eventos? Quem consome?"],
+        "rubric": "Diagrama claro mostrando: serviços, databases, message queue, comunicação"
+      }
+    ],
+    "expected_output": "Documento com: (1) Service boundaries e responsabilidades, (2) Comunicação assíncrona (events), (3) Resilience patterns, (4) Arquitetura completa com diagrama"
+  }
+}

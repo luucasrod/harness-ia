@@ -1,0 +1,124 @@
+{
+  "id": "9-3",
+  "moduleId": "9",
+  "lessonNumber": "9.3",
+  "title": "Infrastructure as Code - Terraform Profissional",
+  "duration": "45 min",
+  "wordCount": 2654,
+  "objectives": [
+    "Entender IaC (Infrastructure as Code) vs imperativo",
+    "Declarativo e idempotente: mesmos resultados sempre",
+    "Terraform: providers, resources, variables, state",
+    "Provisionar VPC + EKS cluster com código",
+    "Hands-on: terraform init, plan, apply em AWS"
+  ],
+  "sections": [
+    {"id": "intro", "title": "Introdução"},
+    {"id": "fundamentals", "title": "Conceitos Fundamentais"},
+    {"id": "terraform-practical", "title": "Terraform Prático - Provisionar Cluster AWS"},
+    {"id": "workflow", "title": "Fluxo Terraform"},
+    {"id": "best-practices", "title": "Modularização e Best Practices"}
+  ],
+  "keyTakeaways": [
+    "IaC = Infraestrutura como código: reprodutível, versionável, auditável",
+    "Terraform é declarativo: descreve estado desejado, idempotente",
+    "State rastreia realidade: sem state, Terraform não sabe o que foi criado",
+    "Plan antes de apply: revise mudanças antes de executar",
+    "Modularizar: dividir em vpc/, eks/, iam/ por responsabilidade"
+  ],
+  "exercises": {
+    "main": {
+      "id": "exercise-terraform-eks",
+      "type": "hands-on",
+      "title": "Provisionar VPC + EKS Cluster com Terraform",
+      "description": "Escrever Terraform pra provisionar cluster AWS completo, aplicar mudanças, verificar com kubectl, depois destruir",
+      "estimatedTime": "40 min (provisioning: ~15 min)",
+      "steps": [
+        {"number": 1, "title": "Estrutura de Arquivos", "description": "Criar main.tf, variables.tf, terraform.tfvars"},
+        {"number": 2, "title": "Inicializar", "description": "terraform init (baixa AWS provider)"},
+        {"number": 3, "title": "Validar", "description": "terraform validate (verifica sintaxe)"},
+        {"number": 4, "title": "Planejar", "description": "terraform plan -out=tfplan (vê mudanças)"},
+        {"number": 5, "title": "Revisar", "description": "Revisar plano (25+ recursos)"},
+        {"number": 6, "title": "Aplicar", "description": "terraform apply tfplan (~15 min)"},
+        {"number": 7, "title": "Conectar kubectl", "description": "aws eks update-kubeconfig"},
+        {"number": 8, "title": "Verificar", "description": "kubectl get nodes (3 workers)"},
+        {"number": 9, "title": "Cleanup", "description": "terraform destroy"}
+      ],
+      "successCriteria": [
+        "terraform init sem erros",
+        "terraform plan mostra 25+ recursos",
+        "terraform apply sem erros (~15 min)",
+        "kubectl get nodes mostra 3 workers",
+        "kubectl apply do seu app funciona",
+        "terraform destroy limpa tudo"
+      ],
+      "hints": [
+        "Pré-requisito: AWS account com credenciais (~/.aws/credentials)",
+        "EKS leva ~15 min pra provisionar (esperar é normal)",
+        "terraform destroy deleta TUDO (cuidado)",
+        "State remoto (S3) é essencial em produção",
+        "Versionamento de providers previne surpresas"
+      ]
+    }
+  },
+  "quiz": [
+    {
+      "id": "q1",
+      "number": 1,
+      "type": "choice",
+      "difficulty": "fundamental",
+      "question": "Qual é o papel do arquivo `terraform.tfstate`?",
+      "options": [
+        {"text": "Armazenar secrets", "correct": false},
+        {"text": "Rastrear estado atual dos recursos", "correct": true},
+        {"text": "Definir providers", "correct": false},
+        {"text": "Validar sintaxe HCL", "correct": false}
+      ],
+      "explanation": "`terraform.tfstate` é um JSON que rastreia o que Terraform criou na realidade. Sem state, Terraform não sabe o que destruir."
+    },
+    {
+      "id": "q2",
+      "number": 2,
+      "type": "short_answer",
+      "difficulty": "intermediate",
+      "question": "Você edita `terraform.tfvars` mudando `desired_size = 5` e roda `terraform apply`. O que acontece?",
+      "expectedAnswer": "Terraform detecta a mudança, compara com state atual (3 nodes), calcula a diferença (2 nodes adicionais), e provisiona-os na AWS."
+    },
+    {
+      "id": "q3",
+      "number": 3,
+      "type": "code_review",
+      "difficulty": "intermediate",
+      "question": "O que está faltando nesse Deployment Terraform?\n\n```hcl\nresource \"aws_eks_cluster\" \"main\" {\n  name       = \"tutor-ia\"\n  role_arn   = \"arn:aws:iam::123456:role/eks-cluster\"\n}\n```",
+      "expectedAnswer": "vpc_config (subnets, endpoint access), kubernetes_version, enabled_cluster_log_types. Mínimo: role_arn, vpc_config, version."
+    },
+    {
+      "id": "q4",
+      "number": 4,
+      "type": "prediction",
+      "difficulty": "intermediate",
+      "question": "Você roda `terraform destroy` em produção. O que acontece?",
+      "options": [
+        {"text": "Deleta tudo que Terraform criou", "correct": true},
+        {"text": "Apenas \"marca\" como deleted (não remove de verdade)", "correct": false},
+        {"text": "Cria um backup antes de deletar", "correct": false},
+        {"text": "Pede confirmação 2x por segurança", "correct": false}
+      ],
+      "explanation": "`terraform destroy` deleta TUDO baseado em state. Por isso state remoto com backup é essencial em produção."
+    },
+    {
+      "id": "q5",
+      "number": 5,
+      "type": "debugging",
+      "difficulty": "intermediate",
+      "question": "`terraform apply` falha com 'UnauthorizedOperation'. Qual é o problema mais provável?",
+      "options": [
+        {"text": "Sintaxe HCL errada", "correct": false},
+        {"text": "Credenciais AWS sem permissão", "correct": true},
+        {"text": "VPC CIDR já existe", "correct": false},
+        {"text": "Kubernetes versão inválida", "correct": false}
+      ],
+      "explanation": "UnauthorizedOperation = IAM user/role não tem permissão pra essa ação. Verificar ~/.aws/credentials e policy associada."
+    }
+  ]
+}

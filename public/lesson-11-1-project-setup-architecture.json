@@ -1,0 +1,190 @@
+{
+  "lesson_id": "lesson-11-1-project-setup-architecture",
+  "title": "Capstone 11.1 - Project Setup & Architecture (worktree, monorepo, fronteiras)",
+  "module_id": "module-11",
+  "module_title": "Capstone Project: Build Your Harness Tutor",
+  "description": "Monte a base profissional do Harness Tutor: worktree Git isolado, monorepo pnpm + Turborepo, Project References do TypeScript e a fronteira de dominio puro que separa CLI, API e dashboard.",
+  "duration_minutes": 105,
+  "word_count": 3004,
+  "target_audience": "Devs que concluiram os Modulos 1-10 e vao construir um produto integrador de uma semana",
+  "learning_objectives": [
+    "Isolar o capstone em um worktree Git proprio sem sujar a branch principal do curso.",
+    "Montar um monorepo pnpm workspaces com quatro pacotes e grafo de dependencias explicito.",
+    "Compilar codigo compartilhado com Project References do TypeScript em vez de alias de path.",
+    "Isolar o dominio puro em @harness/core para eliminar mock da maior parte dos testes.",
+    "Validar variaveis de ambiente com Zod no boot, falhando cedo com mensagem acionavel.",
+    "Provar a configuracao inteira com um unico comando pnpm verify em grafo."
+  ],
+  "content_sections": [
+    {
+      "section_id": "trabalho-profissional-antes-do-codigo",
+      "title": "O trabalho profissional comeca antes do codigo",
+      "key_points": [
+        "git worktree cria um segundo diretorio de trabalho com branch separada e .git compartilhado, eliminando git stash e trocas de branch no meio de debug.",
+        "Monorepo nao e varios package.json: e um grafo de dependencias que documenta a arquitetura do sistema.",
+        "Se apps/cli importa apps/api, o desenho esta errado - e o grafo precisa ser dirigido e sem ciclos.",
+        "Todo ADR (Architecture Decision Record) de 20 linhas explica, quatro meses depois, por que o codigo e assim.",
+        "Registrar a decisao antes de implementa-la evita discussions de nomes de pasta que custam 40 minutos."
+      ],
+      "order": 1
+    },
+    {
+      "section_id": "fronteira-de-dominio",
+      "title": "A fronteira de dominio: a decisao que mais paga",
+      "key_points": [
+        "Dominio puro em packages/core: tipos, schemas, calculos, maquina de estado e evaluator, sem fetch, sem process, sem import.meta.",
+        "Adaptadores em packages/cli, apps/api e apps/web: todos dependem de core; core nao depende de ninguem.",
+        "Integracao em apps/api: unico lugar que fala com Claude, Postgres e Redis.",
+        "Testes de core rodam em 40ms sem rede, sem banco e sem mock - o dividendo da fronteira frente ao custo de mock ensinado no Modulo 6.",
+        "Criterio pratico: se o arquivo teria que mudar se o Claude trocasse de modelo, ele e dominio; caso contrario, e adaptador."
+      ],
+      "order": 2
+    },
+    {
+      "section_id": "passo-a-passo-implementacao",
+      "title": "Passo a passo de implementacao (14 passos)",
+      "key_points": [
+        "Passos 1-4: verificar e fixar versoes (Node 22, pnpm 10, git 2.40+), criar worktree em ../wt/harness-tutor, package.json raiz com private, type module e script verify, e pnpm-workspace.yaml + turbo.json com dependsOn ^build.",
+        "Passos 5-7: definir os quatro pacotes e a tabela de fronteiras num ADR, tsconfig.base.json com strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes e verbatimModuleSyntax, e package.json usando workspace:* para toda dependencia interna.",
+        "Passos 8-9: loadServerEnv com Zod e z.coerce.number, e o primeiro reducer de sessao com 3 testes sem mock.",
+        "Passos 10-12: tres ADRs (monorepo, dominio puro, Fastify vs Next API routes), higiene de repositorio com engine-strict=true, e bootstrap.sh de uma linha.",
+        "Passos 13-14: pnpm verify, inspecao do DAG com --graph=html, e o criterio de pronto via import dinamico de @harness/core."
+      ],
+      "order": 3
+    },
+    {
+      "section_id": "decisoes-e-armadilhas",
+      "title": "Decisoes praticas e armadilhas de monorepo",
+      "key_points": [
+        "workspace:* cria symlink: alteracao no core aparece no proximo start e nunca ha versao publicada divergente da local.",
+        "Project References compilam de verdade; alias de path funciona no editor e falha no build de container.",
+        "Project references exigem rootDir explicito, senao o tsc inclui arquivos de outro pacote e a saida fica com estrutura errada.",
+        "Use tsc -b (e nao tsc) nos pacotes: -b compila em grafo de forma incremental; apps/web nao usa isso porque o Next compila.",
+        "apps/web e a excecao: nao deve herdar composite: true nem outDir, que o Next.js nao suporta.",
+        "Se o build de core falha e o de CLI tambem, o problema esta no core - o cache de task do Turborepo entrega atribuicao de culpa, nao so velocidade."
+      ],
+      "order": 4
+    },
+    {
+      "section_id": "transicao-para-o-cli",
+      "title": "Transicao: a fronteira se paga na licao 11.2",
+      "key_points": [
+        "Nada do que foi construido nesta licao aparece no produto final - e exatamente por isso que importa.",
+        "O CLI harness-tutor vai consumir @harness/core e obter de graca os tipos, os schemas de config e o reducer de sessao.",
+        "pnpm verify e o contrato do projeto: um unico comando para saber se tudo compila e passa.",
+        "Antes de seguir: git status deve mostrar apenas os arquivos desta aula; se mostrar .env, pare."
+      ],
+      "order": 5
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-11-1-1",
+      "title": "Monorepo com Turborepo e script verify",
+      "description": "Raiz do workspace com task graph que ordena build antes de typecheck e test.",
+      "code_or_diagram": "{\n  \"name\": \"harness-tutor\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"packageManager\": \"pnpm@10.11.0\",\n  \"engines\": { \"node\": \">=22.11.0\" },\n  \"scripts\": {\n    \"verify\": \"pnpm build && pnpm typecheck && pnpm test && pnpm lint\"\n  },\n  \"devDependencies\": { \"turbo\": \"^2.3.0\", \"typescript\": \"^5.9.0\", \"vitest\": \"^3.2.0\", \"zod\": \"^4.1.0\" }\n}\n\n// turbo.json\n{\n  \"$schema\": \"https://turbo.build/schema.json\",\n  \"tasks\": {\n    \"build\": { \"dependsOn\": [\"^build\"], \"outputs\": [\"dist/**\", \".next/**\", \"!.next/cache/**\"] },\n    \"typecheck\": { \"dependsOn\": [\"^build\"] },\n    \"test\": { \"dependsOn\": [\"^build\"], \"outputs\": [] },\n    \"dev\": { \"cache\": false, \"persistent\": true }\n  }\n}",
+      "language": "json"
+    },
+    {
+      "id": "ex-11-1-2",
+      "title": "Project References do TypeScript",
+      "description": "Compilacao em grafo com declarationMap, em vez de alias de path que quebra no container.",
+      "code_or_diagram": "// tsconfig.base.json\n{\n  \"$compilerOptions\": {\n    \"target\": \"ES2023\",\n    \"module\": \"NodeNext\",\n    \"moduleResolution\": \"NodeNext\",\n    \"strict\": true,\n    \"noUncheckedIndexedAccess\": true,\n    \"exactOptionalPropertyTypes\": true,\n    \"verbatimModuleSyntax\": true,\n    \"declaration\": true,\n    \"declarationMap\": true,\n    \"composite\": true\n  }\n}\n\n// packages/cli/tsconfig.json\n{\n  \"extends\": \"../../tsconfig.base.json\",\n  \"compilerOptions\": { \"outDir\": \"dist\", \"rootDir\": \"src\" },\n  \"include\": [\"src/**/*\"],\n  \"references\": [{ \"path\": \"../core\" }]\n}",
+      "language": "json"
+    },
+    {
+      "id": "ex-11-1-3",
+      "title": "Workspace protocol e bin do CLI",
+      "description": "workspace:* garante symlink e propaga alteracoes do core sem build manual.",
+      "code_or_diagram": "// packages/cli/package.json\n{\n  \"name\": \"@harness/cli\",\n  \"type\": \"module\",\n  \"bin\": { \"harness-tutor\": \"./dist/index.js\" },\n  \"exports\": { \".\": \"./dist/index.js\" },\n  \"scripts\": { \"build\": \"tsc -b\", \"test\": \"vitest run\" },\n  \"dependencies\": {\n    \"@harness/core\": \"workspace:*\",\n    \"commander\": \"^13.1.0\",\n    \"picocolors\": \"^1.1.1\"\n  }\n}",
+      "language": "json"
+    },
+    {
+      "id": "ex-11-1-4",
+      "title": "Validacao de ambiente com Zod no boot",
+      "description": "Falha cedo e com mensagem que lista cada campo invalido, separando string de numero.",
+      "code_or_diagram": "import { z } from \"zod\";\n\nconst ServerEnvSchema = z.object({\n  NODE_ENV: z.enum([\"development\", \"test\", \"production\"]).default(\"development\"),\n  PORT: z.coerce.number().int().min(1).max(65535).default(4000),\n  ANTHROPIC_API_KEY: z.string().min(1),\n  TUTOR_MODEL: z.string().default(\"claude-sonnet-4-5\"),\n  DATABASE_URL: z.url(),\n  REDIS_URL: z.string().default(\"\"),\n});\n\nexport type ServerEnv = z.infer<typeof ServerEnvSchema>;\n\nexport function loadServerEnv(source: NodeJS.ProcessEnv = process.env): ServerEnv {\n  const parsed = ServerEnvSchema.safeParse(source);\n  if (!parsed.success) {\n    const detail = parsed.error.issues\n      .map((i) => `  - ${i.path.join(\".\") || \"(root)\"}: ${i.message}`)\n      .join(\"\\n\");\n    throw new Error(`Invalid environment configuration:\\n${detail}`);\n  }\n  return parsed.data;\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-11-1-5",
+      "title": "Dominio puro: reducer de sessao testado sem mock",
+      "description": "Maquina de estado com discriminated union, exercitada sem rede, sem banco e sem mock.",
+      "code_or_diagram": "export type SessionState =\n  | { phase: \"idle\" }\n  | { phase: \"awaiting_input\" }\n  | { phase: \"thinking\"; startedAt: number }\n  | { phase: \"streaming\"; chars: number }\n  | { phase: \"failed\"; reason: string };\n\nexport type SessionEvent =\n  | { type: \"start\" }\n  | { type: \"submit\" }\n  | { type: \"first_token\" }\n  | { type: \"done\" }\n  | { type: \"error\"; reason: string };\n\nexport function reduce(state: SessionState, event: SessionEvent): SessionState {\n  switch (event.type) {\n    case \"start\": return { phase: \"awaiting_input\" };\n    case \"submit\": return { phase: \"thinking\", startedAt: 0 };\n    case \"first_token\":\n      return state.phase === \"thinking\" ? { phase: \"streaming\", chars: 0 } : state;\n    case \"done\": return { phase: \"awaiting_input\" };\n    case \"error\": return { phase: \"failed\", reason: event.reason };\n  }\n}\n\nit(\"ignora first_token fora de thinking\", () => {\n  const idle: SessionState = { phase: \"idle\" };\n  expect(reduce(idle, { type: \"first_token\" })).toBe(idle);\n});",
+      "language": "typescript"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-11-1-1",
+      "type": "short_answer",
+      "question": "Por que usar workspace:* em vez de \"@harness/core\": \"^0.1.0\"?",
+      "correct_answer": "workspace:* faz o pnpm instalar um symlink para o pacote local, garantindo que alteracoes no core aparecam imediatamente e que nunca exista uma versao publicada divergente da local.",
+      "explanation": "Com range semantico, o pnpm pode resolver o pacote do registry em uma versao publicada e antiga, criando o classico bug de producao com codigo que funciona local e falha no container."
+    },
+    {
+      "id": "q-11-1-2",
+      "type": "code_review",
+      "question": "Revise a fronteira de dominio. packages/core/src/stats.ts importa @prisma/client para contar respostas por lessonId. Qual regra foi violada e como voce corrige?",
+      "correct_answer": "core nao pode depender de I/O nem de framework externo: isso quebra a fronteira de dominio, obriga todos os testes de core a exigir um banco e impede o CLI de rodar onde nao ha Postgres. Corrija movendo a consulta para apps/api/src/repos/stats.repo.ts, expondo em core apenas a forma do retorno (ex. type StatsQuery e type StatsResult) e um schema Zod para validar a saida.",
+      "explanation": "core deve continuar Depending Only On Itself. Se core importa Prisma, o teste de 40ms vira teste de 4s com container, e o padrao visto no Modulo 6 de mock de infraestrutura se instala sozinho."
+    },
+    {
+      "id": "q-11-1-3",
+      "type": "short_answer",
+      "question": "Por que exactOptionalPropertyTypes esta ligado no tsconfig.base?",
+      "correct_answer": "Porque sem ele, { port?: number } aceita port: undefined explicitamente, e esse valor se distingue do ausente em tempo de execucao. Isso mascara bugs de serializacao e de validacao em payloads de API.",
+      "explanation": "Com a opcao ligada, o compilador obriga a tratar a distincao entre 'campo ausente' e 'campo presente com undefined', que e exatamente onde JSON.stringify e validacao de query string costumam divergir."
+    },
+    {
+      "id": "q-11-1-4",
+      "type": "multiple_choice",
+      "question": "Voce adiciona um quinto pacote packages/ui. Qual documento precisa ser atualizado e por que?",
+      "options": [
+        "O ADR 0001 e a tabela de fronteiras do Passo 5, porque o grafo de dependencias e parte da arquitetura documentada, nao um detalhe de implementacao.",
+        "Apenas o README, porque ADRs so documentam decisoes de infraestrutura e nao de organizacao de codigo.",
+        "Apenas o turbo.json, porque o Turborepo descobre os pacotes automaticamente e nao precisa de registro.",
+        "Nada: em monorepos a estrutura de pastas e autodocumentada pelo sistema de arquivos."
+      ],
+      "correct_answer": "O ADR 0001 e a tabela de fronteiras do Passo 5, porque o grafo de dependencias e parte da arquitetura documentada, nao um detalhe de implementacao.",
+      "explanation": "Sem registrar, o proximo dev assume que pode importar qualquer pacote de qualquer lugar. O ADR e aunicidade que impede a gradual erosion das fronteiras."
+    },
+    {
+      "id": "q-11-1-5",
+      "type": "debugging",
+      "question": "pnpm build passa mas pnpm typecheck falha com erro em apps/web. Qual a causa mais provavel?",
+      "correct_answer": "apps/web herdou composite: true e outDir do tsconfig base, o que o Next.js nao suporta, ou o arquivo gerado pelo next-env.d.ts nao esta incluido no escopo de compilacao.",
+      "explanation": "O Next gerencia o proprio tsconfig e faz a compilacao com Turbopack/SWC, ignorando outDir. Composite e para pacotes que usam tsc -b; aplica-lo no app web gera erro de build e de include."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-11-1",
+    "title": "Transformar o monorepo em template reaproveitavel",
+    "description": "Extraia a criacao dos quatro pacotes para scripts/scaffold.mjs idempotente com --dry-run, adicione packages/core/src/env.ts com ServerEnvSchema e BrowserEnvSchema separados, e escreva um teste provando que BrowserEnvSchema rejeita ANTHROPIC_API_KEY.",
+    "expected_solution": "O scaffold usa node:fs/promises e uma lista declarativa de pacotes, escrevendo package.json e tsconfig.json de cada um a partir de um template unico, sem duplicar literais e sem caminho absoluto da maquina. BrowserEnvSchema usa z.object({...}).strict() para falhar fechado, e o teste confirma a rejeicao de chaves de servidor.",
+    "success_criteria": [
+      "scripts/scaffold.mjs executavel, idempotente e com --dry-run funcional",
+      "Nenhum arquivo gerado contem caminho absoluto do computador do aluno",
+      "BrowserEnvSchema falha fechado com .strict() e rejeita ANTHROPIC_API_KEY",
+      "A fronteira de dominio continua valendo: core nao importa nada de apps/",
+      "Pelo menos 4 casos de teste: happy path, porta invalida, URL invalida e rejeicao de segredo no browser",
+      "docs/adr/0004-browser-env-allowlist.md registrado",
+      "pnpm verify passa ao final"
+    ]
+  },
+  "resources": {
+    "official_docs": [
+      "Turbopack/Turborepo: task graph, dependsOn com ^, outputs de cache e inspecao com --graph.",
+      "TypeScript Project References: composite, declarationMap, tsc -b e builds incrementais.",
+      "pnpm workspaces: pnpm-workspace.yaml, workspace:* e a flag engine-strict.",
+      "Zod v4: safeParse, z.coerce, discriminated unions e .strict() para falha fechada."
+    ],
+    "tools": [
+      "pnpm 10 + Turborepo 2",
+      "TypeScript 5.9 (strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes, verbatimModuleSyntax)",
+      "Vitest 3",
+      "Zod 4",
+      "Git 2.40+ (git worktree)"
+    ]
+  }
+}

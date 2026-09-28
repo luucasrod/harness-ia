@@ -1,0 +1,207 @@
+{
+  "lesson_id": "lesson-2-3-estado-global-redux-zustand",
+  "title": "Estado Global - Context API, Redux Toolkit e Zustand",
+  "description": "Comparação prática entre Context API, Redux Toolkit e Zustand para estado global em uma plataforma educacional, com foco em critérios de engenharia.",
+  "duration_minutes": 60,
+  "target_audience": "Developers com mentalidade de engineer (pré-req: Lição 1.1)",
+  "learning_objectives": [
+    "Decidir quando estado deve continuar local, vir do servidor ou virar global",
+    "Implementar o mesmo caso de progresso de aluno com Context API, Redux Toolkit e Zustand",
+    "Entender princípios de Redux: fonte única de verdade, actions, reducers e selectors",
+    "Usar Zustand como alternativa leve com API direta",
+    "Aplicar DevTools e debugging de estado com eventos de domínio"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "Estado global remove duplicação, mas aumenta acoplamento",
+        "A decisão depende de escopo, frequência de mudança e debugging",
+        "O caso usado é progresso do aluno no LMS"
+      ]
+    },
+    {
+      "section_id": "avoid_global_state",
+      "title": "Quando Não Usar Estado Global (8 minutos)",
+      "key_points": [
+        "Estado local deve ficar perto de onde é usado",
+        "Dados de rota podem vir do servidor",
+        "Estado global deve resolver compartilhamento real"
+      ]
+    },
+    {
+      "section_id": "context",
+      "title": "Context API (10 minutos)",
+      "key_points": [
+        "Opção nativa para estado global simples",
+        "Boa para auth, tema e permissões",
+        "Pode causar re-renders amplos se mal dividido"
+      ]
+    },
+    {
+      "section_id": "redux_toolkit",
+      "title": "Redux Toolkit (12 minutos)",
+      "key_points": [
+        "Redux organiza eventos e transições previsíveis",
+        "Redux Toolkit reduz boilerplate",
+        "Selectors isolam leitura e melhoram manutenção"
+      ]
+    },
+    {
+      "section_id": "zustand",
+      "title": "Zustand (10 minutos)",
+      "key_points": [
+        "Store é consumida como hook",
+        "Baixo boilerplate e boa ergonomia",
+        "Exige convenções internas para projetos maiores"
+      ]
+    },
+    {
+      "section_id": "comparison",
+      "title": "Comparação e Decisão",
+      "key_points": [
+        "Context: simples e nativo",
+        "Redux Toolkit: domínio complexo e debugging forte",
+        "Zustand: estado global leve e pragmático"
+      ]
+    },
+    {
+      "section_id": "devtools",
+      "title": "DevTools e Debugging (5 minutos)",
+      "key_points": [
+        "Ações devem ser nomeadas como eventos de domínio",
+        "Debugging inclui estado anterior, payload e estado novo",
+        "DevTools economizam tempo em fluxos complexos"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-context-progress",
+      "title": "ProgressProvider com Context",
+      "description": "Provider nativo para progresso simples do aluno.",
+      "code_or_diagram": "const ProgressContext = React.createContext<ProgressContextValue | null>(null);"
+    },
+    {
+      "id": "ex-redux-slice",
+      "title": "progressSlice com Redux Toolkit",
+      "description": "Reducers moduleOpened e lessonCompleted usando createSlice.",
+      "code_or_diagram": "const progressSlice = createSlice({ name: 'progress', initialState, reducers: { lessonCompleted(state, action) { if (!state.completedLessonIds.includes(action.payload)) state.completedLessonIds.push(action.payload); } } });"
+    },
+    {
+      "id": "ex-redux-selectors",
+      "title": "Selectors de Progresso",
+      "description": "Leituras derivadas isoladas do formato interno da store.",
+      "code_or_diagram": "export function selectIsLessonCompleted(lessonId: string) { return (state: RootState) => state.progress.completedLessonIds.includes(lessonId); }"
+    },
+    {
+      "id": "ex-zustand-store",
+      "title": "Store Zustand",
+      "description": "Store leve com completedLessonIds e currentModuleId.",
+      "code_or_diagram": "export const useProgressStore = create<ProgressStore>((set) => ({ completedLessonIds: [], lessonCompleted: (lessonId) => set((state) => ({ completedLessonIds: [...state.completedLessonIds, lessonId] })) }));"
+    },
+    {
+      "id": "ex-decision-tree",
+      "title": "Árvore de Decisão",
+      "description": "Critério prático para escolher local, Context, Redux ou Zustand.",
+      "code_or_diagram": "Estado local? mantenha local. Global simples? Context. Domínio complexo? Redux Toolkit. Global leve? Zustand."
+    }
+  ],
+  "exercises": [
+    {
+      "id": "quiz-2-3-1",
+      "type": "multiple_choice",
+      "question": "Qual é o primeiro passo antes de adotar estado global?",
+      "options": [
+        "Instalar Redux.",
+        "Verificar se o estado pode continuar local ou vir do servidor.",
+        "Criar um Context único para tudo.",
+        "Memorizar todos os selectors."
+      ],
+      "correct_answer": "Verificar se o estado pode continuar local ou vir do servidor.",
+      "explanation": "Estado global aumenta acoplamento; use apenas quando resolve compartilhamento real."
+    },
+    {
+      "id": "quiz-2-3-2",
+      "type": "short_answer",
+      "question": "Por que selectors são importantes em Redux?",
+      "expected_answer": "Porque isolam a leitura do formato interno do estado, permitem dados derivados reutilizáveis e reduzem acoplamento entre UI e store.",
+      "explanation": "Selectors tornam mudanças internas menos caras."
+    },
+    {
+      "id": "quiz-2-3-3",
+      "type": "code_review",
+      "question": "Uma store global guarda isModalOpen de um modal usado em uma única tela. O que você recomenda?",
+      "expected_answer": "Mover para estado local da tela ou do componente responsável, a menos que outras partes precisem controlar o modal.",
+      "explanation": "Estado local reduz acoplamento e é mais simples."
+    },
+    {
+      "id": "quiz-2-3-4",
+      "type": "prediction",
+      "question": "Se um Context Provider passa { state, markCompleted } sem useMemo, consumidores podem re-renderizar mais?",
+      "expected_answer": "Sim. Um novo objeto value é criado a cada render do provider, invalidando consumidores mesmo quando os campos não mudaram.",
+      "explanation": "Estabilidade referencial importa no value de Context."
+    },
+    {
+      "id": "quiz-2-3-5",
+      "type": "multiple_choice",
+      "question": "Redux Toolkit é mais indicado quando:",
+      "options": [
+        "O estado é um input local.",
+        "Há domínio complexo, muitos eventos e necessidade forte de debugging.",
+        "Você quer evitar qualquer convenção.",
+        "O app tem apenas um botão."
+      ],
+      "correct_answer": "Há domínio complexo, muitos eventos e necessidade forte de debugging.",
+      "explanation": "Redux Toolkit brilha quando previsibilidade e histórico de ações valem o custo."
+    }
+  ],
+  "practical_exercise": {
+    "id": "practice-2-3-redux-progress-store",
+    "title": "Implemente Store de Progresso com Redux Toolkit",
+    "starting_code": "type ProgressState = { completedLessonIds: string[]; currentModuleId: string | null; }; const initialState: ProgressState = { completedLessonIds: [], currentModuleId: null };",
+    "problems_to_fix": [
+      "Não há actions de domínio",
+      "Não há selectors para leitura derivada",
+      "Duplicação de lessonId pode inflar progresso",
+      "Componente acessa formato interno demais"
+    ],
+    "solution_outline": "Criar progressSlice com moduleOpened, lessonCompleted e lessonReset; adicionar selectors; testar duplicação; usar useAppSelector em ModuleProgressSidebar.",
+    "acceptance_criteria": [
+      "lessonCompleted não duplica ids",
+      "selectModuleProgressPercentage calcula progresso por módulo",
+      "selectNextLesson retorna próxima lição não concluída",
+      "Componente usa selectors, não acessa detalhes internos desnecessários"
+    ]
+  },
+  "summary_key_takeaways": [
+    "Nem todo estado compartilhado precisa ser global",
+    "Context é simples, nativo e suficiente para muitos casos",
+    "Redux Toolkit organiza domínios complexos com actions e selectors",
+    "Zustand é leve e ergonômico, mas pede convenções",
+    "Debugging de estado deve observar eventos e transições"
+  ],
+  "next_lesson": {
+    "id": "lesson-2-4-routing-code-splitting-nextjs",
+    "title": "Routing & Code Splitting - Next.js",
+    "preview": "Vamos aplicar App Router, layouts, Server Components, Client Components e code splitting em rotas de módulos, lições e admin."
+  },
+  "resources": [
+    {
+      "title": "Redux Toolkit Docs",
+      "type": "article",
+      "link": "https://redux-toolkit.js.org/"
+    },
+    {
+      "title": "Zustand Docs",
+      "type": "article",
+      "link": "https://zustand-demo.pmnd.rs/"
+    },
+    {
+      "title": "React Docs - useContext",
+      "type": "article",
+      "link": "https://react.dev/reference/react/useContext"
+    }
+  ]
+}

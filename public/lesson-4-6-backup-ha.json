@@ -1,0 +1,194 @@
+{
+  "lesson_id": "lesson-4-6-backup-ha",
+  "title": "Backup & HA (High Availability)",
+  "description": "Proteger dados contra perda: backup (full, incremental, PITR), replicação (master-slave, failover), RTO/RPO, teste de disaster recovery.",
+  "duration_minutes": 40,
+  "module_id": "module-4",
+  "target_audience": "DevOps, DBAs, senior developers",
+  "learning_objectives": [
+    "Estratégias de backup: full, incremental, point-in-time recovery",
+    "Replicação: master-slave para HA, leitura scale-out",
+    "Failover automático: detectar falha, promover replica",
+    "RTO/RPO: métricas de recovery, trade-off custo vs resilience",
+    "Validar disaster recovery: backup test, failover test, integração com aplicação"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "Backup sem teste é ilusão — muitos descobrem na emergência que dump está corrompido",
+        "HA é transparência: usuário não nota falha, aplicação segue rodando",
+        "RTO/RPO definem strategy — quanto downtime/data loss é aceitável?"
+      ]
+    },
+    {
+      "section_id": "backup",
+      "title": "Backup — Estratégias (12 minutos)",
+      "key_points": [
+        "Full backup: cópia completa, gigantesca, restauração lenta",
+        "Incremental: apenas mudanças desde último full, 10x menor",
+        "WAL archiving: replicação contínua, PITR (restore até minuto específico)",
+        "Backup em staging: validar integridade antes de contar como seguro"
+      ]
+    },
+    {
+      "section_id": "replication",
+      "title": "Replicação (15 minutos)",
+      "key_points": [
+        "Master-Slave: master escreve, replicas leem, WAL streaming sincroniza",
+        "Read scale-out: múltiplas replicas para queries pesadas",
+        "Master-Master: ambos escrevem, conflito de escrita é desafio",
+        "Lag: replica atrás do master — monitorar < 1s em produção"
+      ]
+    },
+    {
+      "section_id": "failover",
+      "title": "Failover Automático (12 minutos)",
+      "key_points": [
+        "Health check: monitorar conectividade master a cada 5s",
+        "Promover replica: se master down, melhor replica vira master",
+        "Orchestração: Patroni/etcd automatiza failover (< 30s)",
+        "Transparência: aplicação reconnecta automaticamente"
+      ]
+    },
+    {
+      "section_id": "rtorpo",
+      "title": "RTO/RPO (10 minutos)",
+      "key_points": [
+        "RTO (Recovery Time Objective): quanto tempo até online",
+        "RPO (Recovery Point Objective): quanto data loss aceitável",
+        "Backup diário: RTO 4h, RPO 24h; Replicação: RTO 30s, RPO 0",
+        "Trade-off: mais resiliente = mais caro (redundância)"
+      ]
+    },
+    {
+      "section_id": "testing",
+      "title": "Teste de Disaster Recovery (8 minutos)",
+      "key_points": [
+        "Restaurar backup em staging regularmente (mensal)",
+        "Simular failover: kill master, validar replica promove",
+        "Validação: integridade de dados, índices, performance",
+        "Runbook: instruções para manual failover se automático falha"
+      ]
+    },
+    {
+      "section_id": "summary",
+      "title": "Síntese (8 minutos)",
+      "key_points": [
+        "Backup automático + testado regularmente",
+        "Replicação para HA e read scale-out",
+        "Failover automático via orchestração",
+        "Monitorar RTO/RPO, alertas se falham"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-4-6-1",
+      "title": "Backup Full vs Incremental",
+      "description": "Tamanho e restauração: full é gigante, incremental é pequeno",
+      "code_or_diagram": "-- FULL BACKUP (semanal)\npg_dump -Fc production_db > production_20240101_full.dump\n-- Tamanho: 2TB (toda base)\n-- Restauração: 4 horas\n\n-- INCREMENTAL (diário)\n# WAL archiving contínuo\narchive_command = 'cp %p /wal_archive/%f'\n-- WAL delta: 10GB por dia\n-- Restauração: 2 horas (full 4h + 10 WAL segments 10min)\n\n-- POINT-IN-TIME RECOVERY\n# Restaurar até 2024-01-15 14:30\nrestore_command = 'cp /wal_archive/%f %p'\n# PostgreSQL aplica WAL até timestamp específico"
+    },
+    {
+      "id": "ex-4-6-2",
+      "title": "Master-Slave Replicação",
+      "description": "Master escreve, replicas leem, WAL streaming sincroniza",
+      "code_or_diagram": "[Aplicação: Write]\n      ↓\n[Master PostgreSQL]\n  ↓ WAL streaming ↓\n[Replica 1] [Replica 2]\n\n-- Master config\nwal_level = replica\nmax_wal_senders = 10\n\n-- Replica config\nstandby_mode = 'on'\nprimary_conninfo = 'host=master user=repl'\n\n-- Resultado:\n-- Escrita em Master → WAL → Replicas sincronizam (lag < 1s)\n-- Leitura em Replica → sem impacto em Master\n-- Se Master cai → promover Replica em < 30s"
+    },
+    {
+      "id": "ex-4-6-3",
+      "title": "RTO/RPO Trade-off",
+      "description": "Mais resiliente custa mais",
+      "code_or_diagram": "| Estratégia | RTO | RPO | Custo | Caso de Uso |\n|-----------|-----|-----|-------|-------------|\n| Backup diário | 4h | 24h | $ | Startup (downtime aceitável) |\n| Backup horário + incremental | 1h | 1h | $$ | SaaS (alta availability) |\n| Replicação síncrona | 30s | 0 | $$$ | Fintech (zero data loss) |\n\n-- SLA 99.9% = 9 horas/ano downtime\n-- RTO > 1h = já viola SLA\n-- Replicação é necessário para 99.9%+"
+    },
+    {
+      "id": "ex-4-6-4",
+      "title": "Failover Automático com Patroni",
+      "description": "Cluster PostgreSQL com failover automático",
+      "code_or_diagram": "# Setup: 3 nós (1 Master + 2 Replicas)\n# Patroni monitora, promove melhor replica se master cai\n\n# Cenário: Master 192.168.1.10 cai\n# 1. Patroni (em cada nó) detecta master down\n# 2. Votação: qual replica é melhor?\n#    - Replica com menos lag vira master\n# 3. pg_ctl promote -D /data (promover replica 1)\n# 4. Replica 2 resincroniza\n# 5. DNS atualiza (virtual IP para novo master)\n# 6. Aplicação reconnecta (transparente)\n# Tempo total: < 30 segundos"
+    },
+    {
+      "id": "ex-4-6-5",
+      "title": "Teste de Disaster Recovery",
+      "description": "Validar que backup funciona de verdade",
+      "code_or_diagram": "#!/bin/bash\n# Teste mensal\n\n# 1. Restaurar backup em staging\npg_restore -d staging /backup/production_20240101.dump\n\n# 2. Validar integridade\npsql -d staging -c \"SELECT COUNT(*) FROM users; SELECT COUNT(*) FROM lessons;\"\n# Números fazem sentido? Nenhum error?\n\n# 3. Teste de aplicação\nnpm test -- --db=staging\n# Queries retornam dados corretos?\n\n# 4. Benchmark\npsql -d staging -c \"EXPLAIN ANALYZE SELECT * FROM users WHERE email = 'test@example.com';\"\n# Índices foram restaurados? Performance OK?\n\n# 5. Se tudo passou: backup é confiável\necho \"Backup OK, pronto para produção em caso de emergência\""
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-4-6-q1",
+      "type": "multiple_choice",
+      "question": "Qual é diferença entre RTO e RPO?",
+      "options": [
+        "São sinônimos; nomes diferentes para mesma coisa",
+        "RTO = tempo para ficar online; RPO = quanto data loss aceitável",
+        "RTO é para backup; RPO é para replicação",
+        "Ambos medem downtime"
+      ],
+      "correct_answer": "RTO = tempo para ficar online; RPO = quanto data loss aceitável",
+      "explanation": "RTO = Recovery Time = downtime; RPO = Recovery Point = data loss. Replicação síncrona: RTO 30s, RPO 0. Backup diário: RTO 4h, RPO 24h."
+    },
+    {
+      "id": "ex-4-6-q2",
+      "type": "short_answer",
+      "question": "Por que testar restore de backup regularmente? Não é suficiente confirmar que arquivo .dump foi criado?",
+      "expected_answer": "Arquivo .dump pode estar corrompido, schema incompatível com aplicação, índices não foram salvos. Restaurar em staging é único jeito de validar que funciona de verdade. Nunca descubra na emergência que backup não presta.",
+      "explanation": "Backup que nunca foi testado é ilusão. Restauração validada é requisito pro backup ser confiável."
+    },
+    {
+      "id": "ex-4-6-q3",
+      "type": "code_review",
+      "question": "Qual é problema desta setup: 'Master + 1 Replica, sem failover automático'?",
+      "expected_answer": "Se master cai, alguém precisa promover replica manualmente. Demora minutos (RTO alto). Melhor: 2+ replicas + orchestração automática (Patroni) para failover < 30s.",
+      "explanation": "Manual failover é lento e propenso a erro humano. Automático via Patroni é padrão em produção."
+    },
+    {
+      "id": "ex-4-6-q4",
+      "type": "multiple_choice",
+      "question": "Você precisa de SLA 99.9% uptime. Qual estratégia?",
+      "options": [
+        "Backup diário (RTO 4h, RPO 24h) — suficiente",
+        "Backup horário (RTO 1h, RPO 1h) — marginal",
+        "Replicação síncrona + failover automático (RTO 30s, RPO 0) — apropriado",
+        "Nenhuma das acima"
+      ],
+      "correct_answer": "Replicação síncrona + failover automático (RTO 30s, RPO 0) — apropriado",
+      "explanation": "99.9% = 9 horas/ano downtime. Backup diário violaria (4h por incidente). Replicação com failover automático atinge 99.99%."
+    },
+    {
+      "id": "ex-4-6-q5",
+      "type": "debugging",
+      "question": "Replica fica atrasada 10 segundos do master (lag = 10s) mas SLA exige < 1s. O quê fazer?",
+      "expected_answer": "Lag alto indica replica não consegue aplicar WAL rápido o bastante. Opções: (1) adicionar índices para queries da replica serem rápidas, (2) upgrade de hardware da replica, (3) dedicar replica apenas para replicação (sem queries de aplicação).",
+      "explanation": "Lag é síntoma de replica estar lenta. Causa é usualmente: replica roda queries pesadas, índices ruins, ou hardware insuficiente."
+    }
+  ],
+  "practical_project": {
+    "id": "practical-4-6",
+    "title": "Projeto: Infraestrutura Resiliente (SLA 99.9%)",
+    "description": "Desenhar e testar arquitetura de backup & HA para plataforma educacional.",
+    "requirements": [
+      "RTO/RPO alvo baseado em SLA 99.9%",
+      "Arquitetura: Master + 2 Replicas com WAL streaming",
+      "Failover automático via Patroni (< 30s)",
+      "Backup: full semanal + WAL incremental diário",
+      "Restore test: validar backup mensal",
+      "Failover test: simular master crash, validar replica promove"
+    ],
+    "hints": [
+      "SLA 99.9% = máximo 9h/ano downtime → RTO < 1h ideal",
+      "Replicação síncrona garante RPO 0 (zero data loss)",
+      "Patroni com etcd orquestra failover automático",
+      "Teste em staging clone (de verdade) antes de produção"
+    ],
+    "solution": "Veja ao final da lição Markdown",
+    "grading_criteria": [
+      "RTO/RPO alvo está claro e viável?",
+      "Arquitetura tem 2+ replicas para failover?",
+      "Failover é automático (não manual)?",
+      "Backup é testado regularmente (staging)?",
+      "Runbook documentado para manual failover (backup plan)?"
+    ]
+  }
+}

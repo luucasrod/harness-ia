@@ -1,0 +1,175 @@
+{
+  "lesson_id": "lesson-4-5-migrations",
+  "title": "Migrations — Schema Evolution",
+  "description": "Evoluir schema em produção sem downtime: estratégias zero-downtime, ferramentas (Flyway, Prisma), rollback seguro, teste de migrations.",
+  "duration_minutes": 40,
+  "module_id": "module-4",
+  "target_audience": "Developers responsáveis por produção, DBAs",
+  "learning_objectives": [
+    "Entender estratégias: big bang (simples, risco), zero-downtime (complexa, segura), blue-green (rollback fácil)",
+    "Usar ferramentas: Flyway (versionamento SQL), Prisma Migrate (TypeScript-native)",
+    "Planejar rollback: reversibilidade garantida, data não deletada",
+    "Testar migrations: staging com dados reais, validação pós-migration, teste de rollback",
+    "Evitar anti-patterns: migrations não idempotentes, deletar dados, lock de tabela grande"
+  ],
+  "content_sections": [
+    {
+      "section_id": "intro",
+      "title": "Introdução (5 minutos)",
+      "key_points": [
+        "Migrations são versionadas, reversíveis, testáveis",
+        "Downtime é inaceitável em produção — zero-downtime é padrão",
+        "Big bang é só para dados pequenos; profissional = planejado"
+      ]
+    },
+    {
+      "section_id": "strategies",
+      "title": "Estratégias de Migration (15 minutos)",
+      "key_points": [
+        "Big Bang: Rápido, arriscado, downtime; para dados pequenos",
+        "Zero-Downtime: Adicionar col + backfill + validar; aplicação segue online",
+        "Blue-Green: Novo DB + dual-write + switch; rollback instantâneo, caro",
+        "Escolha baseada em: tamanho dados, downtime aceitável, reversibilidade"
+      ]
+    },
+    {
+      "section_id": "tools",
+      "title": "Ferramentas e Versionamento (12 minutos)",
+      "key_points": [
+        "Flyway: V001__, V002__ SQL files, versionamento claro, ordem garantida",
+        "Prisma Migrate: schema.prisma → snapshot SQL, TypeScript-native",
+        "Cada migration = arquivo + timestamp, aplicadas em ordem, reversíveis"
+      ]
+    },
+    {
+      "section_id": "rollback",
+      "title": "Rollback e Disaster Recovery (12 minutos)",
+      "key_points": [
+        "Rollback planejado: reverter SQL, manter dados, não deletar",
+        "Manter coluna antiga em paralelo durante transição (semanas)",
+        "Disaster recovery: backup antes de migration crítica, restore se corruption"
+      ]
+    },
+    {
+      "section_id": "testing",
+      "title": "Teste de Migrations (10 minutos)",
+      "key_points": [
+        "Staging com dados reais (copiar production)",
+        "Validar estrutura, performance, integridade pós-migration",
+        "Teste de rollback: reversão não causa data loss",
+        "Idempotência: executar 3x = mesmo estado"
+      ]
+    },
+    {
+      "section_id": "summary",
+      "title": "Síntese (6 minutos)",
+      "key_points": [
+        "Migrations reversíveis, testadas, versionadas",
+        "Zero-downtime standard em produção",
+        "Validar dados intactos + performance após"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-4-5-1",
+      "title": "Big Bang vs Zero-Downtime",
+      "description": "Adicionar coluna: downtime vs sem downtime",
+      "code_or_diagram": "-- BIG BANG (Downtime 1-2h, tabela grande)\nALTER TABLE users ADD COLUMN age INT;\n-- Reescreve todas 50M linhas, tabela locked\n\n-- ZERO-DOWNTIME (Seguro)\n-- Step 1: Adicionar com default (rápido, ~0.1s)\nALTER TABLE users ADD COLUMN age INT DEFAULT 0;\n-- Step 2: Aplicação preenche novos registros\nconst user = { email, name, age };\n-- Step 3: Backfill em background\nUPDATE users SET age = 18 WHERE age = 0 LIMIT 100000;\n-- Step 4: Validar completo\nSELECT COUNT(*) FROM users WHERE age = 0;\n-- Step 5: Remover DEFAULT\nALTER TABLE users ALTER COLUMN age DROP DEFAULT;"
+    },
+    {
+      "id": "ex-4-5-2",
+      "title": "Flyway Versioning",
+      "description": "Estrutura de migrations com Flyway",
+      "code_or_diagram": "migrations/\n├── V001__create_users.sql\n├── V002__add_email_index.sql\n├── V003__create_lessons_table.sql\n└── V004__add_progress_percentage_zero_downtime.sql\n\n-- V001__create_users.sql\nCREATE TABLE users (\n  id UUID PRIMARY KEY,\n  email VARCHAR(255) UNIQUE NOT NULL,\n  created_at TIMESTAMP DEFAULT now()\n);\n\n-- V002__add_email_index.sql\nCREATE INDEX idx_users_email ON users(email);\n\n-- Executar\n$ ./flyway migrate  # Aplica V001, V002, V003, V004 em ordem\n$ ./flyway info     # Mostra histórico\n$ ./flyway undo     # Rollback V004"
+    },
+    {
+      "id": "ex-4-5-3",
+      "title": "Zero-Downtime: Backfill Background",
+      "description": "Adicionar coluna + preencher em background sem lock",
+      "code_or_diagram": "-- Migration v1\nALTER TABLE lesson_progress ADD COLUMN grade VARCHAR(1) DEFAULT 'F';\n-- Rápido, coluna com default\n\n-- Aplicação v2 preenche novos registros\n// Cada nova resposta calcula grade\nconst progress = await prisma.lessonProgress.update({\n  where: { userId, lessonId },\n  data: { grade: calculateGrade(correctCount, totalCount) }\n});\n\n-- Background job: backfill antigos (sem lock)\nsetInterval(async () => {\n  const batch = await db.query(\n    \"SELECT * FROM lesson_progress WHERE grade = 'F' LIMIT 1000\"\n  );\n  for (const p of batch) {\n    await db.query(\n      \"UPDATE lesson_progress SET grade = $1 WHERE id = $2\",\n      [calculateGrade(p.correctCount, p.totalCount), p.id]\n    );\n  }\n}, 10000); // A cada 10s, backfill 1000 linhas\n\n-- Validação\nSELECT COUNT(*) FROM lesson_progress WHERE grade = 'F';\n-- Quando zero, backfill completo"
+    },
+    {
+      "id": "ex-4-5-4",
+      "title": "Rollback Seguro: Manter Dados",
+      "description": "Reverter migration sem deletar dados",
+      "code_or_diagram": "-- Migration v3: Adicionar coluna nova\nALTER TABLE users ADD COLUMN email_normalized VARCHAR(255);\n\n-- Migration v4: Popular nova coluna\nUPDATE users SET email_normalized = LOWER(email);\n\n-- Rollback (v4 → v3)\nDROP COLUMN email_normalized;\n-- Dados de email original preservados!\n\n-- Depois: Migration v5\nALTER TABLE users DROP COLUMN email;\n-- Só remove quando aplicação v2 não usa mais (semanas depois)"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "ex-4-5-q1",
+      "type": "multiple_choice",
+      "question": "Qual estratégia usar para adicionar coluna em tabela com 50M linhas?",
+      "options": [
+        "Big bang: ALTER TABLE ... (rápido, downtime aceitável)",
+        "Zero-downtime: Adicionar + default + backfill background + validar",
+        "Blue-green: Novo DB + dual-write, mais seguro",
+        "Depends — tamanho dados, downtime aceitável, reversibilidade"
+      ],
+      "correct_answer": "Zero-downtime: Adicionar + default + backfill background + validar",
+      "explanation": "50M linhas não podem ficar offline. Zero-downtime é padrão: coluna + default = rápido, backfill em background = sem lock, validar = garantia."
+    },
+    {
+      "id": "ex-4-5-q2",
+      "type": "short_answer",
+      "question": "Por que Flyway migrations têm nomes como 'V001__create_users.sql' (em vez de timestamp)?",
+      "expected_answer": "Versão numérica garante ordem de execução (V001 < V002 < V003). Timestamps podem ter conflitos em CI/CD multi-branch. Versionamento explícito é determinístico.",
+      "explanation": "Ordem de execução deve ser clara e determinística. Versões numéricas evitam conflitos de merge em git."
+    },
+    {
+      "id": "ex-4-5-q3",
+      "type": "code_review",
+      "question": "Revise migration: 'DELETE FROM old_table; CREATE TABLE new_table AS SELECT * FROM old_table' — qual é problema?",
+      "expected_answer": "Não reversível. Se migration falha a meio, dados antigos já foram deletados. Melhor: criar novo schema em paralelo, dual-write, depois switch.",
+      "explanation": "Rollback deve ser seguro. Deletar dados numa migration = sem volta. Sempre manter dados antigos até confirmar novo está OK."
+    },
+    {
+      "id": "ex-4-5-q4",
+      "type": "multiple_choice",
+      "question": "Qual é primeiro passo para migrar com zero-downtime?",
+      "options": [
+        "Reescrever aplicação para novo schema",
+        "Adicionar coluna nova com DEFAULT (rápido, ~0.1s)",
+        "Criar novo banco (blue-green)",
+        "Aguardar maintenance window"
+      ],
+      "correct_answer": "Adicionar coluna nova com DEFAULT (rápido, ~0.1s)",
+      "explanation": "DEFAULT faz adição não-blocking. Depois: aplicação preenche + backfill background + validar. Zero downtime."
+    },
+    {
+      "id": "ex-4-5-q5",
+      "type": "debugging",
+      "question": "Migration V3 foi aplicada mas validação encontrou 100k rows com valor inválido. Como proceder?",
+      "expected_answer": "Rollback: ./flyway undo V3 (volta para V2). Dados preservados. Corrigir SQL de V3 (ou criar V4 para fix). Re-aplicar depois.",
+      "explanation": "Rollback reverifica — dados não eram deletados. Corrigir e re-aplicar é seguro."
+    }
+  ],
+  "practical_project": {
+    "id": "practical-4-5",
+    "title": "Projeto: Evoluir Schema com Zero-Downtime",
+    "description": "Migrar plataforma de 50M progressos: adicionar grade, índice, backfill, validar, rollback.",
+    "requirements": [
+      "V001: Criar schema inicial (users, lessons, progress)",
+      "V002: Adicionar coluna grade com DEFAULT",
+      "V003: Criar índice composto (userId, status)",
+      "V004: Backfill grades (background job, LIMIT batch)",
+      "V005: Validar integridade (sem NULLs, contagem preservada)",
+      "Rollback test: Reverter V004, dados intactos"
+    ],
+    "hints": [
+      "Coluna com DEFAULT = rápido, não-blocking",
+      "Backfill em batches (LIMIT 1000), sem lock tabela",
+      "Índice em background (CONCURRENTLY em PostgreSQL)",
+      "Validar pós-migration: SELECT COUNT(*) de cada tabela"
+    ],
+    "solution": "Veja ao final da lição Markdown",
+    "grading_criteria": [
+      "Migrations são versionadas e reversíveis?",
+      "Zero-downtime? (coluna com DEFAULT, backfill background)",
+      "Índices criados corretamente?",
+      "Validação confirma integridade?",
+      "Rollback é seguro (dados não deletados)?"
+    ]
+  }
+}

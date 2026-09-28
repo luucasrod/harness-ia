@@ -1,0 +1,224 @@
+{
+  "lesson_id": "lesson-10-1-claude-api-fundamentals",
+  "title": "Claude API Fundamentals - Auth, Models, Streaming, Tokens e Custos",
+  "module_id": "module-10",
+  "module_title": "Claude AI Integration",
+  "description": "Aprenda a integrar a Messages API da Claude em uma plataforma educacional real, com autenticacao segura, escolha de modelos, streaming, token budgeting e estimativa de custo.",
+  "duration_minutes": 90,
+  "word_count": 6809,
+  "target_audience": "Developers intermediarios criando features de IA em plataforma educacional",
+  "learning_objectives": [
+    "Configurar o SDK TypeScript da Anthropic sem expor API keys ao navegador.",
+    "Escolher modelos Claude por perfil de tarefa: tutor rapido, avaliador cuidadoso e explicador profundo.",
+    "Criar chamadas Messages API com system prompt, mensagens de usuario e limites de resposta.",
+    "Implementar streaming SSE para respostas incrementais em uma aula interativa.",
+    "Estimar tokens, custo e risco de estouro de contexto antes de chamar a API.",
+    "Projetar uma camada de servico reutilizavel para a plataforma educacional."
+  ],
+  "content_sections": [
+    {
+      "section_id": "a-primeira-integracao-real",
+      "title": "A primeira integracao real",
+      "key_points": [
+        "A API deve viver no servidor; o cliente nunca recebe a chave Anthropic.",
+        "Model IDs mudam com o tempo; isole-os em configuracao versionada.",
+        "Streaming melhora percepcao de latencia e permite cancelar respostas caras.",
+        "O campo usage da resposta deve alimentar custo, analytics e alertas.",
+        "Token budgeting e prompt caching sao decisoes de arquitetura, nao detalhes cosmeticos."
+      ],
+      "order": 1
+    },
+    {
+      "section_id": "autenticacao-e-configuracao-segura",
+      "title": "Autenticacao e configuracao segura",
+      "key_points": [
+        "A API deve viver no servidor; o cliente nunca recebe a chave Anthropic.",
+        "Model IDs mudam com o tempo; isole-os em configuracao versionada.",
+        "Streaming melhora percepcao de latencia e permite cancelar respostas caras.",
+        "O campo usage da resposta deve alimentar custo, analytics e alertas.",
+        "Token budgeting e prompt caching sao decisoes de arquitetura, nao detalhes cosmeticos."
+      ],
+      "order": 2
+    },
+    {
+      "section_id": "modelos-aliases-e-estrategia-de-escolha",
+      "title": "Modelos, aliases e estrategia de escolha",
+      "key_points": [
+        "A API deve viver no servidor; o cliente nunca recebe a chave Anthropic.",
+        "Model IDs mudam com o tempo; isole-os em configuracao versionada.",
+        "Streaming melhora percepcao de latencia e permite cancelar respostas caras.",
+        "O campo usage da resposta deve alimentar custo, analytics e alertas.",
+        "Token budgeting e prompt caching sao decisoes de arquitetura, nao detalhes cosmeticos."
+      ],
+      "order": 3
+    },
+    {
+      "section_id": "messages-api-como-contrato-principal",
+      "title": "Messages API como contrato principal",
+      "key_points": [
+        "A API deve viver no servidor; o cliente nunca recebe a chave Anthropic.",
+        "Model IDs mudam com o tempo; isole-os em configuracao versionada.",
+        "Streaming melhora percepcao de latencia e permite cancelar respostas caras.",
+        "O campo usage da resposta deve alimentar custo, analytics e alertas.",
+        "Token budgeting e prompt caching sao decisoes de arquitetura, nao detalhes cosmeticos."
+      ],
+      "order": 4
+    },
+    {
+      "section_id": "streaming-para-experiencia-de-tutor",
+      "title": "Streaming para experiencia de tutor",
+      "key_points": [
+        "A API deve viver no servidor; o cliente nunca recebe a chave Anthropic.",
+        "Model IDs mudam com o tempo; isole-os em configuracao versionada.",
+        "Streaming melhora percepcao de latencia e permite cancelar respostas caras.",
+        "O campo usage da resposta deve alimentar custo, analytics e alertas.",
+        "Token budgeting e prompt caching sao decisoes de arquitetura, nao detalhes cosmeticos."
+      ],
+      "order": 5
+    },
+    {
+      "section_id": "tokens-custo-e-limites-operacionais",
+      "title": "Tokens, custo e limites operacionais",
+      "key_points": [
+        "A API deve viver no servidor; o cliente nunca recebe a chave Anthropic.",
+        "Model IDs mudam com o tempo; isole-os em configuracao versionada.",
+        "Streaming melhora percepcao de latencia e permite cancelar respostas caras.",
+        "O campo usage da resposta deve alimentar custo, analytics e alertas.",
+        "Token budgeting e prompt caching sao decisoes de arquitetura, nao detalhes cosmeticos."
+      ],
+      "order": 6
+    },
+    {
+      "section_id": "arquitetura-recomendada-para-harness-ia",
+      "title": "Arquitetura recomendada para Harness IA",
+      "key_points": [
+        "A API deve viver no servidor; o cliente nunca recebe a chave Anthropic.",
+        "Model IDs mudam com o tempo; isole-os em configuracao versionada.",
+        "Streaming melhora percepcao de latencia e permite cancelar respostas caras.",
+        "O campo usage da resposta deve alimentar custo, analytics e alertas.",
+        "Token budgeting e prompt caching sao decisoes de arquitetura, nao detalhes cosmeticos."
+      ],
+      "order": 7
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-10-1-1",
+      "title": "Cliente Anthropic no servidor",
+      "description": "Inicializa o SDK apenas no runtime server-side da aplicacao.",
+      "code_or_diagram": "import Anthropic from \"@anthropic-ai/sdk\";\n\nexport const anthropic = new Anthropic({\n  apiKey: process.env.ANTHROPIC_API_KEY,\n  maxRetries: 2,\n  timeout: 45_000,\n});\n\nexport const CLAUDE_MODELS = {\n  tutor: process.env.CLAUDE_TUTOR_MODEL ?? \"claude-sonnet-5-5\",\n  fast: process.env.CLAUDE_FAST_MODEL ?? \"claude-haiku-4-5\",\n  deepReview: process.env.CLAUDE_REVIEW_MODEL ?? \"claude-opus-5-5\",\n} as const;\n\nif (!process.env.ANTHROPIC_API_KEY) {\n  throw new Error(\"ANTHROPIC_API_KEY is required on the server\");\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-1-2",
+      "title": "Primeira resposta do tutor",
+      "description": "Chamada basica para responder uma duvida de aluno com contexto de licao.",
+      "code_or_diagram": "import { anthropic, CLAUDE_MODELS } from \"./anthropic\";\n\nexport async function answerLessonQuestion(input: {\n  lessonTitle: string;\n  lessonExcerpt: string;\n  question: string;\n}) {\n  const message = await anthropic.messages.create({\n    model: CLAUDE_MODELS.tutor,\n    max_tokens: 900,\n    temperature: 0.3,\n    system: `You are the Harness IA tutor. Teach clearly, ask one check question, and never fabricate course content.`,\n    messages: [\n      {\n        role: \"user\",\n        content: `<lesson title=\"${input.lessonTitle}\">${input.lessonExcerpt}</lesson>\n<question>${input.question}</question>`,\n      },\n    ],\n  });\n\n  return {\n    text: message.content.filter((b) => b.type === \"text\").map((b) => b.text).join(\"\\n\"),\n    usage: message.usage,\n    model: message.model,\n  };\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-1-3",
+      "title": "Streaming para UI de chat",
+      "description": "Entrega tokens incrementais para o frontend da plataforma.",
+      "code_or_diagram": "export async function streamTutorAnswer(question: string) {\n  const stream = anthropic.messages.stream({\n    model: CLAUDE_MODELS.tutor,\n    max_tokens: 1200,\n    system: \"You are a concise but rigorous software engineering tutor.\",\n    messages: [{ role: \"user\", content: question }],\n  });\n\n  for await (const event of stream) {\n    if (event.type === \"content_block_delta\" && event.delta.type === \"text_delta\") {\n      process.stdout.write(event.delta.text);\n    }\n  }\n\n  const finalMessage = await stream.finalMessage();\n  return finalMessage.usage;\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-1-4",
+      "title": "Estimativa simples de custo",
+      "description": "Transforma usage em custo usando tabela centralizada e atualizavel.",
+      "code_or_diagram": "type ModelPrice = { inputPerMTok: number; outputPerMTok: number };\n\nconst PRICES_USD: Record<string, ModelPrice> = {\n  \"claude-sonnet-5-5\": { inputPerMTok: 2, outputPerMTok: 10 },\n  \"claude-opus-5-5\": { inputPerMTok: 4, outputPerMTok: 20 },\n  \"claude-haiku-4-5\": { inputPerMTok: 1, outputPerMTok: 5 },\n};\n\nexport function estimateUsd(model: string, usage: { input_tokens: number; output_tokens: number }) {\n  const price = PRICES_USD[model];\n  if (!price) return null;\n  return (\n    (usage.input_tokens / 1_000_000) * price.inputPerMTok +\n    (usage.output_tokens / 1_000_000) * price.outputPerMTok\n  );\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-1-5",
+      "title": "Endpoint server-side para tutor",
+      "description": "API route que valida entrada e nunca revela segredos ao navegador.",
+      "code_or_diagram": "import { NextRequest } from \"next/server\";\nimport { z } from \"zod\";\n\nconst TutorRequest = z.object({\n  lessonId: z.string().min(1),\n  question: z.string().min(3).max(4000),\n});\n\nexport async function POST(req: NextRequest) {\n  const body = TutorRequest.parse(await req.json());\n  const lesson = await loadLessonContext(body.lessonId);\n  const answer = await answerLessonQuestion({\n    lessonTitle: lesson.title,\n    lessonExcerpt: lesson.excerpt,\n    question: body.question,\n  });\n\n  await logAiUsage({ lessonId: body.lessonId, ...answer });\n  return Response.json(answer);\n}",
+      "language": "typescript"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-10-1-1",
+      "type": "short_answer",
+      "question": "Por que a chave Anthropic nao deve ir para o browser?",
+      "correct_answer": "Porque qualquer usuario poderia extrair a chave e gerar custo ou abuso em nome da organizacao.",
+      "explanation": "Porque qualquer usuario poderia extrair a chave e gerar custo ou abuso em nome da organizacao."
+    },
+    {
+      "id": "q-10-1-2",
+      "type": "multiple_choice",
+      "question": "Quando streaming vale a pena em um tutor?",
+      "options": [
+        "Quando a resposta pode demorar mais que alguns segundos, quando o aluno precisa de feedback progressivo, ou quando se deseja permitir cancelamento.",
+        "Ignorar o problema e aumentar max_tokens",
+        "Enviar a API key para o browser",
+        "Remover logs para reduzir custo"
+      ],
+      "correct_answer": "Quando a resposta pode demorar mais que alguns segundos, quando o aluno precisa de feedback progressivo, ou quando se deseja permitir cancelamento.",
+      "explanation": "Quando a resposta pode demorar mais que alguns segundos, quando o aluno precisa de feedback progressivo, ou quando se deseja permitir cancelamento."
+    },
+    {
+      "id": "q-10-1-3",
+      "type": "debugging",
+      "question": "Qual risco de hardcodar o model ID em vinte arquivos?",
+      "correct_answer": "Upgrade, rollback, custo e avaliacao ficam espalhados; uma troca de modelo vira alteracao arriscada.",
+      "explanation": "Upgrade, rollback, custo e avaliacao ficam espalhados; uma troca de modelo vira alteracao arriscada."
+    },
+    {
+      "id": "q-10-1-4",
+      "type": "short_answer",
+      "question": "O que o campo usage permite construir?",
+      "correct_answer": "Estimativa de custo, dashboards, alertas de gasto, limites por usuario e analise de prompts caros.",
+      "explanation": "Estimativa de custo, dashboards, alertas de gasto, limites por usuario e analise de prompts caros."
+    },
+    {
+      "id": "q-10-1-5",
+      "type": "multiple_choice",
+      "question": "Qual e a diferenca entre max_tokens e janela de contexto?",
+      "options": [
+        "max_tokens limita a saida; janela de contexto limita entrada mais saida que o modelo consegue considerar.",
+        "Ignorar o problema e aumentar max_tokens",
+        "Enviar a API key para o browser",
+        "Remover logs para reduzir custo"
+      ],
+      "correct_answer": "max_tokens limita a saida; janela de contexto limita entrada mais saida que o modelo consegue considerar.",
+      "explanation": "max_tokens limita a saida; janela de contexto limita entrada mais saida que o modelo consegue considerar."
+    },
+    {
+      "id": "q-10-1-6",
+      "type": "debugging",
+      "question": "Por que usar temperatura baixa em tutor tecnico?",
+      "correct_answer": "Para reduzir variacao e priorizar consistencia, explicacao fiel ao conteudo e formato previsivel.",
+      "explanation": "Para reduzir variacao e priorizar consistencia, explicacao fiel ao conteudo e formato previsivel."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-10-1",
+    "title": "Criar o ClaudeTutorService da Harness IA",
+    "description": "Implemente uma camada server-side que recebe lessonId, pergunta e userId, carrega contexto da licao, chama Claude, registra usage e retorna resposta.",
+    "expected_solution": "A solucao deve ter Anthropic client server-only, schema Zod de entrada, system prompt do tutor, tabela de modelos em env vars, calculo de custo a partir de usage, log persistente e teste cobrindo pergunta valida, pergunta muito longa e ausencia de API key.",
+    "success_criteria": [
+      "Server-side only para chamadas Claude",
+      "Entrada validada",
+      "Prompt ou contrato versionado",
+      "Uso, custo, latencia e status registrados",
+      "Fallback ou tratamento de erro implementado",
+      "Testes cobrindo caminho feliz e falhas"
+    ]
+  },
+  "resources": {
+    "official_docs": [
+      "Anthropic Claude Platform Docs: API overview, Messages API, Authentication, Models overview, Pricing, Streaming messages, Rate limits, Errors, Prompting best practices.",
+      "Use current model and pricing IDs as configuration, not constants embedded across application code."
+    ],
+    "tools": [
+      "@anthropic-ai/sdk",
+      "zod",
+      "p-limit or p-queue",
+      "OpenTelemetry/logging",
+      "Next.js API routes"
+    ]
+  }
+}

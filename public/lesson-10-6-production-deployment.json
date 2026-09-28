@@ -1,0 +1,224 @@
+{
+  "lesson_id": "lesson-10-6-production-deployment",
+  "title": "Production Deployment - Monitoring, Custos, Compliance, API Keys e Paralelismo",
+  "module_id": "module-10",
+  "module_title": "Claude AI Integration",
+  "description": "Coloque a integracao Claude em producao com governanca: ambientes, rotacao de chaves, dashboards, budgets, compliance, chamadas paralelas e playbooks operacionais.",
+  "duration_minutes": 100,
+  "word_count": 6589,
+  "target_audience": "Developers intermediarios criando features de IA em plataforma educacional",
+  "learning_objectives": [
+    "Configurar API keys por ambiente sem vazamento em logs ou frontend.",
+    "Criar dashboards de custo, tokens, latencia, erro e qualidade.",
+    "Definir budgets por usuario, turma, modulo e workspace.",
+    "Aplicar principios de privacidade para dados educacionais.",
+    "Executar chamadas paralelas com limite de concorrencia e agregacao segura.",
+    "Planejar upgrades de modelo com canary, evals e rollback."
+  ],
+  "content_sections": [
+    {
+      "section_id": "do-prototipo-ao-sistema-operacional",
+      "title": "Do prototipo ao sistema operacional",
+      "key_points": [
+        "Producao exige controles economicos tanto quanto controles tecnicos.",
+        "Segredos precisam de rotacao, escopo minimo e auditoria.",
+        "Chamadas paralelas aceleram avaliacao, mas multiplicam custo e rate limit.",
+        "Compliance comeca minimizando dados enviados ao modelo.",
+        "Upgrade de modelo e mudanca de comportamento; trate como release de produto."
+      ],
+      "order": 1
+    },
+    {
+      "section_id": "ambientes-e-segredos",
+      "title": "Ambientes e segredos",
+      "key_points": [
+        "Producao exige controles economicos tanto quanto controles tecnicos.",
+        "Segredos precisam de rotacao, escopo minimo e auditoria.",
+        "Chamadas paralelas aceleram avaliacao, mas multiplicam custo e rate limit.",
+        "Compliance comeca minimizando dados enviados ao modelo.",
+        "Upgrade de modelo e mudanca de comportamento; trate como release de produto."
+      ],
+      "order": 2
+    },
+    {
+      "section_id": "monitoramento-de-qualidade-custo-e-latencia",
+      "title": "Monitoramento de qualidade, custo e latencia",
+      "key_points": [
+        "Producao exige controles economicos tanto quanto controles tecnicos.",
+        "Segredos precisam de rotacao, escopo minimo e auditoria.",
+        "Chamadas paralelas aceleram avaliacao, mas multiplicam custo e rate limit.",
+        "Compliance comeca minimizando dados enviados ao modelo.",
+        "Upgrade de modelo e mudanca de comportamento; trate como release de produto."
+      ],
+      "order": 3
+    },
+    {
+      "section_id": "compliance-e-dados-educacionais",
+      "title": "Compliance e dados educacionais",
+      "key_points": [
+        "Producao exige controles economicos tanto quanto controles tecnicos.",
+        "Segredos precisam de rotacao, escopo minimo e auditoria.",
+        "Chamadas paralelas aceleram avaliacao, mas multiplicam custo e rate limit.",
+        "Compliance comeca minimizando dados enviados ao modelo.",
+        "Upgrade de modelo e mudanca de comportamento; trate como release de produto."
+      ],
+      "order": 4
+    },
+    {
+      "section_id": "chamadas-paralelas-com-controle",
+      "title": "Chamadas paralelas com controle",
+      "key_points": [
+        "Producao exige controles economicos tanto quanto controles tecnicos.",
+        "Segredos precisam de rotacao, escopo minimo e auditoria.",
+        "Chamadas paralelas aceleram avaliacao, mas multiplicam custo e rate limit.",
+        "Compliance comeca minimizando dados enviados ao modelo.",
+        "Upgrade de modelo e mudanca de comportamento; trate como release de produto."
+      ],
+      "order": 5
+    },
+    {
+      "section_id": "batches-e-tarefas-assincro-nas",
+      "title": "Batches e tarefas assincro nas",
+      "key_points": [
+        "Producao exige controles economicos tanto quanto controles tecnicos.",
+        "Segredos precisam de rotacao, escopo minimo e auditoria.",
+        "Chamadas paralelas aceleram avaliacao, mas multiplicam custo e rate limit.",
+        "Compliance comeca minimizando dados enviados ao modelo.",
+        "Upgrade de modelo e mudanca de comportamento; trate como release de produto."
+      ],
+      "order": 6
+    },
+    {
+      "section_id": "runbooks-upgrades-e-governanca",
+      "title": "Runbooks, upgrades e governanca",
+      "key_points": [
+        "Producao exige controles economicos tanto quanto controles tecnicos.",
+        "Segredos precisam de rotacao, escopo minimo e auditoria.",
+        "Chamadas paralelas aceleram avaliacao, mas multiplicam custo e rate limit.",
+        "Compliance comeca minimizando dados enviados ao modelo.",
+        "Upgrade de modelo e mudanca de comportamento; trate como release de produto."
+      ],
+      "order": 7
+    }
+  ],
+  "examples": [
+    {
+      "id": "ex-10-6-1",
+      "title": "Configuracao por ambiente",
+      "description": "Separa modelos, budgets e chaves sem alterar codigo.",
+      "code_or_diagram": "export const aiConfig = {\n  env: process.env.APP_ENV ?? \"development\",\n  anthropicKey: process.env.ANTHROPIC_API_KEY!,\n  tutorModel: process.env.CLAUDE_TUTOR_MODEL ?? \"claude-sonnet-5-5\",\n  evaluatorModel: process.env.CLAUDE_EVALUATOR_MODEL ?? \"claude-opus-5-5\",\n  monthlyBudgetUsd: Number(process.env.AI_MONTHLY_BUDGET_USD ?? 500),\n  perUserDailyBudgetUsd: Number(process.env.AI_USER_DAILY_BUDGET_USD ?? 2),\n};",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-6-2",
+      "title": "Budget guard antes da chamada",
+      "description": "Bloqueia chamadas antes de gerar custo excessivo.",
+      "code_or_diagram": "export async function assertBudgetAvailable(userId: string, estimatedUsd: number) {\n  const [userSpend, orgSpend] = await Promise.all([\n    db.aiUsage.sum({ where: { userId, createdAt: today() }, field: \"costUsd\" }),\n    db.aiUsage.sum({ where: { createdAt: thisMonth() }, field: \"costUsd\" }),\n  ]);\n\n  if (userSpend + estimatedUsd > aiConfig.perUserDailyBudgetUsd) {\n    throw new Error(\"AI_DAILY_USER_BUDGET_EXCEEDED\");\n  }\n  if (orgSpend + estimatedUsd > aiConfig.monthlyBudgetUsd) {\n    throw new Error(\"AI_MONTHLY_BUDGET_EXCEEDED\");\n  }\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-6-3",
+      "title": "Chamadas paralelas com limite",
+      "description": "Avalia varias respostas sem saturar rate limit.",
+      "code_or_diagram": "import pLimit from \"p-limit\";\n\nconst limit = pLimit(3);\n\nexport async function evaluateManyAttempts(attempts: StudentAttempt[]) {\n  const jobs = attempts.map((attempt) =>\n    limit(async () => {\n      await assertBudgetAvailable(attempt.userId, 0.03);\n      return evaluateAttemptWithClaude(attempt);\n    }),\n  );\n\n  const results = await Promise.allSettled(jobs);\n  return results.map((r, index) => ({\n    attemptId: attempts[index].id,\n    status: r.status,\n    value: r.status === \"fulfilled\" ? r.value : null,\n  }));\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-6-4",
+      "title": "Logs de uso para dashboard",
+      "description": "Normaliza eventos para BI, alertas e suporte.",
+      "code_or_diagram": "export async function logAiUsage(event: {\n  userId: string;\n  lessonId: string;\n  model: string;\n  promptVersion: string;\n  inputTokens: number;\n  outputTokens: number;\n  costUsd: number | null;\n  latencyMs: number;\n  status: \"success\" | \"fallback\" | \"error\";\n}) {\n  await db.aiUsage.create({ data: { ...event, createdAt: new Date() } });\n}",
+      "language": "typescript"
+    },
+    {
+      "id": "ex-10-6-5",
+      "title": "Canary de modelo",
+      "description": "Envia pequena parcela do trafego para modelo novo e compara qualidade.",
+      "code_or_diagram": "export function chooseModelForRequest(userId: string) {\n  const hash = stableHash(userId);\n  const canaryPercent = Number(process.env.CLAUDE_CANARY_PERCENT ?? 0);\n  if (hash % 100 < canaryPercent) {\n    return process.env.CLAUDE_CANARY_MODEL ?? aiConfig.tutorModel;\n  }\n  return aiConfig.tutorModel;\n}\n\nexport async function releaseGate() {\n  const metrics = await getCanaryMetrics();\n  return metrics.quality >= 0.98 && metrics.errorRate < 0.01 && metrics.costIncrease < 0.15;\n}",
+      "language": "typescript"
+    }
+  ],
+  "exercises": [
+    {
+      "id": "q-10-6-1",
+      "type": "short_answer",
+      "question": "Por que chamada paralela exige limite de concorrencia?",
+      "correct_answer": "Porque sem limite voce consome rate limit e budget muito rapido.",
+      "explanation": "Porque sem limite voce consome rate limit e budget muito rapido."
+    },
+    {
+      "id": "q-10-6-2",
+      "type": "multiple_choice",
+      "question": "O que monitorar alem de erro?",
+      "options": [
+        "Custo, tokens, latencia, qualidade, fallback rate, prompt version e modelo.",
+        "Ignorar o problema e aumentar max_tokens",
+        "Enviar a API key para o browser",
+        "Remover logs para reduzir custo"
+      ],
+      "correct_answer": "Custo, tokens, latencia, qualidade, fallback rate, prompt version e modelo.",
+      "explanation": "Custo, tokens, latencia, qualidade, fallback rate, prompt version e modelo."
+    },
+    {
+      "id": "q-10-6-3",
+      "type": "debugging",
+      "question": "Qual e a primeira regra de compliance com dados de aluno?",
+      "correct_answer": "Enviar apenas o minimo necessario para a finalidade educacional.",
+      "explanation": "Enviar apenas o minimo necessario para a finalidade educacional."
+    },
+    {
+      "id": "q-10-6-4",
+      "type": "short_answer",
+      "question": "Como fazer upgrade de modelo com seguranca?",
+      "correct_answer": "Canary pequeno, evals, comparacao de custo/qualidade e rollback rapido.",
+      "explanation": "Canary pequeno, evals, comparacao de custo/qualidade e rollback rapido."
+    },
+    {
+      "id": "q-10-6-5",
+      "type": "multiple_choice",
+      "question": "Por que separar API keys por ambiente?",
+      "options": [
+        "Para reduzir blast radius e impedir que teste consuma budget ou dados de producao.",
+        "Ignorar o problema e aumentar max_tokens",
+        "Enviar a API key para o browser",
+        "Remover logs para reduzir custo"
+      ],
+      "correct_answer": "Para reduzir blast radius e impedir que teste consuma budget ou dados de producao.",
+      "explanation": "Para reduzir blast radius e impedir que teste consuma budget ou dados de producao."
+    },
+    {
+      "id": "q-10-6-6",
+      "type": "debugging",
+      "question": "Quando usar batch ou job assincro no lugar de request interativo?",
+      "correct_answer": "Para avaliacao em massa, relatorios e tarefas que nao precisam responder na hora.",
+      "explanation": "Para avaliacao em massa, relatorios e tarefas que nao precisam responder na hora."
+    }
+  ],
+  "practice_exercise": {
+    "id": "practice-10-6",
+    "title": "Plano de producao para Claude na Harness IA",
+    "description": "Desenhe e implemente o esqueleto de producao: env vars, budget guard, logging, paralelismo limitado, dashboard de metricas e canary de modelo.",
+    "expected_solution": "O gabarito contem configuracao por ambiente, segredo server-only, assertBudgetAvailable, logAiUsage, evaluateManyAttempts com p-limit, metricas agregadas, canary por hash de usuario, checklist de compliance e runbook de incidente.",
+    "success_criteria": [
+      "Server-side only para chamadas Claude",
+      "Entrada validada",
+      "Prompt ou contrato versionado",
+      "Uso, custo, latencia e status registrados",
+      "Fallback ou tratamento de erro implementado",
+      "Testes cobrindo caminho feliz e falhas"
+    ]
+  },
+  "resources": {
+    "official_docs": [
+      "Anthropic Claude Platform Docs: API overview, Messages API, Authentication, Models overview, Pricing, Streaming messages, Rate limits, Errors, Prompting best practices.",
+      "Use current model and pricing IDs as configuration, not constants embedded across application code."
+    ],
+    "tools": [
+      "@anthropic-ai/sdk",
+      "zod",
+      "p-limit or p-queue",
+      "OpenTelemetry/logging",
+      "Next.js API routes"
+    ]
+  }
+}
