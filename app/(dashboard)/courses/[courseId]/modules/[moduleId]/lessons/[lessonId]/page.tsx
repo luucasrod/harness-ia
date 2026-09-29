@@ -471,9 +471,14 @@ async function getLessonData(
   lessonId: string
 ) {
   const baseUrl = await getBaseUrl();
+  const headerList = await headers();
+  const cookie = headerList.get('cookie');
   const response = await fetch(
     `${baseUrl}/api/courses/${courseId}/modules/${moduleId}/lessons/${lessonId}`,
-    { cache: 'no-store' }
+    {
+      cache: 'no-store',
+      headers: cookie ? { cookie } : undefined,
+    }
   );
 
   if (response.status === 404) {
