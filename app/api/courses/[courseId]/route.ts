@@ -1,10 +1,14 @@
 import { getServerSession } from 'next-auth';
+
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { PrismaClient } from '@prisma/client';
+import { db } from '@/lib/prisma';
 
-const db = new PrismaClient();
+export async function GET(
+  _request: Request,
+  context: RouteContext<'/api/courses/[courseId]'>
+) {
+  const { courseId: courseIdParam } = await context.params;
 
-export async function GET(request: Request, { params }: { params: { courseId: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -15,7 +19,14 @@ export async function GET(request: Request, { params }: { params: { courseId: st
     }
 
     const userId = parseInt(session.user.id, 10);
-    const courseId = parseInt(params.courseId, 10);
+    const courseId = parseInt(courseIdParam, 10);
+
+    if (!Number.isFinite(courseId)) {
+      return Response.json(
+        { success: false, error: { code: 'INVALID_ID', message: 'Invalid course id' } },
+        { status: 400 }
+      );
+    }
 
     const enrollment = await db.enrollment.findFirst({
       where: {
@@ -68,7 +79,5 @@ export async function GET(request: Request, { params }: { params: { courseId: st
       { success: false, error: { code: 'SERVER_ERROR', message: 'Internal server error' } },
       { status: 500 }
     );
-  } finally {
-    await db.$disconnect();
   }
 }

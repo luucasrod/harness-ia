@@ -1,9 +1,8 @@
 import { getServerSession } from 'next-auth';
-import { PrismaClient } from '@prisma/client';
 
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { db } from '@/lib/prisma';
 
-const prisma = new PrismaClient();
 export const dynamic = 'force-dynamic';
 
 export async function GET(
@@ -13,44 +12,81 @@ export async function GET(
   const { courseId, moduleId, lessonId } = await context.params;
 
   try {
-    const lesson = await prisma.lesson.findFirst({
-      where: {
-        id: Number(lessonId),
-        moduleId: Number(moduleId),
-        module: { courseId: Number(courseId) },
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return Response.json(
+        { success: false, error: { code: 'AUTH_REQUIRED', message: 'Autenticação necessária' } },
+        { status: 401 }
+      );
+    }
+
+    const userId = Number(session.user.id);
+    const courseIdNumber = Number(courseId);
+    const moduleIdNumber = Number(moduleId);
+    const lessonIdNumber = Number(lessonId);
+
+    if (
+      !Number.isFinite(courseIdNumber) ||
+      !Number.isFinite(moduleIdNumber) ||
+      !Number.isFinite(lessonIdNumber)
+    ) {
+      return Response.json({ message: 'Invalid route ids' }, { status: 400 });
+    }
+
+    const lesson = await db.lesson.findUnique({
+      where: { id: lessonIdNumber },
+      include: {
+        exercises: {
+          orderBy: { id: 'asc' },
+        },
+        module: {
+          include: {
+            course: true,
+            lessons: {
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
       },
-      include: { exercises: true },
     });
 
-    if (!lesson) {
+    if (
+      !lesson ||
+      lesson.moduleId !== moduleIdNumber ||
+      lesson.module.courseId !== courseIdNumber
+    ) {
       return Response.json({ message: 'Lesson not found' }, { status: 404 });
     }
 
-    const module = await prisma.module.findUnique({
-      where: { id: Number(moduleId) },
-      include: { course: true },
+    const enrollment = await db.enrollment.findFirst({
+      where: {
+        userId,
+        courseId: courseIdNumber,
+      },
+      select: { id: true },
     });
 
-    if (!module) {
-      return Response.json({ message: 'Module not found' }, { status: 404 });
+    if (!enrollment) {
+      return Response.json(
+        { success: false, error: { code: 'FORBIDDEN', message: 'Access denied' } },
+        { status: 403 }
+      );
     }
 
-    const allLessons = await prisma.lesson.findMany({
-      where: { moduleId: Number(moduleId) },
-      orderBy: { order: 'asc' },
+    const allLessons = lesson.module.lessons;
+    const completedLessons = await db.userProgress.findMany({
+      where: {
+        userId,
+        lessonId: { in: allLessons.map((item) => item.id) },
+        completed: true,
+      },
+      select: { lessonId: true },
     });
 
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id ? Number(session.user.id) : null;
-
-    const completedLessons = userId
-      ? await prisma.userProgress.findMany({
-          where: { userId, moduleId: Number(moduleId), completed: true },
-        })
-      : [];
-
     const completedLessonIds = new Set(
-      completedLessons.map((p) => p.lessonId)
+      completedLessons.flatMap((progress) =>
+        progress.lessonId === null ? [] : [progress.lessonId]
+      )
     );
 
     const lessonIndex = allLessons.findIndex((l) => l.id === lesson.id);
@@ -60,14 +96,14 @@ export async function GET(
 
     return Response.json({
       course: {
-        id: courseId,
-        title: module.course?.title || 'Engenharia de Software',
+        id: lesson.module.course?.id.toString() ?? courseId,
+        title: lesson.module.course?.title || 'Engenharia de Software',
       },
       module: {
-        id: moduleId,
-        sourceId: module.id.toString(),
-        title: module.title,
-        description: module.title,
+        id: lesson.module.id.toString(),
+        sourceId: lesson.module.id.toString(),
+        title: lesson.module.title,
+        description: lesson.module.title,
       },
       lesson: {
         lesson_id: lesson.id.toString(),
@@ -118,7 +154,5 @@ export async function GET(
       { message: 'Internal server error' },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
