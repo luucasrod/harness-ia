@@ -37,6 +37,7 @@ model Module {
   id       Int      @id @default(autoincrement())
   title    String
   order    Int      @default(0)
+  imageUrl String?
   courseId Int?
   course   Course?  @relation(fields: [courseId], references: [id])
   lessons  Lesson[]
