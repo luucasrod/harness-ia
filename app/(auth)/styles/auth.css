@@ -1,0 +1,25 @@
+/* Auth Pages Styling */
+
+.auth-gradient {
+  @apply bg-gradient-to-b from-[#0066FF] to-[#0052CC];
+}
+
+.auth-card {
+  @apply rounded-lg border border-[#2D2D2D] bg-[#0F1117] p-8 shadow-2xl;
+}
+
+.auth-input {
+  @apply w-full rounded-lg border-2 border-[#2D2D2D] bg-[#1A1A1A] px-4 py-3 text-white placeholder:text-[#A0A0A0] focus:border-[#0066FF] focus:outline-none focus:shadow-[0_0_0_3px_rgba(0,102,255,0.1)] transition-all duration-200;
+}
+
+.auth-button {
+  @apply w-full rounded-lg bg-[#0066FF] px-4 py-3 font-semibold text-white transition-all duration-200 hover:bg-[#0052CC] hover:scale-[1.02] active:scale-[0.98] disabled:bg-gray-600 disabled:cursor-not-allowed;
+}
+
+.auth-link {
+  @apply text-[#0066FF] hover:text-[#0052CC] hover:underline transition-colors;
+}
+
+.error-message {
+  @apply rounded-lg border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-400 flex items-center gap-2;
+}

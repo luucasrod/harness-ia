@@ -1,0 +1,117 @@
+/* Dashboard & Module Cards - Depth-Map Animations */
+
+.module-card {
+  --mouse-x: 50%;
+  --mouse-y: 50%;
+  --accent: #0066FF;
+
+  @apply group relative overflow-hidden rounded-lg border border-[#2D2D2D] bg-[#12151D] transition-all duration-300 cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.module-card:hover {
+  @apply -translate-y-2 shadow-xl;
+  box-shadow: 0 16px 32px rgba(0, 102, 255, 0.15);
+  transform: translateY(-8px) scale(1.02);
+}
+
+/* Depth-map radial gradient follows cursor */
+.module-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    600px at var(--mouse-x) var(--mouse-y),
+    rgba(0, 102, 255, 0.08),
+    transparent 80%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+  z-index: 10;
+}
+
+.module-card:hover::before {
+  opacity: 1;
+}
+
+.module-card-image {
+  @apply relative h-[180px] overflow-hidden border-b border-[#2D2D2D] bg-[#151923];
+  background: linear-gradient(135deg, #0F1117 0%, #151923 100%);
+}
+
+.module-image-grid {
+  background-image:
+    linear-gradient(rgba(0, 102, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 102, 255, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Parallax effect on image */
+.module-card:hover .module-card-image {
+  transform: translateY(-2px);
+  transition: transform 300ms ease-out;
+}
+
+.module-card-content {
+  @apply relative z-[1] flex flex-1 flex-col p-6;
+}
+
+.module-badge {
+  @apply inline-flex rounded-full border border-[#2D2D2D] bg-[#0F1117] px-3 py-1 text-xs font-bold text-white gap-1;
+}
+
+.module-badge.blue {
+  @apply border-[#0066FF]/50 bg-[#0066FF]/10 text-[#0066FF];
+}
+
+.progress-bar-container {
+  @apply h-1 w-full overflow-hidden rounded-full bg-[#2D2D2D];
+}
+
+.progress-bar-fill {
+  @apply h-full bg-[#0066FF] transition-all duration-500 ease-out;
+}
+
+/* Hero Section */
+.dashboard-hero {
+  @apply mb-12 rounded-lg bg-gradient-to-r from-[#0066FF]/10 to-transparent p-8 border border-[#2D2D2D];
+}
+
+.dashboard-hero h1 {
+  @apply text-3xl font-bold text-white mb-2;
+}
+
+.dashboard-hero p {
+  @apply text-[#A0A0A0] text-sm;
+}
+
+/* Module Grid */
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Smooth animations on load */
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.module-card {
+  animation: cardFadeIn 0.5s ease-out;
+}
