@@ -1,8 +1,9 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Sidebar from "@/components/Sidebar";
-import TopNav from "@/components/TopNav";
+import { useState } from 'react';
+
+import Sidebar from '@/components/Sidebar';
+import TopNav from '@/components/TopNav';
 
 type DashboardShellProps = {
   children: React.ReactNode;
@@ -12,8 +13,8 @@ export default function DashboardShell({ children }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="grid min-h-screen sm:grid-cols-[16rem_1fr]">
+    <div className="min-h-screen bg-ink text-white">
+      <div className="grid min-h-screen sm:grid-cols-[17rem_minmax(0,1fr)]">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
         <div className="flex min-w-0 flex-1 flex-col">

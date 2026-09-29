@@ -1,25 +1,85 @@
 /* Auth Pages Styling */
 
 .auth-gradient {
-  @apply bg-gradient-to-b from-[#0066FF] to-[#0052CC];
+  background: linear-gradient(to bottom, #0066FF, #0052CC);
 }
 
 .auth-card {
-  @apply rounded-lg border border-[#2D2D2D] bg-[#0F1117] p-8 shadow-2xl;
+  border-radius: 8px;
+  border: 1px solid #2D2D2D;
+  background-color: #0F1117;
+  padding: 32px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .auth-input {
-  @apply w-full rounded-lg border-2 border-[#2D2D2D] bg-[#1A1A1A] px-4 py-3 text-white placeholder:text-[#A0A0A0] focus:border-[#0066FF] focus:outline-none focus:shadow-[0_0_0_3px_rgba(0,102,255,0.1)] transition-all duration-200;
+  width: 100%;
+  border-radius: 8px;
+  border: 2px solid #2D2D2D;
+  background-color: #1A1A1A;
+  padding: 12px 16px;
+  color: white;
+  font-size: 16px;
+  transition: all 200ms ease;
+}
+
+.auth-input::placeholder {
+  color: #A0A0A0;
+}
+
+.auth-input:focus {
+  border-color: #0066FF;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
 }
 
 .auth-button {
-  @apply w-full rounded-lg bg-[#0066FF] px-4 py-3 font-semibold text-white transition-all duration-200 hover:bg-[#0052CC] hover:scale-[1.02] active:scale-[0.98] disabled:bg-gray-600 disabled:cursor-not-allowed;
+  width: 100%;
+  border-radius: 8px;
+  background-color: #0066FF;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 200ms ease;
+  font-size: 16px;
+}
+
+.auth-button:hover {
+  background-color: #0052CC;
+  transform: scale(1.02);
+}
+
+.auth-button:active {
+  transform: scale(0.98);
+}
+
+.auth-button:disabled {
+  background-color: #4b5563;
+  cursor: not-allowed;
 }
 
 .auth-link {
-  @apply text-[#0066FF] hover:text-[#0052CC] hover:underline transition-colors;
+  color: #0066FF;
+  cursor: pointer;
+  transition: all 200ms ease;
+  text-decoration: none;
+}
+
+.auth-link:hover {
+  color: #0052CC;
+  text-decoration: underline;
 }
 
 .error-message {
-  @apply rounded-lg border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-400 flex items-center gap-2;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  background-color: rgba(239, 68, 68, 0.1);
+  padding: 12px;
+  font-size: 14px;
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }

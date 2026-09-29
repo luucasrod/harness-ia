@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useId, useState } from 'react';
 
-import '../../styles/course.css';
+import '@/app/styles/course.css';
 
 export type LessonSidebarItem = {
   id: string;

@@ -332,6 +332,43 @@ export function resolveLanguage(language: string | undefined): CodeLanguage {
   return LANGUAGE_ALIASES[language.trim().toLowerCase()] ?? 'text';
 }
 
+/**
+ * The lesson examples in `public/module-1-content.json` carry no language tag,
+ * so a snippet like a NestJS controller would otherwise render unstyled. This
+ * keeps the heuristics cheap and ordered from most to least specific: it only
+ * ever runs when no language was supplied at all.
+ */
+export function guessLanguage(code: string): CodeLanguage {
+  const source = code.trim();
+  if (!source) {
+    return 'text';
+  }
+
+  if (/^[{[]\s*"/.test(source) || /^\{\s*$/m.test(source)) {
+    return 'json';
+  }
+  if (/^\s*(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+(TABLE|INDEX)|ALTER\s+TABLE)\b/i.test(source)) {
+    return 'sql';
+  }
+  if (/^(FROM|RUN|CMD|COPY|ENTRYPOINT|ARG)\s/m.test(source)) {
+    return 'dockerfile';
+  }
+  if (/^(provider|resource|variable|module|output|terraform)\s*\{/m.test(source)) {
+    return 'hcl';
+  }
+  if (/(^|\n)\s*(export\s+)?(async\s+)?function\s+\w+|^\s*class\s+\w+|^\s*(import|const|let)\s+[\w{[]|=>\s*[{(]/.test(source)) {
+    return 'typescript';
+  }
+  if (/(^|\n)\s*(def|class)\s+\w+.*:\s*$|^\s*import\s+\w+/.test(source)) {
+    return 'python';
+  }
+  if (/^\s*[\w.-]+:\s/m.test(source) || /^---\s*$/m.test(source)) {
+    return 'yaml';
+  }
+
+  return 'text';
+}
+
 type Match = {
   index: number;
   end: number;

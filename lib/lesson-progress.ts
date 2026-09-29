@@ -53,17 +53,17 @@ export async function markLessonComplete(params: {
 }): Promise<boolean> {
   const { userId, moduleTitle, lessonTitle } = params;
 
-  const module = await prisma.module.findFirst({
+  const moduleRecord = await prisma.module.findFirst({
     where: { title: moduleTitle },
     select: { id: true },
   });
 
-  if (!module) {
+  if (!moduleRecord) {
     return false;
   }
 
   const lesson = await prisma.lesson.findFirst({
-    where: { moduleId: module.id, title: lessonTitle },
+    where: { moduleId: moduleRecord.id, title: lessonTitle },
     select: { id: true },
   });
 
@@ -79,11 +79,11 @@ export async function markLessonComplete(params: {
   if (existing) {
     await prisma.userProgress.update({
       where: { id: existing.id },
-      data: { completed: true, moduleId: module.id },
+      data: { completed: true, moduleId: moduleRecord.id },
     });
   } else {
     await prisma.userProgress.create({
-      data: { userId, lessonId: lesson.id, moduleId: module.id, completed: true },
+      data: { userId, lessonId: lesson.id, moduleId: moduleRecord.id, completed: true },
     });
   }
 
