@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import { Suspense, useId, useState } from 'react';
+import { useId, useState, useSyncExternalStore } from 'react';
 
 import AuthCard from '@/app/components/AuthCard';
 import '@/app/styles/auth.css';
@@ -24,10 +24,38 @@ const linkClassName =
   'font-medium text-brand-text underline-offset-4 transition-colors duration-200 ' +
   'hover:text-brand-soft hover:underline';
 
+const SIGN_IN_ERRORS: Record<string, string> = {
+  CredentialsSignin: 'E-mail ou senha incorretos.',
+  OAuthAccountNotLinked: 'Já existe uma conta com este e-mail usando outro método de acesso.',
+  OAuthSignin: 'Não foi possível entrar com o provedor escolhido.',
+  SessionRequired: 'Faça login para acessar esta página.',
+  AccessDenied: 'Você não tem permissão para acessar esta página.',
+  Configuration: 'O serviço de login está indisponível no momento.',
+};
+
+function describeSignInError(code: string): string {
+  return (
+    SIGN_IN_ERRORS[code] ?? 'Não foi possível entrar. Tente novamente em instantes.'
+  );
+}
+
+const subscribeToNothing = () => () => {};
+
+/**
+ * Reads a query parameter that only exists in the browser, without pulling
+ * `useSearchParams` (which would disable server rendering for the whole form)
+ * and without a setState-in-effect cascade.
+ */
+function useUrlParam(name: string): string | null {
+  return useSyncExternalStore(
+    subscribeToNothing,
+    () => new URLSearchParams(window.location.search).get(name),
+    () => null
+  );
+}
+
 function LoginForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const nextPath = searchParams.get('next');
 
   const emailFieldId = useId();
   const passwordFieldId = useId();
@@ -39,6 +67,15 @@ function LoginForm() {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const nextPath = useUrlParam('next');
+  const urlError = useUrlParam('error');
+  const [reportedUrlError, setReportedUrlError] = useState<string | null>(null);
+
+  if (urlError && urlError !== reportedUrlError) {
+    setReportedUrlError(urlError);
+    setError(describeSignInError(urlError));
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,8 +96,8 @@ function LoginForm() {
     }
 
     setError(
-      result?.error === 'CredentialsSignin'
-        ? 'E-mail ou senha incorretos.'
+      result?.error
+        ? describeSignInError(result.error)
         : 'Não foi possível entrar. Tente novamente em instantes.'
     );
     setIsSubmitting(false);
@@ -161,7 +198,7 @@ function LoginForm() {
             </label>
           </div>
 
-          <Link href="/auth/forgot-password" className={`text-sm ${linkClassName}`}>
+          <Link href="/forgot-password" className={`text-sm ${linkClassName}`}>
             Esqueci minha senha
           </Link>
         </div>
@@ -177,7 +214,7 @@ function LoginForm() {
 
         <p className="text-center text-sm text-muted">
           Novo por aqui?{' '}
-          <Link href="/auth/signup" className={linkClassName}>
+          <Link href="/signup" className={linkClassName}>
             Criar conta
           </Link>
         </p>
@@ -187,11 +224,5 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-  return (
-    <Suspense
-      fallback={<div className="h-8 w-8 animate-pulse rounded-lg bg-surface" />}
-    >
-      <LoginForm />
-    </Suspense>
-  );
+  return <LoginForm />;
 }

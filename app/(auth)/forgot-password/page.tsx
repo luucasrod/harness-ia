@@ -51,7 +51,7 @@ export default function ForgotPasswordPage() {
         <p className="text-center text-sm text-muted">
           Lembrou a senha?{' '}
           <Link
-            href="/auth/login"
+            href="/login"
             className="font-medium text-brand-text underline-offset-4 transition-colors duration-200 hover:text-brand-soft hover:underline"
           >
             Voltar para o login

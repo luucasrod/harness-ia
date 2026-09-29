@@ -464,8 +464,8 @@ type CodeBlockProps = {
 };
 
 export default function CodeBlock({ code, language, caption }: CodeBlockProps) {
-  const resolved = resolveLanguage(language);
-  const label = language ? language.toUpperCase() : 'TEXTO';
+  const resolved = language ? resolveLanguage(language) : guessLanguage(code);
+  const label = (language ?? resolved).toUpperCase();
 
   return (
     <figure className="code-block group my-6 overflow-hidden rounded-xl border border-line bg-surface">

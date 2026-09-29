@@ -37,7 +37,7 @@ export default function SignupPage() {
       });
 
       if (response.ok) {
-        router.push('/auth/login');
+        router.push('/login');
         router.refresh();
         return;
       }
@@ -139,7 +139,7 @@ export default function SignupPage() {
         <p className="text-center text-sm text-muted">
           Já tem conta?{' '}
           <Link
-            href="/auth/login"
+            href="/login"
             className="font-medium text-brand-text underline-offset-4 transition-colors duration-200 hover:text-brand-soft hover:underline"
           >
             Fazer login

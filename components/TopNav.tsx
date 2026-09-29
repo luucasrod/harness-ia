@@ -41,7 +41,7 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
 
   function handleLogout() {
     clearSessionCookies();
-    router.push('/auth/login');
+    router.push('/login');
   }
 
   return (

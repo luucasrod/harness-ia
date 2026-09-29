@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/dashboard") && !hasSessionCookie(request)) {
-    const loginUrl = new URL("/auth/login", request.url);
+    const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }

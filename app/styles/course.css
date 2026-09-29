@@ -170,7 +170,7 @@
 /* Quiz Card */
 .quiz-card {
   border-radius: 8px;
-  border: 1px solid #2D2D2D;
+  border: 1px solid rgba(0, 102, 255, 0.45);
   background-color: #12151D;
   padding: 24px;
   margin: 24px 0;
@@ -179,7 +179,7 @@
 .quiz-card h3 {
   font-size: 18px;
   font-weight: 700;
-  color: #0066FF;
+  color: #8FB8FF;
   margin-bottom: 16px;
 }
 

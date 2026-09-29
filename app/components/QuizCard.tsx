@@ -49,7 +49,7 @@ export default function QuizCard({ exercise, index }: QuizCardProps) {
   }
 
   return (
-    <section className="quiz-card rounded-xl border border-line bg-ink-raised p-5 sm:p-6">
+    <section className="quiz-card rounded-xl bg-ink-raised p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h3
           id={fieldsetId}
