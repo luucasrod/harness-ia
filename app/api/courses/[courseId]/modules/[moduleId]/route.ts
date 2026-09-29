@@ -1,15 +1,20 @@
-import { PrismaClient } from '@prisma/client';
+import { db } from '@/lib/prisma';
 
-const prisma = new PrismaClient();
+type RouteParams = {
+  params: Promise<{
+    courseId: string;
+    moduleId: string;
+  }>;
+};
 
 export async function GET(
   _request: Request,
-  context: RouteContext<'/api/courses/[courseId]/modules/[moduleId]'>
+  context: RouteParams
 ) {
   const { courseId, moduleId } = await context.params;
 
   try {
-    const module = await prisma.module.findUnique({
+    const moduleRecord = await db.module.findUnique({
       where: { id: Number(moduleId) },
       include: {
         lessons: {
@@ -25,20 +30,18 @@ export async function GET(
       },
     });
 
-    if (!module || module.course?.id !== Number(courseId)) {
+    if (!moduleRecord || moduleRecord.course?.id !== Number(courseId)) {
       return Response.json({ message: 'Module not found' }, { status: 404 });
     }
 
     return Response.json({
-      moduleId: module.id,
-      moduleTitle: module.title,
+      moduleId: moduleRecord.id,
+      moduleTitle: moduleRecord.title,
       courseId,
-      lessons: module.lessons,
+      lessons: moduleRecord.lessons,
     });
   } catch (error) {
     console.error('Error fetching module:', error);
     return Response.json({ message: 'Internal server error' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
