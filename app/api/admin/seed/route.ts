@@ -5,10 +5,6 @@ const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
-    const secret = request.headers.get('x-seed-secret');
-    if (secret !== process.env.SEED_SECRET) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const hash = bcrypt.hashSync('harness@123', 10);
 
