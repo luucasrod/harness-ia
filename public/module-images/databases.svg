@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360">
+    <!-- Background -->
+    <rect width="640" height="360" fill="#0F1117"/>
+
+    <!-- Gradient overlay for depth -->
+    <defs>
+        <radialGradient id="grad-databases" cx="50%" cy="50%" r="60%">
+            <stop offset="0%" style="stop-color:#0066FF;stop-opacity:0.1" />
+            <stop offset="100%" style="stop-color:#0066FF;stop-opacity:0" />
+        </radialGradient>
+    </defs>
+
+    <!-- Gradient -->
+    <rect width="640" height="360" fill="url(#grad-databases)"/>
+
+    <!-- Icon -->
+    
+            <g id="database-icon" transform="translate(280, 160)">
+                <ellipse cx="0" cy="-40" rx="50" ry="20" fill="#0066FF" opacity="0.3"/>
+                <ellipse cx="0" cy="-40" rx="50" ry="20" fill="none" stroke="#0066FF" stroke-width="2"/>
+                <path d="M -50 -40 L -50 20 Q 0 50 50 20 L 50 -40" fill="none" stroke="#0066FF" stroke-width="2" opacity="0.5"/>
+                <ellipse cx="0" cy="20" rx="50" ry="20" fill="#0066FF" opacity="0.3"/>
+                <line x1="0" y1="-30" x2="0" y2="30" stroke="#0066FF" stroke-width="1" opacity="0.3"/>
+            </g>
+        
+
+    <!-- Bottom accent line -->
+    <line x1="50" y1="330" x2="590" y2="330" stroke="#0066FF" stroke-width="2" opacity="0.5"/>
+</svg>

@@ -1,68 +1,35 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { getServerSession } from 'next-auth';
 
-type LessonExample = {
-  title: string;
-  description: string;
-  code_or_diagram: string;
-};
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { loadModuleCompletion } from '@/lib/lesson-progress';
+import { normalizeTitle, readModuleContent } from '@/lib/module-content';
 
-type LessonExercise = {
-  id: string;
-  type: string;
-  question: string;
-  options?: string[];
-  correct_answer: string;
-  explanation: string;
-};
-
-type Lesson = {
-  lesson_id: string;
-  title: string;
-  description: string;
-  learning_objectives: string[];
-  content: string;
-  examples?: LessonExample[];
-  exercises?: LessonExercise[];
-};
-
-type ModuleContent = {
-  module_id: string;
-  title: string;
-  description: string;
-  lessons: Lesson[];
-};
-
-export const dynamic = "force-dynamic";
-
-async function readModuleContent(): Promise<ModuleContent> {
-  const filePath = join(process.cwd(), "public", "module-1-content.json");
-  const rawContent = await readFile(filePath, "utf8");
-  const jsonStart = rawContent.indexOf('{\n  "module_id"');
-  const jsonEnd = rawContent.lastIndexOf("}");
-
-  if (jsonStart < 0 || jsonEnd < jsonStart) {
-    throw new Error("Module content JSON payload was not found.");
-  }
-
-  return JSON.parse(rawContent.slice(jsonStart, jsonEnd + 1)) as ModuleContent;
-}
+export const dynamic = 'force-dynamic';
 
 export async function GET(
   _request: Request,
-  context: RouteContext<
-    "/api/courses/[courseId]/modules/[moduleId]/lessons/[lessonId]"
-  >,
+  context: RouteContext<'/api/courses/[courseId]/modules/[moduleId]/lessons/[lessonId]'>
 ) {
   const { courseId, moduleId, lessonId } = await context.params;
   const moduleContent = await readModuleContent();
   const lessonIndex = moduleContent.lessons.findIndex(
-    (lesson) => lesson.lesson_id === lessonId,
+    (lesson) => lesson.lesson_id === lessonId
   );
 
   if (lessonIndex === -1) {
-    return Response.json({ message: "Lesson not found" }, { status: 404 });
+    return Response.json({ message: 'Lesson not found' }, { status: 404 });
   }
+
+  const session = await getServerSession(authOptions);
+  const sessionUserId = session?.user?.id ? Number(session.user.id) : null;
+
+  const completion =
+    sessionUserId === null
+      ? new Map<string, boolean>()
+      : await loadModuleCompletion(
+          moduleContent.title,
+          moduleContent.lessons.map((lesson) => lesson.title)
+        );
 
   const lesson = moduleContent.lessons[lessonIndex];
   const previousLesson = moduleContent.lessons[lessonIndex - 1];
@@ -71,7 +38,7 @@ export async function GET(
   return Response.json({
     course: {
       id: courseId,
-      title: "AI Engineering Foundations",
+      title: 'AI Engineering Foundations',
     },
     module: {
       id: moduleId,
@@ -79,13 +46,17 @@ export async function GET(
       title: moduleContent.title,
       description: moduleContent.description,
     },
-    lesson,
+    lesson: {
+      ...lesson,
+      isCompleted: completion.get(normalizeTitle(lesson.title)) ?? false,
+    },
     outline: moduleContent.lessons.map((moduleLesson, index) => ({
       id: moduleLesson.lesson_id,
       title: moduleLesson.title,
       description: moduleLesson.description,
       order: index + 1,
       isCurrent: moduleLesson.lesson_id === lessonId,
+      isCompleted: completion.get(normalizeTitle(moduleLesson.title)) ?? false,
       href: `/courses/${courseId}/modules/${moduleId}/lessons/${moduleLesson.lesson_id}`,
     })),
     navigation: {

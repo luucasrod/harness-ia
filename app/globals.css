@@ -1,26 +1,54 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Surfaces */
+  --color-ink: #0f1117;
+  --color-ink-raised: #141824;
+  --color-surface: #1a1a1a;
+
+  /* Lines */
+  --color-line: #2d2d2d;
+  --color-line-strong: #3a3a3a;
+
+  /* Brand */
+  --color-brand: #0066ff;
+  --color-brand-strong: #0052cc;
+  --color-brand-soft: #e6f0ff;
+  --color-brand-text: #8fb8ff;
+  --color-brand-ring: rgb(0 102 255 / 0.1);
+
+  /* Content */
+  --color-muted: #a0a0a0;
+  --color-danger: #ff4444;
+
+  /* Motion */
+  --ease-out-soft: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Consolas,
+    monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-ink);
+  color: #ffffff;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+::selection {
+  background-color: var(--color-brand);
+  color: #ffffff;
 }

@@ -1,0 +1,54 @@
+/* Login / auth page motion. Every rule is namespaced under .auth- so the
+   stylesheet can be imported from a page without leaking into the dashboard. */
+
+.auth-fade-in {
+  animation: auth-fade-in 400ms var(--ease-out-soft) both;
+}
+
+.auth-fade-in-delay-1 {
+  animation-delay: 60ms;
+}
+
+.auth-fade-in-delay-2 {
+  animation-delay: 120ms;
+}
+
+.auth-fade-in-delay-3 {
+  animation-delay: 180ms;
+}
+
+.auth-error-in {
+  animation: auth-error-in 260ms var(--ease-out-soft) both;
+}
+
+@keyframes auth-fade-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes auth-error-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-fade-in,
+  .auth-fade-in-delay-1,
+  .auth-fade-in-delay-2,
+  .auth-fade-in-delay-3,
+  .auth-error-in {
+    animation: none;
+  }
+}

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360">
+    <!-- Background -->
+    <rect width="640" height="360" fill="#0F1117"/>
+
+    <!-- Gradient overlay for depth -->
+    <defs>
+        <radialGradient id="grad-engineering-foundations" cx="50%" cy="50%" r="60%">
+            <stop offset="0%" style="stop-color:#0066FF;stop-opacity:0.1" />
+            <stop offset="100%" style="stop-color:#0066FF;stop-opacity:0" />
+        </radialGradient>
+    </defs>
+
+    <!-- Gradient -->
+    <rect width="640" height="360" fill="url(#grad-engineering-foundations)"/>
+
+    <!-- Icon -->
+    
+            <g id="blueprint-icon" transform="translate(280, 160)">
+                <rect x="-60" y="-50" width="120" height="100" fill="none" stroke="#0066FF" stroke-width="2" opacity="0.3"/>
+                <circle cx="-30" cy="-25" r="8" fill="#0066FF" opacity="0.5"/>
+                <circle cx="30" cy="-25" r="8" fill="#0066FF" opacity="0.5"/>
+                <circle cx="-30" cy="25" r="8" fill="#0066FF" opacity="0.5"/>
+                <circle cx="30" cy="25" r="8" fill="#0066FF" opacity="0.5"/>
+                <line x1="-30" y1="-25" x2="30" y2="-25" stroke="#0066FF" stroke-width="1" opacity="0.3"/>
+                <line x1="-30" y1="25" x2="30" y2="25" stroke="#0066FF" stroke-width="1" opacity="0.3"/>
+                <line x1="-30" y1="-25" x2="-30" y2="25" stroke="#0066FF" stroke-width="1" opacity="0.3"/>
+                <line x1="30" y1="-25" x2="30" y2="25" stroke="#0066FF" stroke-width="1" opacity="0.3"/>
+            </g>
+        
+
+    <!-- Bottom accent line -->
+    <line x1="50" y1="330" x2="590" y2="330" stroke="#0066FF" stroke-width="2" opacity="0.5"/>
+</svg>
