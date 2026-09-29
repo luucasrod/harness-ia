@@ -45,8 +45,8 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
   }
 
   return (
-    <header className="sticky top-0 z-20 flex flex-col gap-3 border-b border-line bg-ink/90 px-4 py-3 backdrop-blur sm:h-16 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-      <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-start">
+    <header className="sticky top-0 z-20 flex min-w-0 flex-col gap-3 border-b border-line bg-ink/90 px-4 py-3 backdrop-blur sm:h-16 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <div className="flex w-full min-w-0 items-center justify-between gap-3 sm:w-auto sm:justify-start">
         <button
           type="button"
           className="rounded-lg p-2 text-muted transition hover:bg-surface hover:text-white sm:hidden"
@@ -60,12 +60,14 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
 
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 rounded-lg sm:hidden"
+          className="flex min-w-0 items-center gap-2 rounded-lg sm:hidden"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-xs font-bold text-white">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand text-xs font-bold text-white">
             IA
           </span>
-          <span className="text-base font-bold text-white">Harness IA</span>
+          <span className="truncate text-base font-bold text-white">
+            Harness IA
+          </span>
         </Link>
 
         <div className="hidden sm:block">
@@ -74,7 +76,10 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
         </div>
       </div>
 
-      <div className="relative flex w-full justify-end sm:w-auto" ref={menuRef}>
+      <div
+        className="relative flex w-full justify-end sm:w-auto"
+        ref={menuRef}
+      >
         <button
           type="button"
           className="flex items-center gap-3 rounded-lg p-1.5 text-left transition hover:bg-surface"

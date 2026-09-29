@@ -44,27 +44,27 @@ export default function ModuleCard({ module }: ModuleCardProps) {
 
   return (
     <article
-      className="module-card group flex min-h-[31rem] flex-col overflow-hidden rounded-lg border border-[#2D2D2D] bg-[#12151D]"
+      className="module-card group flex min-h-[28rem] min-w-0 flex-col overflow-hidden rounded-lg border border-[#2D2D2D] bg-[#12151D] sm:min-h-[31rem]"
       onPointerMove={handlePointerMove}
       style={style}
     >
-      <div className="module-card-image relative h-[180px] overflow-hidden border-b border-[#2D2D2D] bg-[#151923]">
+      <div className="module-card-image relative h-[150px] overflow-hidden border-b border-[#2D2D2D] bg-[#151923] sm:h-[180px]">
         <div className="absolute inset-0 opacity-90" aria-hidden="true">
           <div className="module-image-grid absolute inset-0" />
-          <div className="absolute left-6 top-6 h-16 w-16 rounded-lg border border-[#0066FF]/50 bg-[#0066FF]/10" />
-          <div className="absolute bottom-6 right-6 h-20 w-28 rounded-lg border border-white/10 bg-white/[0.04]" />
-          <div className="absolute left-24 top-16 h-2 w-32 rounded-full bg-[#0066FF]" />
-          <div className="absolute left-24 top-24 h-2 w-24 rounded-full bg-white/20" />
-          <div className="absolute bottom-10 left-8 h-12 w-12 rounded-full border border-[#0066FF]/60" />
+          <div className="absolute left-5 top-5 h-14 w-14 rounded-lg border border-[#0066FF]/50 bg-[#0066FF]/10 sm:left-6 sm:top-6 sm:h-16 sm:w-16" />
+          <div className="absolute bottom-5 right-5 h-16 w-24 rounded-lg border border-white/10 bg-white/[0.04] sm:bottom-6 sm:right-6 sm:h-20 sm:w-28" />
+          <div className="absolute left-20 top-14 h-2 w-28 rounded-full bg-[#0066FF] sm:left-24 sm:top-16 sm:w-32" />
+          <div className="absolute left-20 top-[5.5rem] h-2 w-20 rounded-full bg-white/20 sm:left-24 sm:top-24 sm:w-24" />
+          <div className="absolute bottom-8 left-7 h-11 w-11 rounded-full border border-[#0066FF]/60 sm:bottom-10 sm:left-8 sm:h-12 sm:w-12" />
         </div>
         <div className="absolute left-5 top-5 flex h-10 w-10 items-center justify-center rounded-lg bg-[#0066FF] text-sm font-bold text-white">
           {module.id}
         </div>
       </div>
 
-      <div className="relative z-[1] flex flex-1 flex-col p-6">
+      <div className="relative z-[1] flex min-w-0 flex-1 flex-col p-5 sm:p-6">
         <div className="flex-1">
-          <h2 className="text-xl font-bold leading-tight text-white">
+          <h2 className="text-lg font-bold leading-tight text-white sm:text-xl">
             {module.title}
           </h2>
           <p className="mt-3 text-sm leading-6 text-[#A0A0A0]">
@@ -73,10 +73,10 @@ export default function ModuleCard({ module }: ModuleCardProps) {
 
           <div
             className="mt-5 flex flex-wrap gap-2"
-            aria-label="Detalhes do modulo"
+            aria-label="Detalhes do módulo"
           >
             <span className="rounded-full border border-[#2D2D2D] bg-[#0F1117] px-3 py-1 text-xs font-bold text-white">
-              {module.lessons} licoes
+              {module.lessons} lições
             </span>
             <span className="rounded-full border border-[#2D2D2D] bg-[#0F1117] px-3 py-1 text-xs font-bold text-white">
               {module.hours} horas
@@ -95,7 +95,7 @@ export default function ModuleCard({ module }: ModuleCardProps) {
           />
           <Link
             href={module.href}
-            className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-[#0066FF] px-4 text-sm font-bold text-white transition duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:bg-[#0052CC] focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:ring-offset-2 focus:ring-offset-[#12151D]"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[#0066FF] px-4 text-sm font-bold text-white transition duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:bg-[#0052CC] focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:ring-offset-2 focus:ring-offset-[#12151D]"
             aria-label={`Continuar ${module.title}`}
           >
             Continuar

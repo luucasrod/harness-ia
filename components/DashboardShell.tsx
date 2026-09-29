@@ -13,13 +13,13 @@ export default function DashboardShell({ children }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-ink text-white">
+    <div className="min-h-screen overflow-x-hidden bg-ink text-white">
       <div className="grid min-h-screen sm:grid-cols-[17rem_minmax(0,1fr)]">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
         <div className="flex min-w-0 flex-1 flex-col">
           <TopNav onMenuClick={() => setSidebarOpen(true)} />
-          <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <main className="min-w-0 flex-1 px-5 py-6 sm:px-6 lg:px-8">
             <div className="mx-auto w-full max-w-7xl">{children}</div>
           </main>
         </div>

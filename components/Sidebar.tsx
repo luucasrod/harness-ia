@@ -58,7 +58,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-line bg-ink-raised transition-transform duration-300 ease-out-soft sm:static sm:z-auto sm:w-[17rem] sm:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col border-r border-line bg-ink-raised transition-transform duration-300 ease-out-soft sm:static sm:z-auto sm:w-[17rem] sm:max-w-none sm:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         aria-label="Navegação principal"
@@ -66,13 +66,15 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         <div className="flex h-16 items-center justify-between border-b border-line px-5">
           <Link
             href="/dashboard"
-            className="flex items-center gap-3 rounded-lg"
+            className="flex min-w-0 items-center gap-3 rounded-lg"
             onClick={onClose}
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-sm font-bold text-white">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand text-sm font-bold text-white">
               IA
             </span>
-            <span className="text-base font-bold text-white">Harness IA</span>
+            <span className="truncate text-base font-bold text-white">
+              Harness IA
+            </span>
           </Link>
 
           <button
@@ -97,7 +99,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 href={item.href}
                 onClick={onClose}
                 aria-current={active ? 'page' : undefined}
-                className={`flex h-11 items-center gap-3 rounded-lg px-3 text-sm transition-[background-color,color] duration-200 ease-out-soft ${
+                className={`flex h-11 min-w-0 items-center gap-3 rounded-lg px-3 text-sm transition-[background-color,color] duration-200 ease-out-soft ${
                   active
                     ? 'border-l-2 border-brand bg-brand/15 font-bold text-brand-text'
                     : 'border-l-2 border-transparent font-medium text-muted hover:bg-surface hover:text-white'
@@ -115,7 +117,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 >
                   <path d={item.icon} />
                 </svg>
-                {item.label}
+                <span className="truncate">{item.label}</span>
               </Link>
             );
           })}
@@ -127,7 +129,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
               Trilha atual
             </p>
             <p className="mt-1 text-sm font-semibold leading-5 text-white">
-              AI Engineering Foundations
+              Fundamentos de Engenharia de IA
             </p>
           </div>
         </div>

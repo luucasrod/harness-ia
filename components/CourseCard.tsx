@@ -29,40 +29,49 @@ export default function CourseCard({
 
   const statusLabel = {
     not_started: 'Não iniciado',
-    in_progress: 'Em progresso',
+    in_progress: 'Em andamento',
     completed: 'Concluído',
   };
 
   return (
-    <Link href={`/dashboard/courses/${id}`}>
-      <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/30 transition-all cursor-pointer h-full flex flex-col">
-        <div className="flex-1">
-          <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">{title}</h3>
-          <p className="text-sm text-gray-400 mb-4 line-clamp-2">{description || 'Sem descrição'}</p>
+    <Link
+      href={`/dashboard/courses/${id}`}
+      className="block h-full rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-ink"
+    >
+      <article className="flex h-full min-h-[15rem] min-w-0 flex-col rounded-lg border border-line bg-ink-raised p-5 transition hover:border-brand/70 hover:shadow-lg hover:shadow-blue-500/20">
+        <div className="min-w-0 flex-1">
+          <h3 className="line-clamp-2 text-lg font-bold leading-tight text-white">
+            {title}
+          </h3>
+          <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted">
+            {description || 'Sem descrição'}
+          </p>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-xs text-gray-400">
+        <div className="mt-5 space-y-3">
+          <div className="flex items-center justify-between gap-3 text-xs text-muted">
             <span>Progresso</span>
-            <span>{progressPercent}%</span>
+            <span className="font-semibold text-white">{progressPercent}%</span>
           </div>
-          <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-700">
             <div
-              className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all"
+              className="h-full rounded-full bg-brand transition-all"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[status]}`}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span
+              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[status]}`}
+            >
               {statusLabel[status]}
             </span>
-            <span className="text-xs text-gray-400">
-              {lessonsCompleted} de {totalLessons}
+            <span className="text-xs text-muted">
+              {lessonsCompleted} de {totalLessons} lições
             </span>
           </div>
         </div>
-      </div>
+      </article>
     </Link>
   );
 }
