@@ -276,7 +276,7 @@ function parseMarkdown(markdown: string) {
 }
 
 function isStyledHtmlLesson(content: string) {
-  return content.includes('class="lesson-concept"');
+  return content.includes('class="lesson-concept"') || content.includes('style="background: rgba(0, 102, 255');
 }
 
 function stripHtmlTags(value: string) {
