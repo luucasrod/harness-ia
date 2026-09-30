@@ -22,5 +22,19 @@
       "destination": "/dashboard",
       "statusCode": 307
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/dashboard/courses/:courseId",
+      "destination": "/courses/:courseId"
+    },
+    {
+      "source": "/dashboard/courses/:courseId/modules/:moduleId",
+      "destination": "/courses/:courseId/modules/:moduleId"
+    },
+    {
+      "source": "/dashboard/courses/:courseId/modules/:moduleId/lessons/:lessonId",
+      "destination": "/courses/:courseId/modules/:moduleId/lessons/:lessonId"
+    }
   ]
 }
