@@ -3,12 +3,27 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { db } from '@/lib/prisma';
 
 interface Lesson {
   id: number;
   title: string;
   duration?: number;
   isCompleted?: boolean;
+}
+
+export async function generateStaticParams() {
+  try {
+    const modules = await db.module.findMany({
+      select: { id: true, courseId: true },
+    });
+    return modules.map((m) => ({
+      courseId: m.courseId.toString(),
+      moduleId: m.id.toString(),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 export default function ModuleLessonsPage() {
