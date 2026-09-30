@@ -41,7 +41,7 @@ export default async function ModuleLessonsPage({ params }: Props) {
       },
     });
 
-    if (!module || module.course.id !== courseIdNum) {
+    if (!module || !module.course || module.course.id !== courseIdNum) {
       notFound();
     }
 
