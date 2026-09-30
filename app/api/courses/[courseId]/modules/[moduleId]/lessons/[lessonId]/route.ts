@@ -129,21 +129,21 @@ export async function GET(
         order: index + 1,
         isCurrent: l.id === lesson.id,
         isCompleted: completedLessonIds.has(l.id),
-        href: `/courses/${courseId}/modules/${moduleId}/lessons/${l.id}`,
+        href: `/dashboard/courses/${courseId}/modules/${moduleId}/lessons/${l.id}`,
       })),
       navigation: {
         previous: previousLesson
           ? {
               id: previousLesson.id.toString(),
               title: previousLesson.title,
-              href: `/courses/${courseId}/modules/${moduleId}/lessons/${previousLesson.id}`,
+              href: `/dashboard/courses/${courseId}/modules/${moduleId}/lessons/${previousLesson.id}`,
             }
           : null,
         next: nextLesson
           ? {
               id: nextLesson.id.toString(),
               title: nextLesson.title,
-              href: `/courses/${courseId}/modules/${moduleId}/lessons/${nextLesson.id}`,
+              href: `/dashboard/courses/${courseId}/modules/${moduleId}/lessons/${nextLesson.id}`,
             }
           : null,
       },

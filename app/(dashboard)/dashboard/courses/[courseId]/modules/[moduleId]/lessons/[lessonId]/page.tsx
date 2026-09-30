@@ -526,7 +526,7 @@ function LessonToc({ headings }: { headings: Heading[] }) {
 export const dynamicParams = true;
 
 export default async function LessonPage(
-  props: PageProps<'/courses/[courseId]/modules/[moduleId]/lessons/[lessonId]'>
+  props: PageProps<'/dashboard/courses/[courseId]/modules/[moduleId]/lessons/[lessonId]'>
 ) {
   const { courseId, moduleId, lessonId } = await props.params;
   const lessonData = await getLessonData(courseId, moduleId, lessonId);
