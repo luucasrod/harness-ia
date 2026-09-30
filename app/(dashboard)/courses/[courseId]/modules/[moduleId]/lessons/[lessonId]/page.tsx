@@ -523,21 +523,7 @@ function LessonToc({ headings }: { headings: Heading[] }) {
   );
 }
 
-export async function generateStaticParams() {
-  try {
-    const { db } = await import('@/lib/prisma');
-    const lessons = await db.lesson.findMany({
-      select: { id: true, moduleId: true, module: { select: { courseId: true } } },
-    });
-    return lessons.map((l) => ({
-      courseId: l.module.courseId.toString(),
-      moduleId: l.moduleId.toString(),
-      lessonId: l.id.toString(),
-    }));
-  } catch {
-    return [];
-  }
-}
+export const dynamicParams = true;
 
 export default async function LessonPage(
   props: PageProps<'/courses/[courseId]/modules/[moduleId]/lessons/[lessonId]'>

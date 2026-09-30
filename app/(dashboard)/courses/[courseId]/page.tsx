@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { db } from '@/lib/prisma';
 
 interface Module {
   id: number;
@@ -12,18 +11,7 @@ interface Module {
   lessonsCount: number;
 }
 
-export async function generateStaticParams() {
-  try {
-    const courses = await db.course.findMany({
-      select: { id: true },
-    });
-    return courses.map((course) => ({
-      courseId: course.id.toString(),
-    }));
-  } catch {
-    return [];
-  }
-}
+export const dynamicParams = true;
 
 export default function CourseModulesPage() {
   const params = useParams();
