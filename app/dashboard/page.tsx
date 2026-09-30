@@ -1,153 +1,70 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { getServerSession } from 'next-auth';
 import ModuleCard, { type ModuleCardData } from '@/app/components/ModuleCard';
 import ProgressBar from '@/app/components/ProgressBar';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { db } from '@/lib/prisma';
 import '@/app/styles/dashboard.css';
 
-const modules: ModuleCardData[] = [
-  {
-    id: 1,
-    title: 'Fundamentos de Engenharia',
-    description:
-      'Base técnica para pensar como engenheiro, estruturar contexto e tomar decisões com critério.',
-    lessons: 6,
-    hours: 12,
-    completedLessons: 6,
-    progress: 100,
-    href: '/dashboard/courses/1',
-    accent: '#0066FF',
-  },
-  {
-    id: 2,
-    title: 'React & Frontend',
-    description:
-      'Componentes, estado, roteamento e interfaces modernas com foco em experiência de produto.',
-    lessons: 6,
-    hours: 14,
-    completedLessons: 5,
-    progress: 83,
-    href: '/dashboard/courses/2',
-    accent: '#00A3FF',
-  },
-  {
-    id: 3,
-    title: 'Node.js & Express',
-    description:
-      'APIs robustas, middlewares, autenticação e padrões de backend prontos para produção.',
-    lessons: 6,
-    hours: 13,
-    completedLessons: 4,
-    progress: 67,
-    href: '/dashboard/courses/3',
-    accent: '#0066FF',
-  },
-  {
-    id: 4,
-    title: 'Bancos de Dados',
-    description:
-      'Modelagem relacional, SQL, ORMs, migrações e operação confiável de dados.',
-    lessons: 6,
-    hours: 15,
-    completedLessons: 6,
-    progress: 100,
-    href: '/dashboard/courses/4',
-    accent: '#2F80ED',
-  },
-  {
-    id: 5,
-    title: 'Cache & Tempo Real',
-    description:
-      'Redis, filas, WebSockets e estratégias para reduzir latência sem perder consistência.',
-    lessons: 5,
-    hours: 11,
-    completedLessons: 5,
-    progress: 100,
-    href: '/dashboard/courses/5',
-    accent: '#0066FF',
-  },
-  {
-    id: 6,
-    title: 'Testing & QA',
-    description:
-      'Pirâmide de testes, Jest, integração, E2E e pipelines para manter qualidade no fluxo.',
-    lessons: 6,
-    hours: 12,
-    completedLessons: 6,
-    progress: 100,
-    href: '/dashboard/courses/6',
-    accent: '#1D72FF',
-  },
-  {
-    id: 7,
-    title: 'SOLID & Patterns',
-    description:
-      'Princípios, design patterns e arquitetura evolutiva para código mais fácil de manter.',
-    lessons: 6,
-    hours: 13,
-    completedLessons: 3,
-    progress: 50,
-    href: '/dashboard/courses/7',
-    accent: '#0066FF',
-  },
-  {
-    id: 8,
-    title: 'Design de Sistemas',
-    description:
-      'Estimativas, escalabilidade, disponibilidade e trade-offs de sistemas distribuídos.',
-    lessons: 6,
-    hours: 16,
-    completedLessons: 4,
-    progress: 67,
-    href: '/dashboard/courses/8',
-    accent: '#3385FF',
-  },
-  {
-    id: 9,
-    title: 'DevOps & Contêineres',
-    description:
-      'Docker, Kubernetes, CI/CD e infraestrutura para entregar software com repetibilidade.',
-    lessons: 5,
-    hours: 12,
-    completedLessons: 4,
-    progress: 80,
-    href: '/dashboard/courses/9',
-    accent: '#0066FF',
-  },
-  {
-    id: 10,
-    title: 'Integração com Claude e IA',
-    description:
-      'APIs de IA, prompts de sistema, memória conversacional e resiliência em produção.',
-    lessons: 6,
-    hours: 14,
-    completedLessons: 5,
-    progress: 83,
-    href: '/dashboard/courses/10',
-    accent: '#0B6BFF',
-  },
-  {
-    id: 11,
-    title: 'Projeto Final',
-    description:
-      'Projeto final integrando dashboard, CLI, deploy e critérios de entrega profissional.',
-    lessons: 5,
-    hours: 18,
-    completedLessons: 0,
-    progress: 0,
-    href: '/dashboard/courses/11',
-    accent: '#0066FF',
-  },
-];
-
-const completedModules = modules.filter(
-  (module) => module.progress === 100
-).length;
-const overallProgress = Math.round(
-  modules.reduce((total, module) => total + module.progress, 0) / modules.length
-);
-
 async function DashboardContent() {
-  await Promise.resolve();
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return null;
+  }
+
+  const userId = parseInt(session.user.id, 10);
+
+  const course = await db.course.findUnique({
+    where: { id: 1 },
+    include: {
+      modules: {
+        orderBy: { order: 'asc' },
+        include: { lessons: true },
+      },
+    },
+  });
+
+  if (!course) {
+    return null;
+  }
+
+  const userProgress = await db.userProgress.findMany({
+    where: { userId },
+  });
+
+  const progressMap = new Map<number, number>();
+  userProgress.forEach(p => {
+    if (p.moduleId) {
+      const current = progressMap.get(p.moduleId) || 0;
+      progressMap.set(p.moduleId, current + (p.completed ? 1 : 0));
+    }
+  });
+
+  const modules: ModuleCardData[] = course.modules.map(m => {
+    const completedCount = progressMap.get(m.id) || 0;
+    const totalCount = m.lessons.length;
+    const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+    return {
+      id: m.id,
+      title: m.title,
+      description: '',
+      lessons: totalCount,
+      hours: 0,
+      completedLessons: completedCount,
+      progress,
+      href: `/dashboard/courses/1/modules/${m.id}`,
+      accent: '#0066FF',
+    };
+  });
+
+  const completedModules = modules.filter(m => m.progress === 100).length;
+  const overallProgress = Math.round(
+    modules.reduce((total, m) => total + m.progress, 0) / modules.length || 0
+  );
+
+  const firstIncompleteModule = modules.find(m => m.progress < 100) || modules[0];
 
   return (
     <>
@@ -158,7 +75,7 @@ async function DashboardContent() {
               Dashboard
             </p>
             <h1 className="mt-3 text-2xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
-              Bem-vindo, Lucas
+              Bem-vindo, {session.user.name || 'Estudante'}
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-[#A0A0A0] sm:text-base">
               Você tem {completedModules}/{modules.length} módulos completos.
@@ -169,7 +86,7 @@ async function DashboardContent() {
 
           <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
             <Link
-              href="/dashboard/courses/10"
+              href={firstIncompleteModule.href}
               className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#0066FF] px-5 text-center text-sm font-bold text-white transition duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:bg-[#0052CC] focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:ring-offset-2 focus:ring-offset-[#0F1117]"
             >
               Continuar último módulo
