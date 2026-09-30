@@ -15,13 +15,6 @@ type LessonWithModule = {
 
 type VisualPattern = 'concepts' | 'architecture' | 'process' | 'tools';
 
-type LessonProfile = {
-  focus: string;
-  concepts: string[];
-  example: string;
-  practice: string;
-};
-
 const FALLBACK_CONCEPTS = [
   'modelo mental do problema',
   'responsabilidades e limites',
@@ -37,6 +30,7 @@ function cleanText(value: string | undefined): string {
 
 function sentenceCase(value: string): string {
   const cleaned = cleanText(value);
+
   if (!cleaned) {
     return cleaned;
   }
@@ -44,8 +38,41 @@ function sentenceCase(value: string): string {
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
 
+function compactPhrase(value: string, fallback: string, maxLength = 54): string {
+  const cleaned = cleanText(value)
+    .replace(/^#+\s*/, '')
+    .replace(/[.;:!?]+$/g, '')
+    .replace(/\s+na pratica$/i, '');
+
+  if (!cleaned) {
+    return fallback;
+  }
+
+  if (cleaned.length <= maxLength) {
+    return cleaned;
+  }
+
+  const selected: string[] = [];
+
+  for (const word of cleaned.split(' ')) {
+    const candidate = [...selected, word].join(' ');
+
+    if (candidate.length > maxLength - 3) {
+      break;
+    }
+
+    selected.push(word);
+  }
+
+  return selected.length > 0 ? `${selected.join(' ')}...` : fallback;
+}
+
 function stripMarkdownHeading(value: string): string {
   return cleanText(value.replace(/^#+\s*/, ''));
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function extractTitleFromContent(
@@ -64,30 +91,33 @@ function extractFocus(content: string, title: string): string {
   const visualMatch = content.match(
     /Esta aula organiza\s+([\s\S]*?)\.\s+O objetivo/i
   );
+
   if (visualMatch) {
-    return cleanText(
-      visualMatch[1].replace(/^Esta aula organiza\s+/i, '').replace(/\.+$/g, '')
-    );
+    return cleanText(visualMatch[1]);
   }
 
   const oldMatch = content.match(/e uma aula sobre ([^.]+)\./i);
+
   if (oldMatch) {
     return cleanText(oldMatch[1]);
   }
 
   const contextMatch = content.match(/## Contexto\s+([\s\S]*?)(?=\n##\s|$)/i);
+
   if (contextMatch) {
     const firstSentence = cleanText(contextMatch[1]).split(/(?<=[.!?])\s+/)[0];
+
     return cleanText(
       firstSentence.replace(new RegExp(`^${escapeRegExp(title)}\\s+`, 'i'), '')
     );
   }
 
-  return `compreender ${title} como uma competencia pratica de engenharia`;
+  return `compreender ${title} como competencia pratica`;
 }
 
 function extractConcepts(content: string): string[] {
   const oldMatch = content.match(/Os conceitos de ([^.]+) oferecem/i);
+
   if (oldMatch) {
     return oldMatch[1]
       .split(/,\s*| e /)
@@ -121,59 +151,36 @@ function extractExample(content: string, title: string): string {
   const guidedMatch = content.match(
     /### Exemplo 1:[^\n]*\n+Imagine\s+([\s\S]*?)\.\s+Primeiro descreva/i
   );
+
   if (guidedMatch) {
-    return cleanText(
-      guidedMatch[1].replace(/^Imagine\s+/i, '').replace(/\.+$/g, '')
-    );
+    return cleanText(guidedMatch[1]);
   }
 
   const oldMatch = content.match(/Um exemplo pratico seria ([^.]+)\./i);
+
   if (oldMatch) {
     return cleanText(oldMatch[1]);
   }
 
-  const visualMatch = content.match(
-    /### Exemplo 1:[^\n]*\n+([\s\S]*?)(?=\n### Exemplo 2:|\n##\s|$)/i
-  );
-  if (visualMatch) {
-    return cleanText(
-      visualMatch[1].replace(/```[\s\S]*?```/g, '').replace(/^- .+$/gm, '')
-    );
-  }
-
-  return `um fluxo real em que ${title} precisa ser aplicado com dados, regras e feedback claros`;
+  return `um caso real em que ${title} precisa ser aplicado`;
 }
 
 function extractPractice(content: string): string {
   const reviewMatch = content.match(
     /### Exemplo 2:[^\n]*\n+Use a aula como revisao de engenharia:\s+([\s\S]*?)\.\s+Em seguida/i
   );
+
   if (reviewMatch) {
-    return cleanText(reviewMatch[1].replace(/\.+$/g, ''));
+    return cleanText(reviewMatch[1]);
   }
 
   const oldMatch = content.match(/Como exercicio, ([^.]+)\./i);
+
   if (oldMatch) {
     return cleanText(oldMatch[1]);
   }
 
-  const checklistMatch = content.match(/## Checklist \/ Resumo\s+([\s\S]*?)$/i);
-  if (checklistMatch) {
-    const firstItem = checklistMatch[1]
-      .split(/\r?\n/)
-      .map((line) => line.replace(/^-\s*✓\s*/, '').trim())
-      .find(Boolean);
-
-    if (firstItem) {
-      return cleanText(firstItem);
-    }
-  }
-
-  return 'revise a solucao, transforme decisoes importantes em criterios verificaveis e registre o que precisa ser testado';
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return 'revisar a solucao e registrar criterios verificaveis';
 }
 
 function chooseVisualPattern(lesson: LessonWithModule): VisualPattern {
@@ -206,123 +213,90 @@ function chooseVisualPattern(lesson: LessonWithModule): VisualPattern {
   return 'concepts';
 }
 
-function diagramName(pattern: VisualPattern, title: string): string {
+function explanationFor(pattern: VisualPattern): string {
   if (pattern === 'architecture') {
-    return `Camadas de ${title}`;
+    return 'Separe fronteiras, dados e regras antes de escolher a solucao.';
   }
 
   if (pattern === 'process') {
-    return `Fluxo de ${title}`;
+    return 'Transforme a decisao em etapas visiveis, testaveis e revisaveis.';
   }
 
   if (pattern === 'tools') {
-    return `Estados e Decisoes de ${title}`;
+    return 'Use a ferramenta com sinais claros de entrada, saida, erro e custo.';
   }
 
-  return `Mapa Conceitual de ${title}`;
+  return 'Quebre a ideia em partes pequenas para comparar alternativas tecnicas.';
 }
 
-function diagramDescription(
-  pattern: VisualPattern,
-  concepts: string[]
-): string {
-  const [firstConcept, secondConcept, thirdConcept] = concepts;
+function scenarioFor(pattern: VisualPattern, lessonTitle: string): string {
+  const title = compactPhrase(lessonTitle, 'a aula', 42);
 
   if (pattern === 'architecture') {
-    return `O diagrama mostra uma leitura em camadas: entrada do usuario ou sistema, regras de negocio, persistencia e operacao. ${sentenceCase(
-      firstConcept
-    )} fica no centro da decisao, enquanto ${secondConcept} define limites entre componentes e ${thirdConcept} ajuda a validar se a arquitetura suporta mudanca.`;
+    return `Um time precisa organizar ${title} sem misturar responsabilidades.`;
   }
 
   if (pattern === 'process') {
-    return `O flowchart descrito segue cinco etapas: entender o objetivo, mapear entradas, aplicar ${firstConcept}, validar ${secondConcept} e fechar com ${thirdConcept}. A ideia visual e mostrar que cada etapa gera evidencias antes da proxima decisao.`;
+    return `Um fluxo de ${title} precisa sair do improviso e virar rotina.`;
   }
 
   if (pattern === 'tools') {
-    return `A tabela visual separa estados, sinais e acoes. ${sentenceCase(
-      firstConcept
-    )} indica quando usar a ferramenta, ${secondConcept} mostra os limites de configuracao e ${thirdConcept} orienta como observar resultado, erro e custo.`;
+    return `A equipe quer usar ${title} com criterio e medir impacto real.`;
   }
 
-  return `O mapa conceitual coloca o tema no centro e abre tres ramos: ${firstConcept}, ${secondConcept} e ${thirdConcept}. Cada ramo conecta definicao, impacto pratico e criterio de revisao.`;
+  return `Voce precisa explicar ${title} para tomar uma decisao tecnica.`;
 }
 
-function conceptBullets(
+function actionFor(pattern: VisualPattern): string {
+  if (pattern === 'architecture') {
+    return 'Desenhe camadas, entradas, saidas e pontos de integracao.';
+  }
+
+  if (pattern === 'process') {
+    return 'Liste etapas, responsaveis, evidencias e criterios de aceite.';
+  }
+
+  if (pattern === 'tools') {
+    return 'Configure o menor caso util e observe logs, erros e latencia.';
+  }
+
+  return 'Compare duas alternativas usando risco, clareza e manutencao.';
+}
+
+function resultFor(pattern: VisualPattern): string {
+  if (pattern === 'architecture') {
+    return 'Arquitetura mais simples de revisar, testar e evoluir.';
+  }
+
+  if (pattern === 'process') {
+    return 'Fluxo repetivel, com menos ambiguidade e melhor feedback.';
+  }
+
+  if (pattern === 'tools') {
+    return 'Decisao baseada em sinais, nao em tentativa solta.';
+  }
+
+  return 'Escolha tecnica mais clara, defensavel e facil de revisar.';
+}
+
+function conceptBlock(
+  index: number,
   concept: string,
   pattern: VisualPattern,
-  lesson: LessonWithModule
-): string[] {
-  if (pattern === 'architecture') {
-    return [
-      `${sentenceCase(concept)} define uma responsabilidade clara dentro de ${lesson.module.title}.`,
-      'A pergunta visual e: esta parte sabe demais sobre as outras camadas?',
-    ];
-  }
+  lessonTitle: string
+): string {
+  const fallback = FALLBACK_CONCEPTS[index - 1] ?? FALLBACK_CONCEPTS[0];
+  const name = sentenceCase(compactPhrase(concept, fallback));
 
-  if (pattern === 'process') {
-    return [
-      `${sentenceCase(concept)} funciona como uma etapa verificavel, nao como uma intuicao solta.`,
-      'O resultado esperado deve poder virar checklist, teste ou criterio de aceite.',
-    ];
-  }
+  return `### Conceito ${index}: ${name}
+${explanationFor(pattern)}
 
-  if (pattern === 'tools') {
-    return [
-      `${sentenceCase(concept)} ajuda a escolher configuracoes, limites e sinais de saude.`,
-      'A ferramenta deve ser observada por entrada, saida, erro, custo e impacto no usuario.',
-    ];
-  }
+**Exemplo Pratico:**
+- Cenario: ${scenarioFor(pattern, lessonTitle)}
+- Acao: ${actionFor(pattern)}
+- Resultado: ${resultFor(pattern)}
 
-  return [
-    `${sentenceCase(concept)} transforma uma ideia ampla em partes menores e explicaveis.`,
-    'Use este conceito para comparar alternativas e justificar a decisao tecnica.',
-  ];
-}
-
-function codeExample(pattern: VisualPattern, concepts: string[]): string {
-  if (pattern === 'architecture') {
-    return [
-      '```ts',
-      'type Entrada = { usuarioId: string; payload: unknown };',
-      '',
-      'async function executarCasoDeUso(entrada: Entrada) {',
-      '  validarContrato(entrada.payload);',
-      '  const resultado = await aplicarRegraDeNegocio(entrada);',
-      '  return apresentarResposta(resultado);',
-      '}',
-      '```',
-    ].join('\n');
-  }
-
-  if (pattern === 'process') {
-    return [
-      '1. Definir objetivo e restricoes.',
-      '2. Mapear entradas, saidas e riscos.',
-      `3. Aplicar ${concepts[0]} com evidencias.`,
-      `4. Validar ${concepts[1]} antes de concluir.`,
-      `5. Registrar ${concepts[2]} como criterio de revisao.`,
-    ].join('\n');
-  }
-
-  if (pattern === 'tools') {
-    return [
-      '| Estado | Sinal observado | Acao recomendada |',
-      '| --- | --- | --- |',
-      '| Saudavel | Latencia e erros dentro do esperado | Manter monitoramento |',
-      '| Atencao | Crescimento de custo, fila ou cache miss | Ajustar limite e medir novamente |',
-      '| Critico | Falha repetida ou dado inconsistente | Acionar fallback e investigar causa |',
-    ].join('\n');
-  }
-
-  return [
-    '```ts',
-    'const decisaoTecnica = {',
-    `  conceito: '${concepts[0]}',`,
-    '  criterio: "clareza, risco e manutencao",',
-    '  evidencia: "teste, log ou exemplo reproduzivel",',
-    '};',
-    '```',
-  ].join('\n');
+**Aplicacao:** Use este conceito para montar uma parte do exercicio final.`;
 }
 
 function buildVisualContent(lesson: LessonWithModule): string {
@@ -334,55 +308,94 @@ function buildVisualContent(lesson: LessonWithModule): string {
     ...FALLBACK_CONCEPTS,
   ].slice(0, 3);
   const [firstConcept, secondConcept, thirdConcept] = concepts;
-  const focus = extractFocus(sourceContent, title);
-  const example = extractExample(sourceContent, title);
-  const practice = extractPractice(sourceContent);
-  const diagram = diagramName(pattern, title);
+  const focus = compactPhrase(extractFocus(sourceContent, title), title, 58);
+  const example = compactPhrase(
+    extractExample(sourceContent, title),
+    'um caso real do tema',
+    58
+  );
+  const practice = compactPhrase(
+    extractPractice(sourceContent),
+    'revisar a solucao com criterio',
+    58
+  );
 
   return `# ${title}
 
 ## Contexto
-Esta aula organiza ${focus}. O objetivo e transformar o tema em um modelo visual, facil de revisar, aplicar e explicar para outra pessoa.
+- Tema: ${sentenceCase(focus)}.
+- Objetivo: entender, aplicar e revisar sem texto corrido.
+- Ritmo: leia um conceito, veja o exemplo e avance para o proximo.
 
-Dentro do modulo ${lesson.module.title}, o conteudo funciona como uma peca pratica: voce entende o conceito, visualiza o fluxo e sai com criterios para usar em codigo, arquitetura ou operacao.
+---
 
 ## Conceitos Centrais
 
-### Conceito 1: ${sentenceCase(firstConcept)}
-- ${conceptBullets(firstConcept, pattern, lesson)[0]}
-- ${conceptBullets(firstConcept, pattern, lesson)[1]}
+${conceptBlock(1, firstConcept, pattern, title)}
 
-### Conceito 2: ${sentenceCase(secondConcept)}
-- ${conceptBullets(secondConcept, pattern, lesson)[0]}
-- ${conceptBullets(secondConcept, pattern, lesson)[1]}
+---
 
-### Conceito 3: ${sentenceCase(thirdConcept)}
-- ${conceptBullets(thirdConcept, pattern, lesson)[0]}
-- ${conceptBullets(thirdConcept, pattern, lesson)[1]}
+${conceptBlock(2, secondConcept, pattern, title)}
 
-## [Diagrama: ${diagram}]
-${diagramDescription(pattern, concepts)}
+---
 
-## Exemplos Praticos
+${conceptBlock(3, thirdConcept, pattern, title)}
 
-### Exemplo 1: Cenario guiado
-Imagine ${example}. Primeiro descreva o comportamento em linguagem simples, depois separe dados de entrada, regra principal, fronteiras externas e sinais de sucesso.
+---
 
-${codeExample(pattern, concepts)}
+## Exercicio Final
 
-### Exemplo 2: Revisao aplicada
-Use a aula como revisao de engenharia: ${practice}. Em seguida, compare a solucao com uma alternativa mais simples e uma alternativa mais robusta.
+**Entrega:** produza um mapa curto sobre ${sentenceCase(
+    compactPhrase(title, 'o tema')
+  )}.
 
-- O que precisa ficar explicito para outro desenvolvedor?
-- Qual erro seria mais caro em producao?
-- Que teste, log ou checklist provaria que a solucao esta correta?
+- Cenario: ${sentenceCase(example)}.
+- Acao: aplique os tres conceitos em bullets curtos.
+- Resultado: registre decisoes, riscos e criterio de revisao.
+- Revisao: ${sentenceCase(practice)}.
 
 ## Checklist / Resumo
-- ✓ Expliquei ${firstConcept} com impacto pratico.
-- ✓ Conectei ${secondConcept} a uma decisao verificavel.
-- ✓ Usei ${thirdConcept} para revisar qualidade, risco ou operacao.
-- ✓ Tenho um exemplo pequeno que pode virar codigo, teste ou checklist.
+- Cada conceito tem H3 proprio.
+- Explicacoes ficam curtas e respiraveis.
+- Exemplos usam cenario, acao e resultado.
+- Separadores mantem a leitura em blocos leves.
 `;
+}
+
+function paragraphTooLong(content: string): string[] {
+  const paragraphs: string[] = [];
+  let current: string[] = [];
+
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+
+    if (!line) {
+      if (current.length > 0) {
+        paragraphs.push(current.join(' '));
+        current = [];
+      }
+      continue;
+    }
+
+    const isBlockElement =
+      /^(#{1,6}\s|-\s|---$|\*\*[^*]+:\*\*)/.test(line);
+
+    if (isBlockElement) {
+      if (current.length > 0) {
+        paragraphs.push(current.join(' '));
+        current = [];
+      }
+      continue;
+    }
+
+    current.push(line);
+  }
+
+  if (current.length > 0) {
+    paragraphs.push(current.join(' '));
+  }
+
+  return paragraphs.filter((paragraph) => paragraph.length > 100);
 }
 
 async function main() {
@@ -402,6 +415,15 @@ async function main() {
 
   for (const lesson of lessons) {
     const content = buildVisualContent(lesson);
+    const longParagraphs = paragraphTooLong(content);
+
+    if (longParagraphs.length > 0) {
+      throw new Error(
+        `Lesson ${lesson.id} has paragraphs over 100 chars: ${longParagraphs.join(
+          ' | '
+        )}`
+      );
+    }
 
     await prisma.lesson.update({
       where: { id: lesson.id },
