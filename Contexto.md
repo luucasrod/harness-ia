@@ -18,24 +18,32 @@
 
 ## Status Atual
 
-### ✅ Completo
+### ✅ Completo (2026-09-30)
 
 1. **Login/Auth** → Dashboard funciona end-to-end
-2. **PostgreSQL** → Schema completo, 11 módulos + 28 lições
+2. **PostgreSQL** → Schema completo, 11 módulos + **58 lições**
 3. **Enrollment** → Demo user inscrito em Course 1 (via `prisma/add-enrollment.ts`)
 4. **API Courses** → `/api/courses/1` retorna `200 OK` com módulos + imageUrls
 5. **Imagens** → Todas populadas (Unsplash URLs via `prisma/setup-images-safe.ts`)
-6. **Dashboard view** → Módulos aparecem com progresso
-7. **Rotas dinâmicas** → `/dashboard/courses/[courseId]` funciona em produção ✓
+6. **Dashboard view** → Módulos aparecem com progresso real
+7. **Rotas dinâmicas** → `/dashboard/courses/[courseId]/modules/[moduleId]/lessons/[lessonId]` funciona em produção ✓
    - Movido `app/(dashboard)/dashboard/` → `app/dashboard/` (fora do layout group)
    - Rotas agora servem em `/dashboard/*` corretamente
    - Navegação Cursos → Módulos → Lições funciona 100%
+8. **Lições completas** → Módulos 7-12 populados (Codex, 2026-09-30 07:34)
+   - 30 aulas novas criadas: 5 por módulo vazio
+   - Cada aula com título, conteúdo, duração (35-55min), type e order
+9. **Marcação de conclusão** → Botão "Marcar como concluída" funciona
+   - Progress updates refletem em tempo real no dashboard
+   - Testado: Aula 1 do Módulo 7 → 20% progresso (1/5)
 
 ### 📊 Dados
 - **11 módulos** com imagens temáticas (Unsplash)
-- **28 lições** com conteúdo completo
-- **Usuário demo:** 75% progresso (6/8 módulos iniciais completados)
-- **Imagens:** Todas atualiz. (módulos 2-11), módulo 1 não existe no DB
+- **58 lições** com conteúdo completo em português
+  - Módulos 2-6: 5-6 lições cada (já existentes)
+  - Módulos 7-12: 5 lições cada (criadas 2026-09-30)
+- **Usuário demo:** Progresso rastreado corretamente
+- **Imagens:** Todas atualiz. (módulos 2-11)
 
 ## Scripts Criados
 
