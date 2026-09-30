@@ -208,7 +208,11 @@ function parseMarkdown(markdown: string) {
       const rows: TableRow[] = [];
       index += 2;
 
-      while (index < lines.length && lines[index].includes('|') && lines[index].trim()) {
+      while (
+        index < lines.length &&
+        lines[index].includes('|') &&
+        lines[index].trim()
+      ) {
         rows.push(splitTableRow(lines[index]));
         index += 1;
       }
@@ -256,7 +260,11 @@ function parseMarkdown(markdown: string) {
     const paragraphLines = [line.trim()];
     index += 1;
 
-    while (index < lines.length && lines[index].trim() && !isBlockStart(lines[index])) {
+    while (
+      index < lines.length &&
+      lines[index].trim() &&
+      !isBlockStart(lines[index])
+    ) {
       paragraphLines.push(lines[index].trim());
       index += 1;
     }
@@ -265,6 +273,47 @@ function parseMarkdown(markdown: string) {
   }
 
   return { blocks, headings };
+}
+
+function isStyledHtmlLesson(content: string) {
+  return content.includes('class="lesson-concept"');
+}
+
+function stripHtmlTags(value: string) {
+  return value
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function decodeHtmlEntities(value: string) {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function extractHtmlHeadings(html: string): Heading[] {
+  return Array.from(html.matchAll(/<h([23])([^>]*)>([\s\S]*?)<\/h\1>/gi)).map(
+    (match) => {
+      const text = decodeHtmlEntities(stripHtmlTags(match[3]));
+      const idMatch = match[2].match(/\sid="([^"]+)"/i);
+
+      return {
+        id: idMatch ? idMatch[1] : createSlug(text),
+        text,
+        level: Number(match[1]),
+      };
+    }
+  );
+}
+
+function extractLessonHeadings(content: string) {
+  return isStyledHtmlLesson(content)
+    ? extractHtmlHeadings(content)
+    : parseMarkdown(content).headings;
 }
 
 function renderInline(text: string, keyPrefix: string): ReactNode[] {
@@ -282,7 +331,9 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
       return;
     }
 
-    const imageMatch = part.match(/^!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)$/);
+    const imageMatch = part.match(
+      /^!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)$/
+    );
 
     if (imageMatch) {
       const src = safeUrl(imageMatch[2]);
@@ -339,10 +390,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
       return;
     }
 
-    if (
-      (part.startsWith('*') && part.endsWith('*')) &&
-      part.length > 2
-    ) {
+    if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
       nodes.push(<em key={key}>{part.slice(1, -1)}</em>);
       return;
     }
@@ -354,6 +402,15 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
 }
 
 function MarkdownContent({ markdown }: { markdown: string }) {
+  if (isStyledHtmlLesson(markdown)) {
+    return (
+      <div
+        className="course-content"
+        dangerouslySetInnerHTML={{ __html: markdown }}
+      />
+    );
+  }
+
   const { blocks } = parseMarkdown(markdown);
 
   return (
@@ -382,7 +439,9 @@ function MarkdownContent({ markdown }: { markdown: string }) {
         }
 
         if (block.type === 'code') {
-          return <CodeBlock code={block.code} language={block.language} key={key} />;
+          return (
+            <CodeBlock code={block.code} language={block.language} key={key} />
+          );
         }
 
         if (block.type === 'quote') {
@@ -416,7 +475,10 @@ function MarkdownContent({ markdown }: { markdown: string }) {
 
         if (block.type === 'table') {
           return (
-            <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0" key={key}>
+            <div
+              className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
+              key={key}
+            >
               <table>
                 <thead>
                   <tr>
@@ -531,7 +593,7 @@ export default async function LessonPage(
   const { courseId, moduleId, lessonId } = await props.params;
   const lessonData = await getLessonData(courseId, moduleId, lessonId);
   const { lesson, module, course, outline, navigation } = lessonData;
-  const { headings } = parseMarkdown(lesson.content ?? '');
+  const headings = extractLessonHeadings(lesson.content ?? '');
 
   const completedCount = outline.filter((item) => item.isCompleted).length;
   const progress = outline.length === 0 ? 0 : completedCount / outline.length;
@@ -658,10 +720,7 @@ export default async function LessonPage(
                   <p className="mt-2 text-sm leading-6 text-muted">
                     {example.description}
                   </p>
-                  <CodeBlock
-                    code={example.code_or_diagram}
-                    caption="Exemplo"
-                  />
+                  <CodeBlock code={example.code_or_diagram} caption="Exemplo" />
                 </section>
               ))}
             </div>

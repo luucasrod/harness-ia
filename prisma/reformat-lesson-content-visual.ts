@@ -15,6 +15,63 @@ type LessonWithModule = {
 
 type VisualPattern = 'concepts' | 'architecture' | 'process' | 'tools';
 
+const LESSON_STYLE = `<style>
+.lesson-concept {
+  margin: 2rem 0;
+}
+
+.lesson-concept h3 {
+  font-size: 1.8em;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 1.5rem 0 0.8rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #0066ff;
+}
+
+.lesson-concept .explanation {
+  font-size: 0.95em;
+  color: #d0d0d0;
+  line-height: 1.7;
+  margin: 1rem 0;
+}
+
+.lesson-concept .example {
+  background: rgba(0, 102, 255, 0.08);
+  border-left: 4px solid #0066ff;
+  padding: 1.2rem;
+  margin: 1.5rem 0;
+  border-radius: 4px;
+}
+
+.lesson-concept .example h4 {
+  font-weight: 700;
+  font-size: 1.05em;
+  margin: 0 0 0.8rem 0;
+  color: #ffffff;
+}
+
+.lesson-concept .example li {
+  margin: 0.6rem 0;
+  line-height: 1.6;
+  font-size: 0.95em;
+}
+
+.lesson-concept .application {
+  font-size: 0.95em;
+  color: #d0d0d0;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.concept-separator {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.2);
+  margin: 2.5rem 0;
+}
+</style>`;
+
 const FALLBACK_CONCEPTS = [
   'modelo mental do problema',
   'responsabilidades e limites',
@@ -38,7 +95,11 @@ function sentenceCase(value: string): string {
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
 
-function compactPhrase(value: string, fallback: string, maxLength = 54): string {
+function compactPhrase(
+  value: string,
+  fallback: string,
+  maxLength = 54
+): string {
   const cleaned = cleanText(value)
     .replace(/^#+\s*/, '')
     .replace(/[.;:!?]+$/g, '')
@@ -73,6 +134,24 @@ function stripMarkdownHeading(value: string): string {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function createSlug(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
 }
 
 function extractTitleFromContent(
@@ -286,17 +365,31 @@ function conceptBlock(
   lessonTitle: string
 ): string {
   const fallback = FALLBACK_CONCEPTS[index - 1] ?? FALLBACK_CONCEPTS[0];
-  const name = sentenceCase(compactPhrase(concept, fallback));
+  const name = escapeHtml(sentenceCase(compactPhrase(concept, fallback)));
+  const explanation = escapeHtml(explanationFor(pattern));
+  const scenario = escapeHtml(scenarioFor(pattern, lessonTitle));
+  const action = escapeHtml(actionFor(pattern));
+  const result = escapeHtml(resultFor(pattern));
 
-  return `### Conceito ${index}: ${name}
-${explanationFor(pattern)}
+  const heading = `Conceito ${index}: ${sentenceCase(compactPhrase(concept, fallback))}`;
 
-**Exemplo Pratico:**
-- Cenario: ${scenarioFor(pattern, lessonTitle)}
-- Acao: ${actionFor(pattern)}
-- Resultado: ${resultFor(pattern)}
+  return `<div class="lesson-concept">
+  <h3 id="${createSlug(heading)}">Conceito ${index}: ${name}</h3>
+  <p class="explanation">${explanation}</p>
 
-**Aplicacao:** Use este conceito para montar uma parte do exercicio final.`;
+  <div class="example">
+    <h4>Exemplo Pratico:</h4>
+    <ul>
+      <li><strong>Cenario:</strong> ${scenario}</li>
+      <li><strong>Acao:</strong> ${action}</li>
+      <li><strong>Resultado:</strong> ${result}</li>
+    </ul>
+  </div>
+
+  <p class="application"><strong>Aplicacao:</strong> Use este conceito para montar uma parte do exercicio final.</p>
+</div>
+
+<hr class="concept-separator" />`;
 }
 
 function buildVisualContent(lesson: LessonWithModule): string {
@@ -320,82 +413,74 @@ function buildVisualContent(lesson: LessonWithModule): string {
     58
   );
 
-  return `# ${title}
+  return `${LESSON_STYLE}
 
-## Contexto
-- Tema: ${sentenceCase(focus)}.
-- Objetivo: entender, aplicar e revisar sem texto corrido.
-- Ritmo: leia um conceito, veja o exemplo e avance para o proximo.
+<section class="lesson-overview">
+  <h2 id="contexto">Contexto</h2>
+  <ul>
+    <li><strong>Tema:</strong> ${escapeHtml(sentenceCase(focus))}.</li>
+    <li><strong>Objetivo:</strong> entender, aplicar e revisar sem texto corrido.</li>
+    <li><strong>Ritmo:</strong> leia um conceito, veja o exemplo e avance para o proximo.</li>
+  </ul>
+</section>
 
----
-
-## Conceitos Centrais
+<h2 id="conceitos-centrais">Conceitos Centrais</h2>
 
 ${conceptBlock(1, firstConcept, pattern, title)}
 
----
-
 ${conceptBlock(2, secondConcept, pattern, title)}
-
----
 
 ${conceptBlock(3, thirdConcept, pattern, title)}
 
----
+<section class="lesson-exercise">
+  <h2 id="exercicio-final">Exercicio Final</h2>
+  <p><strong>Entrega:</strong> produza um mapa curto sobre ${escapeHtml(
+    sentenceCase(compactPhrase(title, 'o tema'))
+  )}.</p>
+  <ul>
+    <li><strong>Cenario:</strong> ${escapeHtml(sentenceCase(example))}.</li>
+    <li><strong>Acao:</strong> aplique os tres conceitos em bullets curtos.</li>
+    <li><strong>Resultado:</strong> registre decisoes, riscos e criterio de revisao.</li>
+    <li><strong>Revisao:</strong> ${escapeHtml(sentenceCase(practice))}.</li>
+  </ul>
+</section>
 
-## Exercicio Final
-
-**Entrega:** produza um mapa curto sobre ${sentenceCase(
-    compactPhrase(title, 'o tema')
-  )}.
-
-- Cenario: ${sentenceCase(example)}.
-- Acao: aplique os tres conceitos em bullets curtos.
-- Resultado: registre decisoes, riscos e criterio de revisao.
-- Revisao: ${sentenceCase(practice)}.
-
-## Checklist / Resumo
-- Cada conceito tem H3 proprio.
-- Explicacoes ficam curtas e respiraveis.
-- Exemplos usam cenario, acao e resultado.
-- Separadores mantem a leitura em blocos leves.
-`;
+<section class="lesson-summary">
+  <h2 id="checklist-resumo">Checklist / Resumo</h2>
+  <ul>
+    <li>Cada conceito tem H3 proprio.</li>
+    <li>Explicacoes ficam curtas e respiraveis.</li>
+    <li>Exemplos usam cenario, acao e resultado.</li>
+    <li>Separadores mantem a leitura em blocos leves.</li>
+  </ul>
+</section>`;
 }
 
-function paragraphTooLong(content: string): string[] {
-  const paragraphs: string[] = [];
-  let current: string[] = [];
+function validateHtmlContent(content: string, lesson: LessonWithModule): void {
+  const styleCount = (content.match(/<style>/g) ?? []).length;
+  const conceptCount = (content.match(/<div class="lesson-concept">/g) ?? [])
+    .length;
+  const separatorCount = (
+    content.match(/<hr class="concept-separator" \/>/g) ?? []
+  ).length;
 
-  for (const rawLine of content.split(/\r?\n/)) {
-    const line = rawLine.trim();
-
-    if (!line) {
-      if (current.length > 0) {
-        paragraphs.push(current.join(' '));
-        current = [];
-      }
-      continue;
-    }
-
-    const isBlockElement =
-      /^(#{1,6}\s|-\s|---$|\*\*[^*]+:\*\*)/.test(line);
-
-    if (isBlockElement) {
-      if (current.length > 0) {
-        paragraphs.push(current.join(' '));
-        current = [];
-      }
-      continue;
-    }
-
-    current.push(line);
+  if (styleCount !== 1) {
+    throw new Error(`Lesson ${lesson.id} must contain exactly one style tag.`);
   }
 
-  if (current.length > 0) {
-    paragraphs.push(current.join(' '));
+  if (conceptCount !== 3) {
+    throw new Error(`Lesson ${lesson.id} must contain 3 lesson-concept divs.`);
   }
 
-  return paragraphs.filter((paragraph) => paragraph.length > 100);
+  if (separatorCount !== conceptCount) {
+    throw new Error(
+      `Lesson ${lesson.id} must contain one separator per concept.`
+    );
+  }
+
+  if (/^#{1,6}\s/m.test(content) || /\*\*[^*]+\*\*/.test(content)) {
+    throw new Error(`Lesson ${lesson.id} still contains markdown formatting.`);
+  }
 }
 
 async function main() {
@@ -415,15 +500,7 @@ async function main() {
 
   for (const lesson of lessons) {
     const content = buildVisualContent(lesson);
-    const longParagraphs = paragraphTooLong(content);
-
-    if (longParagraphs.length > 0) {
-      throw new Error(
-        `Lesson ${lesson.id} has paragraphs over 100 chars: ${longParagraphs.join(
-          ' | '
-        )}`
-      );
-    }
+    validateHtmlContent(content, lesson);
 
     await prisma.lesson.update({
       where: { id: lesson.id },
@@ -435,7 +512,7 @@ async function main() {
   }
 
   console.log(
-    `Done. Reformatted ${updated} lessons for course 1 with visual pedagogy.`
+    `Done. Reformatted ${updated} lessons for course 1 with embedded HTML styling.`
   );
 }
 
