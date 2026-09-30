@@ -26,13 +26,10 @@
 4. **API Courses** → `/api/courses/1` retorna `200 OK` com módulos + imageUrls
 5. **Imagens** → Todas populadas (Unsplash URLs via `prisma/setup-images-safe.ts`)
 6. **Dashboard view** → Módulos aparecem com progresso
-
-### ⚠️ Em Andamento
-
-- **Rotas dinâmicas** → `/dashboard/courses/[courseId]` retorna 404 no Vercel
-  - API funciona, problema é rota RSC do Next.js
-  - Alternativa: usar navegação via API em vez de rotas
-  - **Próx.:** Debugar build Next.js ou corrigir route configuration
+7. **Rotas dinâmicas** → `/dashboard/courses/[courseId]` funciona em produção ✓
+   - Movido `app/(dashboard)/dashboard/` → `app/dashboard/` (fora do layout group)
+   - Rotas agora servem em `/dashboard/*` corretamente
+   - Navegação Cursos → Módulos → Lições funciona 100%
 
 ### 📊 Dados
 - **11 módulos** com imagens temáticas (Unsplash)
